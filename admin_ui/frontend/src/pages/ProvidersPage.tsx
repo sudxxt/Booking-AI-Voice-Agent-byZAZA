@@ -22,10 +22,12 @@ import ElevenLabsProviderForm from '../components/config/providers/ElevenLabsPro
 import TelnyxProviderForm from '../components/config/providers/TelnyxProviderForm';
 import { Capability, capabilityFromKey, ensureModularKey, isFullAgentProvider } from '../utils/providerNaming';
 import { GOOGLE_LIVE_DEFAULT_MODEL } from '../utils/googleLiveModels';
+import { useTranslation } from 'react-i18next';
 
 const stripModularSuffix = (name: string): string => (name || '').replace(/_(stt|llm|tts)$/i, '');
 
 const ProvidersPage: React.FC = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
@@ -62,9 +64,9 @@ const ProvidersPage: React.FC = () => {
             console.error('Failed to load config', err);
             const status = (err as any)?.response?.status;
             if (status === 401) {
-                setError('Not authenticated. Please refresh and log in again.');
+                setError(t('providers.errors.notAuthenticated'));
             } else {
-                setError('Failed to load configuration. Check backend logs and try again.');
+                setError(t('providers.errors.loadFailed'));
             }
             setYamlError(null);
         } finally {
@@ -255,7 +257,7 @@ const ProvidersPage: React.FC = () => {
         });
 
         if (!changed) {
-            toast.info('Selected providers already exist.');
+            toast.info(t('providers.errors.alreadyExists'));
             setShowAddProvidersModal(false);
             return;
         }
@@ -263,6 +265,7 @@ const ProvidersPage: React.FC = () => {
         await saveConfig({ ...config, providers: nextProviders });
         setShowAddProvidersModal(false);
         setPendingRestart(true);
+        toast.success(t('providers.errors.success'));
     };
 
     const handleSetAsDefault = async (name: string) => {
@@ -288,9 +291,9 @@ const ProvidersPage: React.FC = () => {
 
             if (response.data.status === 'warning') {
                 const confirmForce = await confirm({
-                    title: 'Force Restart?',
-                    description: `${response.data.message}\n\nDo you want to force restart anyway? This may disconnect active calls.`,
-                    confirmText: 'Force Restart',
+                    title: t('providers.restart.confirmTitleForce'),
+                    description: t('providers.restart.confirmDescForce', { message: response.data.message }),
+                    confirmText: t('providers.restart.btnForce'),
                     variant: 'destructive'
                 });
                 if (confirmForce) {
@@ -301,16 +304,16 @@ const ProvidersPage: React.FC = () => {
             }
 
             if (response.data.status === 'degraded') {
-                toast.warning('AI Engine restarted but may not be fully healthy', { description: response.data.output || 'Please verify manually' });
+                toast.warning(t('providers.errors.degraded'), { description: response.data.output || t('providers.errors.degradedDesc') });
                 return;
             }
 
             if (response.data.status === 'success') {
                 setPendingRestart(false);
-                toast.success('AI Engine restarted! Changes are now active.');
+                toast.success(t('providers.errors.restartSuccess'));
             }
         } catch (error: any) {
-            toast.error('Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
+            toast.error(t('providers.errors.restartFailed'), { description: error.response?.data?.detail || error.message });
         } finally {
             setRestartingEngine(false);
         }
@@ -326,7 +329,7 @@ const ProvidersPage: React.FC = () => {
         // Check pipeline usage
         const pipelines = config.pipelines || {};
         const inUsePipelines = Object.entries(pipelines).filter(([_, p]: [string, any]) => p.stt === name || p.llm === name || p.tts === name);
-        
+
         // P1 Guard: Block if used by active pipeline
         const activePipeline = config.active_pipeline;
         if (activePipeline && pipelines[activePipeline]) {
@@ -383,7 +386,7 @@ const ProvidersPage: React.FC = () => {
         if (!newEnabled) {
             const pipelines = config.pipelines || {};
             const activePipeline = config.active_pipeline;
-            
+
             if (activePipeline && pipelines[activePipeline]) {
                 const ap = pipelines[activePipeline] as any;
                 if (ap.stt === name || ap.llm === name || ap.tts === name) {
@@ -540,12 +543,12 @@ const ProvidersPage: React.FC = () => {
 
         // Check provider name for specific forms, fallback to type
         const providerName = (providerForm.name || '').toLowerCase();
-        
+
         // Local provider (including full agent mode) uses LocalProviderForm
         if (providerForm.type === 'local' || providerName === 'local' || providerName.includes('local')) {
             return <LocalProviderForm config={providerForm} onChange={updateForm} />;
         }
-        
+
         // Check by provider NAME first (for full agents that have type='full')
         // This ensures Deepgram, Google Live, etc. use their specific forms
         if (providerName === 'deepgram' || providerName.includes('deepgram')) {
@@ -563,7 +566,7 @@ const ProvidersPage: React.FC = () => {
         if (providerName.includes('telnyx') || providerName.includes('telenyx')) {
             return <TelnyxProviderForm config={providerForm} onChange={updateForm} />;
         }
-        
+
         // Fall back to type-based selection
         switch (providerForm.type) {
             case 'openai_realtime':
@@ -613,23 +616,22 @@ const ProvidersPage: React.FC = () => {
             <div className={`${pendingRestart ? 'bg-orange-500/15 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/20'} border text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between`}>
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    Provider configuration changes require an AI Engine restart to take effect.
+                    {t('providers.restart.warning')}
                 </div>
                 <button
                     onClick={() => handleReloadAIEngine(false)}
                     disabled={restartingEngine}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium' 
-                            : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                        ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
+                        : 'bg-yellow-500/20 hover:bg-yellow-500/30'
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Restarting...' : 'Restart AI Engine'}
+                    {restartingEngine ? t('providers.restart.reloading') : t('providers.restart.reload')}
                 </button>
             </div>
 
@@ -650,11 +652,11 @@ const ProvidersPage: React.FC = () => {
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Providers</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('providers.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Manage connections to external AI services (STT, LLM, TTS).
+                        {t('providers.description')}
                         <span className="block text-xs mt-1">
-                            Modular providers are auto-suffixed (e.g., <code>_stt</code>) to match engine factories. Full agents stay unsuffixed.
+                            {t('providers.descriptionModular')}
                         </span>
                     </p>
                 </div>
@@ -664,19 +666,19 @@ const ProvidersPage: React.FC = () => {
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                     >
                         <Wand2 className="w-4 h-4 mr-2" />
-                        Add Provider Templates
+                        {t('providers.addTemplates')}
                     </button>
                     <button
                         onClick={handleAddProvider}
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                     >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Provider
+                        {t('providers.addProvider')}
                     </button>
                 </div>
             </div>
 
-            <ConfigSection title="Full Agents" description="End-to-end agents (STT+LLM+TTS) that bypass pipelines.">
+            <ConfigSection title={t('providers.fullAgents.title')} description={t('providers.fullAgents.description')}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {Object.entries(config.providers || {}).filter(([_, p]) => isFullAgentProvider(p)).map(([name, providerData]: [string, any]) => (
                         <ConfigCard key={name} className="group relative hover:border-primary/50 transition-colors">
@@ -691,61 +693,61 @@ const ProvidersPage: React.FC = () => {
                                         {config.default_provider === name && (
                                             <span className="text-xs bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full flex items-center gap-1 flex-shrink-0">
                                                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                                Default
+                                                {t('providers.fullAgents.default')}
                                             </span>
                                         )}
                                         {!providerData.enabled && (
-                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded flex-shrink-0">Disabled</span>
+                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded flex-shrink-0">{t('providers.fullAgents.disabled')}</span>
                                         )}
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                            {(providerData.model || providerData.voice || providerData.tts_model || providerData.llm_model || providerData.tts_voice_name || providerData.agent_id || providerData.voice_id || providerData.model_id) && (
-                                                <>
-                                                    {providerData.model && (
-                                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground">
-                                                            {providerData.model}
-                                                        </span>
-                                                    )}
-                                                    {providerData.voice && (
-                                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground">
-                                                            {providerData.voice}
-                                                        </span>
-                                                    )}
-                                                    {providerData.tts_model && (
-                                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground">
-                                                            {providerData.tts_model}
-                                                        </span>
-                                                    )}
-                                                    {providerData.llm_model && (
-                                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground">
-                                                            {providerData.llm_model}
-                                                        </span>
-                                                    )}
-                                                    {providerData.tts_voice_name && (
-                                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground">
-                                                            {providerData.tts_voice_name}
-                                                        </span>
-                                                    )}
-                                                    {providerData.model_id && (
-                                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground">
-                                                            {providerData.model_id}
-                                                        </span>
-                                                    )}
-                                                    {providerData.voice_id && (
-                                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground" title={providerData.voice_id}>
-                                                            {providerData.voice_id.length > 15 ? `${providerData.voice_id.substring(0, 15)}...` : providerData.voice_id}
-                                                        </span>
-                                                    )}
-                                                    {providerData.agent_id && !providerData.agent_id.startsWith('${') && (
-                                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground" title={providerData.agent_id}>
-                                                            {providerData.agent_id.length > 20 ? `${providerData.agent_id.substring(0, 20)}...` : providerData.agent_id}
-                                                        </span>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
+                                        {(providerData.model || providerData.voice || providerData.tts_model || providerData.llm_model || providerData.tts_voice_name || providerData.agent_id || providerData.voice_id || providerData.model_id) && (
+                                            <>
+                                                {providerData.model && (
+                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground">
+                                                        {providerData.model}
+                                                    </span>
+                                                )}
+                                                {providerData.voice && (
+                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground">
+                                                        {providerData.voice}
+                                                    </span>
+                                                )}
+                                                {providerData.tts_model && (
+                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground">
+                                                        {providerData.tts_model}
+                                                    </span>
+                                                )}
+                                                {providerData.llm_model && (
+                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground">
+                                                        {providerData.llm_model}
+                                                    </span>
+                                                )}
+                                                {providerData.tts_voice_name && (
+                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground">
+                                                        {providerData.tts_voice_name}
+                                                    </span>
+                                                )}
+                                                {providerData.model_id && (
+                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground">
+                                                        {providerData.model_id}
+                                                    </span>
+                                                )}
+                                                {providerData.voice_id && (
+                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground" title={providerData.voice_id}>
+                                                        {providerData.voice_id.length > 15 ? `${providerData.voice_id.substring(0, 15)}...` : providerData.voice_id}
+                                                    </span>
+                                                )}
+                                                {providerData.agent_id && !providerData.agent_id.startsWith('${') && (
+                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground" title={providerData.agent_id}>
+                                                        {providerData.agent_id.length > 20 ? `${providerData.agent_id.substring(0, 20)}...` : providerData.agent_id}
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
                                     </div>
                                 </div>
+                            </div>
                             {/* Row 2: Actions */}
                             <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
                                 <div className="flex items-center gap-2">
@@ -758,14 +760,14 @@ const ProvidersPage: React.FC = () => {
                                         />
                                         <div className="w-9 h-5 bg-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                                     </label>
-                                    <span className="text-xs text-muted-foreground">{providerData.enabled !== false ? 'Enabled' : 'Disabled'}</span>
+                                    <span className="text-xs text-muted-foreground">{providerData.enabled !== false ? t('providers.fullAgents.enabled') : t('providers.fullAgents.disabled')}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     {config.default_provider !== name && (
                                         <button
                                             onClick={() => handleSetAsDefault(name)}
                                             className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                                            title="Set as Default"
+                                            title={t('providers.fullAgents.setAsDefault')}
                                         >
                                             <Star className="w-4 h-4" />
                                         </button>
@@ -774,7 +776,7 @@ const ProvidersPage: React.FC = () => {
                                         onClick={() => handleTestConnection(name, providerData)}
                                         disabled={testingProvider === name}
                                         className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
-                                        title="Test Connection"
+                                        title={t('providers.fullAgents.testConnection')}
                                     >
                                         {testingProvider === name ? (
                                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -789,14 +791,14 @@ const ProvidersPage: React.FC = () => {
                                     <button
                                         onClick={() => handleEditProvider(name)}
                                         className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                                        title="Settings"
+                                        title={t('providers.fullAgents.settings')}
                                     >
                                         <Settings className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={() => handleDeleteProvider(name)}
                                         className="p-1.5 hover:bg-destructive/10 rounded-md text-destructive transition-colors"
-                                        title="Delete"
+                                        title={t('providers.fullAgents.delete')}
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
@@ -814,13 +816,13 @@ const ProvidersPage: React.FC = () => {
                     ))}
                     {Object.entries(config.providers || {}).filter(([_, p]) => isFullAgentProvider(p)).length === 0 && (
                         <div className="col-span-full p-8 border border-dashed rounded-lg text-center text-muted-foreground">
-                            No full agents configured. Click "Add Provider" to get started.
+                            {t('providers.fullAgents.noFullAgents')}
                         </div>
                     )}
                 </div>
             </ConfigSection>
 
-            <ConfigSection title="Modular Providers" description="Providers you can mix in pipelines (STT/LLM/TTS) based on their capabilities.">
+            <ConfigSection title={t('providers.modularProviders.title')} description={t('providers.modularProviders.description')}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {Object.entries(config.providers || {}).filter(([_, p]) => !isFullAgentProvider(p)).map(([name, providerData]: [string, any]) => (
                         <ConfigCard key={name} className="group relative hover:border-primary/50 transition-colors">
@@ -833,7 +835,7 @@ const ProvidersPage: React.FC = () => {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h4 className={`font-semibold text-lg truncate ${!providerData.enabled ? 'text-muted-foreground' : ''}`}>{name}</h4>
                                         {!providerData.enabled && (
-                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded flex-shrink-0">Disabled</span>
+                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded flex-shrink-0">{t('providers.fullAgents.disabled')}</span>
                                         )}
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -857,14 +859,14 @@ const ProvidersPage: React.FC = () => {
                                         />
                                         <div className="w-9 h-5 bg-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                                     </label>
-                                    <span className="text-xs text-muted-foreground">{providerData.enabled !== false ? 'Enabled' : 'Disabled'}</span>
+                                    <span className="text-xs text-muted-foreground">{providerData.enabled !== false ? t('providers.fullAgents.enabled') : t('providers.fullAgents.disabled')}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={() => handleTestConnection(name, providerData)}
                                         disabled={testingProvider === name}
                                         className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
-                                        title="Test Connection"
+                                        title={t('providers.fullAgents.testConnection')}
                                     >
                                         {testingProvider === name ? (
                                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -904,7 +906,7 @@ const ProvidersPage: React.FC = () => {
                     ))}
                     {Object.entries(config.providers || {}).filter(([_, p]) => !isFullAgentProvider(p)).length === 0 && (
                         <div className="col-span-full p-8 border border-dashed rounded-lg text-center text-muted-foreground">
-                            No composable providers configured. Click "Add Provider" to get started.
+                            {t('providers.modularProviders.noModular')}
                         </div>
                     )}
                 </div>
@@ -913,12 +915,12 @@ const ProvidersPage: React.FC = () => {
             <Modal
                 isOpen={!!editingProvider}
                 onClose={() => setEditingProvider(null)}
-                title={isNewProvider ? 'Add Provider' : `Edit Provider: ${editingProvider}`}
+                title={isNewProvider ? t('providers.modal.addTitle') : `${t('providers.modal.editTitle')} ${editingProvider}`}
                 size="lg"
                 footer={
                     <div className="flex w-full justify-between items-center">
                         <div className="text-xs text-muted-foreground">
-                            Modular providers are automatically suffixed for their capability (e.g., <code>openai_stt</code>, <code>openai_llm</code>, <code>openai_tts</code>).
+                            {t('providers.modal.modularHelp')}
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -931,11 +933,11 @@ const ProvidersPage: React.FC = () => {
                                 ) : (
                                     <Server className="w-4 h-4 mr-2" />
                                 )}
-                                Test Connection
+                                {t('providers.modal.testConnection')}
                             </button>
                             {testResults[providerForm.name || 'new_provider'] && (
                                 <span className={`text-xs ${testResults[providerForm.name || 'new_provider']?.success ? 'text-green-500' : 'text-destructive'}`}>
-                                    {testResults[providerForm.name || 'new_provider']?.success ? 'Success' : 'Failed'}
+                                    {testResults[providerForm.name || 'new_provider']?.success ? t('providers.modal.success') : t('providers.modal.failed')}
                                 </span>
                             )}
                         </div>
@@ -944,13 +946,13 @@ const ProvidersPage: React.FC = () => {
                                 onClick={() => setEditingProvider(null)}
                                 className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                             >
-                                Cancel
+                                {t('providers.modal.cancel')}
                             </button>
                             <button
                                 onClick={handleSaveProvider}
                                 className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                             >
-                                Save Changes
+                                {t('providers.modal.save')}
                             </button>
                         </div>
                     </div>
@@ -961,20 +963,20 @@ const ProvidersPage: React.FC = () => {
                         <div className="rounded-lg border border-border bg-card/40 p-4 space-y-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Capability (required)</label>
+                                    <label className="text-sm font-medium">{t('providers.modal.capabilityRequired')}</label>
                                     <select
                                         className="w-full p-2 rounded border border-input bg-background"
                                         value={Array.isArray(providerForm.capabilities) && providerForm.capabilities.length === 1 ? providerForm.capabilities[0] : ''}
                                         disabled={!isNewProvider && Array.isArray(providerForm.capabilities) && providerForm.capabilities.length === 1}
                                         onChange={(e) => handleSetModularCapability(e.target.value as Capability)}
                                     >
-                                        <option value="">Select capability...</option>
-                                        <option value="stt">Speech-to-Text (STT)</option>
-                                        <option value="llm">Large Language Model (LLM)</option>
-                                        <option value="tts">Text-to-Speech (TTS)</option>
+                                        <option value="">{t('providers.modal.selectCapability')}</option>
+                                        <option value="stt">{t('providers.modal.stt')}</option>
+                                        <option value="llm">{t('providers.modal.llm')}</option>
+                                        <option value="tts">{t('providers.modal.tts')}</option>
                                     </select>
                                     <p className="text-xs text-muted-foreground">
-                                        Determines which pipeline slot this provider appears in. Saved providers will persist this in YAML.
+                                        {t('providers.modal.capabilityDesc')}
                                     </p>
                                 </div>
                             </div>
@@ -988,13 +990,13 @@ const ProvidersPage: React.FC = () => {
                                 const suggested = ensureModularKey(stripModularSuffix((providerForm.name || '').toLowerCase()), declared);
                                 return (
                                     <div className="bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 p-3 rounded-md text-sm">
-                                        <div className="font-semibold mb-1">Capability/name mismatch</div>
+                                        <div className="font-semibold mb-1">{t('providers.modal.mismatchTitle')}</div>
                                         <div>
-                                            This provider name ends with <code className="px-1 rounded bg-muted">_{suffix}</code> but capabilities says{' '}
-                                            <code className="px-1 rounded bg-muted">{declared}</code>. Pipelines will trust capabilities.
+                                            {t('providers.modal.mismatchBody1')} <code className="px-1 rounded bg-muted">_{suffix}</code> {t('providers.modal.mismatchBody2')}
+                                            <code className="px-1 rounded bg-muted">{declared}</code>{t('providers.modal.mismatchBody3')}
                                         </div>
                                         <div className="mt-2">
-                                            Suggested fix: rename to <code className="px-1 rounded bg-muted">{suggested}</code>.
+                                            {t('providers.modal.mismatchTarget')} <code className="px-1 rounded bg-muted">{suggested}</code>.
                                         </div>
                                     </div>
                                 );
@@ -1010,7 +1012,7 @@ const ProvidersPage: React.FC = () => {
             <Modal
                 isOpen={showAddProvidersModal}
                 onClose={() => setShowAddProvidersModal(false)}
-                title="Add Provider Templates"
+                title={t('providers.templatesModal.title')}
                 size="md"
                 footer={
                     <div className="flex justify-end gap-2">
@@ -1018,25 +1020,24 @@ const ProvidersPage: React.FC = () => {
                             onClick={() => setShowAddProvidersModal(false)}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                         >
-                            Cancel
+                            {t('providers.templatesModal.cancel')}
                         </button>
                         <button
                             onClick={handleAddSelectedProviders}
                             disabled={selectedTemplates.length === 0}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                         >
-                            Add Selected
+                            {t('providers.templatesModal.addSelected')}
                         </button>
                     </div>
                 }
             >
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        Select provider templates to add. Templates are added <strong>disabled</strong> by default.
-                        Configure API keys in the Environment page, then enable the provider.
+                        {t('providers.templatesModal.desc')}
                     </p>
                     <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Full Agents (Cloud)</h4>
+                        <h4 className="text-sm font-medium">{t('providers.templatesModal.fullAgentsCloud')}</h4>
                         {[
                             { id: 'openai_realtime', name: 'OpenAI Realtime', desc: 'GPT-4o real-time voice agent' },
                             { id: 'deepgram', name: 'Deepgram', desc: 'Nova-2 STT + Aura TTS voice agent' },
@@ -1061,7 +1062,7 @@ const ProvidersPage: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium">{template.name}</span>
                                         {config.providers?.[template.id] && (
-                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">Already exists</span>
+                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">{t('providers.templatesModal.alreadyExists')}</span>
                                         )}
                                     </div>
                                     <p className="text-xs text-muted-foreground">{template.desc}</p>
@@ -1070,7 +1071,7 @@ const ProvidersPage: React.FC = () => {
                         ))}
                     </div>
                     <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Modular Providers (Local)</h4>
+                        <h4 className="text-sm font-medium">{t('providers.templatesModal.modularLocal')}</h4>
                         <label className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 cursor-pointer">
                             <input
                                 type="checkbox"
@@ -1089,15 +1090,15 @@ const ProvidersPage: React.FC = () => {
                                 <div className="flex items-center gap-2">
                                     <span className="font-medium">Local Modular (STT + LLM + TTS)</span>
                                     {config.providers?.local_stt && config.providers?.local_llm && config.providers?.local_tts && (
-                                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">Already exists</span>
+                                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">{t('providers.templatesModal.alreadyExists')}</span>
                                     )}
                                 </div>
-                                <p className="text-xs text-muted-foreground">Adds local_stt, local_llm, local_tts for pipeline use</p>
+                                <p className="text-xs text-muted-foreground">{t('providers.templatesModal.localDesc')}</p>
                             </div>
                         </label>
                     </div>
                     <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Modular Providers (Cloud)</h4>
+                        <h4 className="text-sm font-medium">{t('providers.templatesModal.modularCloud')}</h4>
                         {[
                             { id: 'telnyx_llm', name: 'Telnyx LLM', desc: 'Telnyx AI Inference (OpenAI-compatible /chat/completions)' },
                         ].map(template => (
@@ -1119,7 +1120,7 @@ const ProvidersPage: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium">{template.name}</span>
                                         {config.providers?.[template.id] && (
-                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">Already exists</span>
+                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">{t('providers.templatesModal.alreadyExists')}</span>
                                         )}
                                     </div>
                                     <p className="text-xs text-muted-foreground">{template.desc}</p>

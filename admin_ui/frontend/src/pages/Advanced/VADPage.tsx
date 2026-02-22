@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import yaml from 'js-yaml';
-import { Save, Activity, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { Save, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { YamlErrorBanner, YamlErrorInfo } from '../../components/ui/YamlErrorBanner';
 import { ConfigSection } from '../../components/ui/ConfigSection';
 import { ConfigCard } from '../../components/ui/ConfigCard';
@@ -13,6 +14,7 @@ import { sanitizeConfigForSave } from '../../utils/configSanitizers';
 const VAD_UTTERANCE_EXPERT_STORAGE_KEY = 'aava.ui.vad.utteranceExpert';
 
 const VADPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
@@ -68,10 +70,10 @@ const VADPage = () => {
             const sanitized = sanitizeConfigForSave(config);
             await axios.post('/api/config/yaml', { content: yaml.dump(sanitized) });
             setPendingRestart(true);
-            toast.success('VAD configuration saved');
+            toast.success(t('advanced.vad.saveSuccess'));
         } catch (err) {
             console.error('Failed to save config', err);
-            toast.error('Failed to save configuration');
+            toast.error(t('advanced.vad.saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -85,9 +87,9 @@ const VADPage = () => {
 
             if (response.data.status === 'warning') {
                 const confirmForce = await confirm({
-                    title: 'Force Restart?',
-                    description: `${response.data.message}\n\nDo you want to force restart anyway? This may disconnect active calls.`,
-                    confirmText: 'Force Restart',
+                    title: t('advanced.vad.forceRestartTitle'),
+                    description: `${response.data.message}\n\n${t('advanced.vad.forceRestartDesc')}`,
+                    confirmText: t('advanced.vad.forceRestartConfirm'),
                     variant: 'destructive'
                 });
                 if (confirmForce) {
@@ -98,16 +100,16 @@ const VADPage = () => {
             }
 
             if (response.data.status === 'degraded') {
-                toast.warning('AI Engine restarted but may not be fully healthy', { description: response.data.output || 'Please verify manually' });
+                toast.warning(t('advanced.vad.restartedDegradedWarn'), { description: response.data.output || t('advanced.vad.restartedDegradedDesc') });
                 return;
             }
 
             if (response.data.status === 'success') {
                 setPendingRestart(false);
-                toast.success('AI Engine restarted! Changes are now active.');
+                toast.success(t('advanced.vad.restartSuccess'));
             }
         } catch (error: any) {
-            toast.error('Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
+            toast.error(t('modals.restartFailed') || 'Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
         } finally {
             setRestartingEngine(false);
         }
@@ -136,7 +138,7 @@ const VADPage = () => {
         }
     }, [config?.vad]);
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading configuration...</div>;
+    if (loading) return <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>;
 
     if (yamlError) return (
         <div className="space-y-6">
@@ -151,31 +153,30 @@ const VADPage = () => {
             <div className={`${pendingRestart ? 'bg-orange-500/15 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/20'} border text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between`}>
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    Changes to VAD configurations require an AI Engine restart to take effect.
+                    {t('advanced.vad.restartWarning')}
                 </div>
                 <button
                     onClick={() => handleReloadAIEngine(false)}
                     disabled={restartingEngine}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium' 
-                            : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                        ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
+                        : 'bg-yellow-500/20 hover:bg-yellow-500/30'
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Restarting...' : 'Reload AI Engine'}
+                    {restartingEngine ? t('advanced.vad.restarting') : t('advanced.vad.reloadAIEngine')}
                 </button>
             </div>
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Voice Activity Detection</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('advanced.vad.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Configure how the system detects speech and silence.
+                        {t('advanced.vad.desc')}
                     </p>
                 </div>
                 <button
@@ -184,25 +185,25 @@ const VADPage = () => {
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 >
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? t('advanced.vad.saving') : t('advanced.vad.saveChanges')}
                 </button>
             </div>
 
-            <ConfigSection title="Primary Detection" description="Main VAD settings for speech detection.">
+            <ConfigSection title={t('advanced.vad.primaryDetectTitle')} description={t('advanced.vad.primaryDetectDesc')}>
                 <ConfigCard>
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormSwitch
-                                label="Enhanced VAD"
-                                description="Use advanced algorithms for better accuracy."
-                                tooltip="Enables engine-side VAD (energy + optional WebRTC VAD) used for local heuristics like barge-in fallback and silence robustness. Does not change provider-owned turn-taking."
+                                label={t('advanced.vad.enhVadLabel')}
+                                description={t('advanced.vad.enhVadDesc')}
+                                tooltip={t('advanced.vad.enhVadTooltip')}
                                 checked={vadConfig.enhanced_enabled ?? false}
                                 onChange={(e) => updateVADConfig('enhanced_enabled', e.target.checked)}
                             />
                             <FormSwitch
-                                label="Use Provider VAD"
-                                description="Prefer provider-managed turn detection when supported; engine VAD is used only for local fallback heuristics."
-                                tooltip="When enabled, the engine avoids making primary turn/endpointing decisions and relies on provider-side detection where available. Engine VAD may still be used for safe local fallbacks."
+                                label={t('advanced.vad.useProvVadLabel')}
+                                description={t('advanced.vad.useProvVadDesc')}
+                                tooltip={t('advanced.vad.useProvVadTooltip')}
                                 checked={vadConfig.use_provider_vad ?? false}
                                 onChange={(e) => updateVADConfig('use_provider_vad', e.target.checked)}
                             />
@@ -210,57 +211,57 @@ const VADPage = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Energy Threshold (RMS)"
+                                label={t('advanced.vad.energyThreshLabel')}
                                 type="number"
                                 value={vadConfig.energy_threshold ?? 1500}
                                 onChange={(e) => updateVADConfig('energy_threshold', parseInt(e.target.value))}
-                                tooltip="Engine VAD energy threshold (RMS over PCM16). Higher = less sensitive (fewer false triggers), lower = more sensitive (better for quiet callers). Only applies when Enhanced VAD is enabled."
+                                tooltip={t('advanced.vad.energyThreshTooltip')}
                                 disabled={!vadConfig.enhanced_enabled}
                             />
                             <FormInput
-                                label="Confidence Threshold"
+                                label={t('advanced.vad.confThreshLabel')}
                                 type="number"
                                 step="0.05"
                                 min="0"
                                 max="1"
                                 value={vadConfig.confidence_threshold ?? 0.6}
                                 onChange={(e) => updateVADConfig('confidence_threshold', parseFloat(e.target.value))}
-                                tooltip="Confidence required for engine VAD decisions (0.0–1.0). Used by engine heuristics; providers may implement their own confidence/endpointing. Only applies when Enhanced VAD is enabled."
+                                tooltip={t('advanced.vad.confThreshTooltip')}
                                 disabled={!vadConfig.enhanced_enabled}
                             />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormSwitch
-                                label="Adaptive Threshold"
-                                description="Adapt energy threshold based on observed noise floor."
-                                tooltip="When enabled, engine VAD raises the effective energy threshold in noisy environments so background noise doesn’t trigger speech."
+                                label={t('advanced.vad.adaptThreshLabel')}
+                                description={t('advanced.vad.adaptThreshDesc')}
+                                tooltip={t('advanced.vad.adaptThreshTooltip')}
                                 checked={vadConfig.adaptive_threshold_enabled ?? true}
                                 onChange={(e) => updateVADConfig('adaptive_threshold_enabled', e.target.checked)}
                             />
                             <FormInput
-                                label="Noise Adaptation Rate"
+                                label={t('advanced.vad.noiseAdaptRateLabel')}
                                 type="number"
                                 step="0.05"
                                 min="0"
                                 max="1"
                                 value={vadConfig.noise_adaptation_rate ?? 0.1}
                                 onChange={(e) => updateVADConfig('noise_adaptation_rate', parseFloat(e.target.value))}
-                                tooltip="How quickly the adaptive threshold reacts to background noise (0.0–1.0). Higher reacts faster but can over-adjust on short noise bursts."
+                                tooltip={t('advanced.vad.noiseAdaptRateTooltip')}
                             />
                         </div>
                     </div>
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection title="Engine VAD (WebRTC)" description="Engine-side fallback heuristics (barge-in + safety), using WebRTC VAD when available.">
+            <ConfigSection title={t('advanced.vad.engineVadTitle')} description={t('advanced.vad.engineVadDesc')}>
                 <ConfigCard>
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormSwitch
-                                label="Enable Engine Fallback"
-                                description="Allow periodic forwarding / heuristics during extended silence (engine-side)."
-                                tooltip="If the engine believes the caller is silent for too long, it periodically lets audio through to avoid getting “stuck” on mis-detected silence. Does not affect providers that continuously stream audio."
+                                label={t('advanced.vad.enableEngineFallbackLabel')}
+                                description={t('advanced.vad.enableEngineFallbackDesc')}
+                                tooltip={t('advanced.vad.enableEngineFallbackTooltip')}
                                 checked={vadConfig.fallback_enabled ?? true}
                                 onChange={(e) => updateVADConfig('fallback_enabled', e.target.checked)}
                             />
@@ -268,37 +269,37 @@ const VADPage = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Fallback Interval (ms)"
+                                label={t('advanced.vad.fallbackIntervalLabel')}
                                 type="number"
                                 value={vadConfig.fallback_interval_ms ?? 1500}
                                 onChange={(e) => updateVADConfig('fallback_interval_ms', parseInt(e.target.value))}
-                                tooltip="After this much detected silence, engine may periodically allow audio through for robustness (default: 1500ms). Increase to reduce background noise leakage; decrease if calls feel “stuck”."
+                                tooltip={t('advanced.vad.fallbackIntervalTooltip')}
                             />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <FormInput
-                                label="Aggressiveness (0-3)"
+                                label={t('advanced.vad.aggressivenessLabel')}
                                 type="number"
                                 min="0"
                                 max="3"
                                 value={vadConfig.webrtc_aggressiveness ?? 1}
                                 onChange={(e) => updateVADConfig('webrtc_aggressiveness', parseInt(e.target.value))}
-                                tooltip="WebRTC VAD aggressiveness (0–3). Higher = more aggressive silence detection (fewer false speech triggers) but may miss quiet speech."
+                                tooltip={t('advanced.vad.aggressivenessTooltip')}
                             />
                             <FormInput
-                                label="Start Frames"
+                                label={t('advanced.vad.startFramesLabel')}
                                 type="number"
                                 value={vadConfig.webrtc_start_frames ?? 2}
                                 onChange={(e) => updateVADConfig('webrtc_start_frames', parseInt(e.target.value))}
-                                tooltip="Number of consecutive “speech” frames needed to declare speech started. Higher reduces false starts but increases detection latency."
+                                tooltip={t('advanced.vad.startFramesTooltip')}
                             />
                             <FormInput
-                                label="End Silence Frames"
+                                label={t('advanced.vad.endSilFramesLabel')}
                                 type="number"
                                 value={vadConfig.webrtc_end_silence_frames ?? 15}
                                 onChange={(e) => updateVADConfig('webrtc_end_silence_frames', parseInt(e.target.value))}
-                                tooltip="Number of consecutive “silence” frames needed to declare speech ended. Higher avoids cutting off trailing words but increases tail latency."
+                                tooltip={t('advanced.vad.endSilFramesTooltip')}
                             />
                         </div>
                     </div>
@@ -306,58 +307,58 @@ const VADPage = () => {
             </ConfigSection>
 
             <ConfigSection
-                title="Utterance Controls"
-                description="Fine-grained utterance boundary tuning for engine-side heuristics."
+                title={t('advanced.vad.utteranceTitle')}
+                description={t('advanced.vad.utteranceDesc')}
             >
                 <ConfigCard>
                     <div className="space-y-6">
                         <div className="border border-amber-300/40 rounded-lg p-3 bg-amber-500/5">
                             <FormSwitch
-                                label="Utterance Expert Settings"
-                                description="Enable editing of low-level utterance timing and buffer controls."
+                                label={t('advanced.vad.uttExpertLabel')}
+                                description={t('advanced.vad.uttExpertDesc')}
                                 checked={showUtteranceExpert}
                                 onChange={(e) => setShowUtteranceExpert(e.target.checked)}
                                 className="mb-0 border-0 p-0 bg-transparent"
                             />
                             <p className={`text-xs mt-2 ${showUtteranceExpert ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
                                 {showUtteranceExpert
-                                    ? 'Warning: these controls can clip speech, delay turn-taking, or over-buffer audio if tuned aggressively.'
-                                    : 'Expert values are visible and read-only until enabled.'}
+                                    ? t('advanced.vad.uttExpertWarn')
+                                    : t('advanced.vad.uttExpertReadOnly')}
                             </p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Min Utterance Duration (ms)"
+                                label={t('advanced.vad.minUttDurationLabel')}
                                 type="number"
                                 value={vadConfig.min_utterance_duration_ms ?? 800}
                                 onChange={(e) => updateVADConfig('min_utterance_duration_ms', parseInt(e.target.value))}
-                                tooltip="Minimum duration to consider detected speech a valid utterance."
+                                tooltip={t('advanced.vad.minUttDurationTooltip')}
                                 disabled={!showUtteranceExpert}
                             />
                             <FormInput
-                                label="Max Utterance Duration (ms)"
+                                label={t('advanced.vad.maxUttDurationLabel')}
                                 type="number"
                                 value={vadConfig.max_utterance_duration_ms ?? 8000}
                                 onChange={(e) => updateVADConfig('max_utterance_duration_ms', parseInt(e.target.value))}
-                                tooltip="Hard cap for a single utterance before forced boundary handling."
+                                tooltip={t('advanced.vad.maxUttDurationTooltip')}
                                 disabled={!showUtteranceExpert}
                             />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Utterance Padding (ms)"
+                                label={t('advanced.vad.uttPadLabel')}
                                 type="number"
                                 value={vadConfig.utterance_padding_ms ?? 100}
                                 onChange={(e) => updateVADConfig('utterance_padding_ms', parseInt(e.target.value))}
-                                tooltip="Extra audio kept around utterance boundaries for naturalness."
+                                tooltip={t('advanced.vad.uttPadTooltip')}
                                 disabled={!showUtteranceExpert}
                             />
                             <FormInput
-                                label="Fallback Buffer Size (bytes)"
+                                label={t('advanced.vad.fallbackBufLabel')}
                                 type="number"
                                 value={vadConfig.fallback_buffer_size ?? 128000}
                                 onChange={(e) => updateVADConfig('fallback_buffer_size', parseInt(e.target.value))}
-                                tooltip="Internal fallback buffer size used by engine-side VAD fallback paths."
+                                tooltip={t('advanced.vad.fallbackBufTooltip')}
                                 disabled={!showUtteranceExpert}
                             />
                         </div>
@@ -366,16 +367,16 @@ const VADPage = () => {
             </ConfigSection>
 
             <ConfigSection
-                title="Upstream Squelch"
-                description="Optional upstream noise squelch for continuous-audio providers with server-side VAD."
+                title={t('advanced.vad.upstreamSquelchTitle')}
+                description={t('advanced.vad.upstreamSquelchDesc')}
             >
                 <ConfigCard>
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormSwitch
-                                label="Enable Upstream Squelch"
-                                description="Replace non-speech frames with silence for server-VAD providers."
-                                tooltip="When enabled, the AI Engine analyzes inbound PCM16 energy and replaces low-energy/noise frames with silence before forwarding audio to providers that require continuous audio and have native VAD. This can improve end-of-turn detection in noisy environments, but overly aggressive settings can clip quiet speech."
+                                label={t('advanced.vad.enableUpsqLabel')}
+                                description={t('advanced.vad.enableUpsqDesc')}
+                                tooltip={t('advanced.vad.enableUpsqTooltip')}
                                 checked={vadConfig.upstream_squelch_enabled ?? true}
                                 onChange={(e) => updateVADConfig('upstream_squelch_enabled', e.target.checked)}
                             />
@@ -383,53 +384,53 @@ const VADPage = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Base RMS Threshold"
+                                label={t('advanced.vad.baseRmsLabel')}
                                 type="number"
                                 min="0"
                                 value={vadConfig.upstream_squelch_base_rms ?? 200}
                                 onChange={(e) => updateVADConfig('upstream_squelch_base_rms', parseInt(e.target.value))}
-                                tooltip="Minimum RMS threshold in PCM16 space. Higher blocks more low-energy audio (less noise leakage) but may suppress quiet callers."
+                                tooltip={t('advanced.vad.baseRmsTooltip')}
                             />
                             <FormInput
-                                label="Noise Factor"
+                                label={t('advanced.vad.noiseFactorLabel')}
                                 type="number"
                                 step="0.1"
                                 min="0"
                                 value={vadConfig.upstream_squelch_noise_factor ?? 2.5}
                                 onChange={(e) => updateVADConfig('upstream_squelch_noise_factor', parseFloat(e.target.value))}
-                                tooltip="Dynamic threshold multiplier: threshold = max(base_rms, noise_floor_rms × noise_factor). Increase to be more conservative about what counts as speech."
+                                tooltip={t('advanced.vad.noiseFactorTooltip')}
                             />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Noise EMA Alpha"
+                                label={t('advanced.vad.noiseEmaAlphaLabel')}
                                 type="number"
                                 step="0.01"
                                 min="0"
                                 max="1"
                                 value={vadConfig.upstream_squelch_noise_ema_alpha ?? 0.06}
                                 onChange={(e) => updateVADConfig('upstream_squelch_noise_ema_alpha', parseFloat(e.target.value))}
-                                tooltip="Noise floor smoothing factor (0–1). Higher adapts faster to changing background noise but can overreact to short bursts."
+                                tooltip={t('advanced.vad.noiseEmaAlphaTooltip')}
                             />
                             <FormInput
-                                label="Min Speech Frames"
+                                label={t('advanced.vad.minSpeechFramesLabel')}
                                 type="number"
                                 min="1"
                                 value={vadConfig.upstream_squelch_min_speech_frames ?? 2}
                                 onChange={(e) => updateVADConfig('upstream_squelch_min_speech_frames', parseInt(e.target.value))}
-                                tooltip="Hysteresis: number of consecutive speech frames required before the engine considers the caller “speaking”. Higher reduces false positives but can increase detection latency."
+                                tooltip={t('advanced.vad.minSpeechFramesTooltip')}
                             />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="End Silence Frames"
+                                label={t('advanced.vad.upsqEndSilFramesLabel')}
                                 type="number"
                                 min="1"
                                 value={vadConfig.upstream_squelch_end_silence_frames ?? 15}
                                 onChange={(e) => updateVADConfig('upstream_squelch_end_silence_frames', parseInt(e.target.value))}
-                                tooltip="Hysteresis: number of consecutive silence frames required to exit speaking state. Higher avoids toggling during noise, but may keep speech ‘open’ longer."
+                                tooltip={t('advanced.vad.upsqEndSilFramesTooltip')}
                             />
                         </div>
                     </div>

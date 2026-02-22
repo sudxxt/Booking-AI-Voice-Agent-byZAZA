@@ -5,7 +5,67 @@ import websockets
 import time
 import array
 import re
-import audioop
+try:
+    import audioop  # deprecated in 3.11, removed in 3.13
+except ImportError:
+    # Python 3.13+ — provide minimal pure-Python stubs so the provider still runs.
+    import struct as _struct
+    import array as _array
+    class _AudiopStub:
+        """Minimal stub for audioop (μ-law <-> PCM16 + RMS)."""
+        @staticmethod
+        def ulaw2lin(data: bytes, width: int) -> bytes:
+            """Decode ITU-T G.711 μ-law to linear PCM16LE."""
+            out = _array.array('h')
+            for byte in data:
+                b = byte ^ 0xFF
+                sign = (b & 0x80) >> 7
+                exp = (b & 0x70) >> 4
+                mantissa = b & 0x0F
+                sample = ((mantissa << 3) + 132) << max(exp - 1, 0) if exp else (mantissa << 3) + 4
+                if exp:
+                    sample -= 132
+                out.append(-sample if sign else sample)
+            return out.tobytes()
+
+        @staticmethod
+        def lin2ulaw(data: bytes, width: int) -> bytes:
+            """Encode linear PCM16LE to ITU-T G.711 μ-law."""
+            samples = _array.array('h')
+            samples.frombytes(data)
+            out = bytearray(len(samples))
+            for i, s in enumerate(samples):
+                sign = 0
+                if s < 0:
+                    s = -s
+                    sign = 0x80
+                s = min(s + 132, 32767)
+                exp = 7
+                for e in range(7, -1, -1):
+                    if s >= (1 << (e + 3)):
+                        exp = e
+                        break
+                mantissa = (s >> max(exp + 3 - 4, 0)) & 0x0F
+                out[i] = (~(sign | (exp << 4) | mantissa)) & 0xFF
+            return bytes(out)
+
+        @staticmethod
+        def rms(data: bytes, width: int) -> int:
+            """Root-mean-square of PCM16LE samples."""
+            if not data:
+                return 0
+            samples = _array.array('h')
+            samples.frombytes(data[:len(data) - len(data) % 2])
+            if not samples:
+                return 0
+            return int((sum(s * s for s in samples) / len(samples)) ** 0.5)
+
+        @staticmethod
+        def alaw2lin(data: bytes, width: int) -> bytes:
+            """No-op stub — A-law decode not implemented; return zeros."""
+            return bytes(len(data) * 2)
+
+    audioop = _AudiopStub()  # type: ignore[assignment]
 from typing import Callable, Optional, List, Dict, Any
 import websockets.exceptions
 from websockets.asyncio.client import ClientConnection
@@ -362,6 +422,8 @@ class DeepgramProvider(AIProviderInterface):
 
             # Persist call context for downstream events
             self.call_id = call_id
+            # Clear per-call warning counters to prevent unbounded dict growth across calls
+            self._low_rms_warnings_logged.clear()
             # Per-call tool allowlist (contexts are the source of truth).
             # Missing/None is treated as [] for safety.
             if context and "tools" in context:
@@ -462,7 +524,9 @@ class DeepgramProvider(AIProviderInterface):
         # Get configured agent language (default: "en")
         agent_language = str(self._get_config_value("agent_language", "en") or "").strip() or "en"
         
-        # Build settings with configured audio formats
+        # Build settings with configured audio formats.
+        # NOTE: listen_model and think_model come from config (lines above), do NOT hardcode here.
+        think_temperature = float(self._get_config_value("temperature", 0.7) or 0.7)
         settings = {
             "type": "Settings",
             "audio": {
@@ -471,22 +535,22 @@ class DeepgramProvider(AIProviderInterface):
             },
             "agent": {
                 "language": agent_language,
-                "listen": { 
-                    "provider": { 
-                        "type": "deepgram", 
-                        "model": "nova-3"  # Twilio uses nova-3
-                    } 
+                "listen": {
+                    "provider": {
+                        "type": "deepgram",
+                        "model": listen_model,  # from config (nova-3, nova-2-general, etc.)
+                    }
                 },
-                "think": { 
-                    "provider": { 
-                        "type": "open_ai", 
-                        "model": "gpt-4o-mini",  # Twilio uses gpt-4o-mini
-                        "temperature": 0.7
-                    }, 
-                    "prompt": think_prompt 
+                "think": {
+                    "provider": {
+                        "type": "open_ai",
+                        "model": think_model,  # from config (gpt-4o, gpt-4o-mini, etc.)
+                        "temperature": think_temperature,
+                    },
+                    "prompt": think_prompt
                 },
                 "speak": {
-                    "provider": {"type": "deepgram", "model": speak_model}  # Revert: keep provider format
+                    "provider": {"type": "deepgram", "model": speak_model}
                 },
                 "greeting": greeting_val
             }
@@ -803,14 +867,22 @@ class DeepgramProvider(AIProviderInterface):
                     if self._prestream_queue and self._settings_acked:
                         try:
                             for q in self._prestream_queue:
-                                await self.websocket.send(q)
+                                await asyncio.wait_for(self.websocket.send(q), timeout=5.0)
+                        except asyncio.TimeoutError:
+                            logger.warning("Deepgram prestream flush timed out", call_id=self.call_id)
+                            self._is_audio_flowing = False
                         except Exception:
                             logger.debug("Deepgram prestream flush failed", exc_info=True)
                         finally:
                             self._prestream_queue.clear()
 
                     for fr in frames_to_send:
-                        await self.websocket.send(fr)
+                        try:
+                            await asyncio.wait_for(self.websocket.send(fr), timeout=5.0)
+                        except asyncio.TimeoutError:
+                            logger.warning("Deepgram send_audio (pcm) timed out", call_id=self.call_id)
+                            self._is_audio_flowing = False
+                            break
                 else:
                     if not self._settings_acked:
                         try:
@@ -824,13 +896,20 @@ class DeepgramProvider(AIProviderInterface):
                     if self._prestream_queue:
                         try:
                             for q in self._prestream_queue:
-                                await self.websocket.send(q)
+                                await asyncio.wait_for(self.websocket.send(q), timeout=5.0)
+                        except asyncio.TimeoutError:
+                            logger.warning("Deepgram prestream flush (ulaw) timed out", call_id=self.call_id)
+                            self._is_audio_flowing = False
                         except Exception:
                             logger.debug("Deepgram prestream flush failed", exc_info=True)
                         finally:
                             self._prestream_queue.clear()
 
-                    await self.websocket.send(payload)
+                    try:
+                        await asyncio.wait_for(self.websocket.send(payload), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        logger.warning("Deepgram send_audio (ulaw) timed out", call_id=self.call_id)
+                        self._is_audio_flowing = False
             except websockets.exceptions.ConnectionClosed as e:
                 logger.debug("Could not send audio packet: Connection closed.", code=e.code, reason=e.reason)
             except Exception:

@@ -6,6 +6,7 @@ import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { Save, Download, AlertCircle, Settings, Server, Trash2, RefreshCw, Loader2 } from 'lucide-react';
 import yaml from 'js-yaml';
 import { sanitizeConfigForSave } from '../utils/configSanitizers';
+import { useTranslation } from 'react-i18next';
 
 // Import Config Components
 import GeneralConfig from '../components/config/GeneralConfig';
@@ -26,11 +27,12 @@ import TelnyxProviderForm from '../components/config/providers/TelnyxProviderFor
 
 
 const ConfigEditor = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [activeTab, setActiveTab] = useState<'general' | 'asterisk' | 'contexts' | 'providers' | 'pipelines' | 'vad' | 'streaming' | 'llm' | 'tools' | 'audiosocket' | 'yaml'>('general');
     const [yamlContent, setYamlContent] = useState('');
     const [parsedConfig, setParsedConfig] = useState<any>({});
-    
+
     // UI State
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -61,16 +63,16 @@ const ConfigEditor = () => {
             try {
                 const parsed = yaml.load(res.data.content) as any;
                 if (!parsed) {
-                    setError("Failed to parse configuration: Empty result");
+                    setError(t('configEditor.toasts.parseFailedEmpty'));
                     return;
                 }
                 setParsedConfig(parsed);
             } catch (e: any) {
                 console.error("Failed to parse YAML", e);
-                setError(`Failed to parse YAML: ${e.message}`);
+                setError(t('configEditor.toasts.parseFailed', { msg: e.message }));
             }
         } catch (err: any) {
-            setError('Failed to load configuration');
+            setError(t('configEditor.toasts.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -110,14 +112,14 @@ const ConfigEditor = () => {
             }
 
             const response = await axios.post('/api/config/yaml', { content: contentToSave });
-            setSuccess(response.data?.message || 'Configuration saved successfully');
+            setSuccess(response.data?.message || t('configEditor.toasts.saveSuccess'));
             setTimeout(() => setSuccess(null), 5000);
 
             const warnings = response.data?.warnings;
             if (Array.isArray(warnings) && warnings.length > 0) {
                 const shown = warnings.slice(0, 6).join('; ');
                 const suffix = warnings.length > 6 ? ` (+${warnings.length - 6} more)` : '';
-                setWarning(`Saved with warnings: ${shown}${suffix}`);
+                setWarning(t('configEditor.toasts.saveWarning', { msg: shown, suffix }));
                 setTimeout(() => setWarning(null), 15000);
             }
 
@@ -137,7 +139,7 @@ const ConfigEditor = () => {
             }
         } catch (err: any) {
             console.error(err);
-            const msg = err.response?.data?.detail || 'Failed to save configuration';
+            const msg = err.response?.data?.detail || t('configEditor.toasts.saveFailed');
             setError(msg);
             setTimeout(() => setError(null), 10000);
         } finally {
@@ -151,9 +153,9 @@ const ConfigEditor = () => {
 
         if (response.data?.status === 'warning') {
             const confirmForce = await confirm({
-                title: 'Force Restart?',
-                description: `${response.data.message}\n\nDo you want to force restart anyway? This may disconnect active calls.`,
-                confirmText: 'Force Restart',
+                title: t('configEditor.toasts.forceRestartTitle'),
+                description: t('configEditor.toasts.forceRestartDesc', { msg: response.data.message }),
+                confirmText: t('configEditor.toasts.forceRestartBtn'),
                 variant: 'destructive'
             });
             if (confirmForce) {
@@ -165,14 +167,14 @@ const ConfigEditor = () => {
         }
 
         if (response.data?.status === 'degraded') {
-            setWarning(`AI Engine restarted but may not be fully healthy: ${response.data.output || 'Health check issue'}. Verify manually.`);
+            setWarning(t('configEditor.toasts.restartDegraded', { msg: response.data.output || 'Health check issue' }));
             setTimeout(() => setWarning(null), 15000);
             return;
         }
 
         setPendingApply(false);
         setApplyPlan([]);
-        setSuccess('Changes applied: AI Engine restarted.');
+        setSuccess(t('configEditor.toasts.restartSuccess'));
         setTimeout(() => setSuccess(null), 5000);
     };
 
@@ -188,7 +190,7 @@ const ConfigEditor = () => {
                 const endpoint = item?.endpoint || '/api/system/containers/ai_engine/reload';
                 const resp = await axios.post(endpoint);
                 if (resp.data?.restart_required || resp.data?.status === 'partial') {
-                    setWarning('Hot reload completed but some changes still require an AI Engine restart.');
+                    setWarning(t('configEditor.toasts.hotReloadWarning'));
                     setTimeout(() => setWarning(null), 15000);
                     setApplyPlan([{ service: 'ai_engine', method: 'restart', endpoint: '/api/system/containers/ai_engine/restart' }]);
                     setApplyMethod('restart');
@@ -198,14 +200,14 @@ const ConfigEditor = () => {
 
                 setPendingApply(false);
                 setApplyPlan([]);
-                setSuccess('Changes applied: AI Engine hot reloaded.');
+                setSuccess(t('configEditor.toasts.hotReloadSuccess'));
                 setTimeout(() => setSuccess(null), 5000);
                 return;
             }
 
             await restartAiEngine(false);
         } catch (err: any) {
-            const msg = err.response?.data?.detail || err.message || 'Failed to apply changes';
+            const msg = err.response?.data?.detail || err.message || t('configEditor.toasts.applyFailed');
             setError(msg);
             setTimeout(() => setError(null), 10000);
         } finally {
@@ -223,7 +225,7 @@ const ConfigEditor = () => {
                 const parsed = yaml.load(yamlContent) as any;
                 setParsedConfig(parsed);
             } catch (e) {
-                toast.error('Invalid YAML, cannot switch to form view. Please fix errors first.');
+                toast.error(t('configEditor.toasts.invalidYamlSwitch'));
                 return;
             }
         }
@@ -239,9 +241,9 @@ const ConfigEditor = () => {
 
     const handleProviderDelete = async (name: string) => {
         const confirmed = await confirm({
-            title: 'Delete Provider?',
-            description: `Are you sure you want to delete provider "${name}"?`,
-            confirmText: 'Delete',
+            title: t('configEditor.toasts.deleteProviderTitle'),
+            description: t('configEditor.toasts.deleteProviderDesc', { name }),
+            confirmText: t('configEditor.toasts.deleteProviderBtn'),
             variant: 'destructive'
         });
         if (!confirmed) return;
@@ -260,7 +262,7 @@ const ConfigEditor = () => {
         // A9: Require provider name before save
         const providerName = isNewProvider ? providerForm.name?.trim() : editingProvider;
         if (!providerName) {
-            setError('Provider name is required');
+            setError(t('configEditor.toasts.providerNameReq'));
             return;
         }
 
@@ -269,12 +271,12 @@ const ConfigEditor = () => {
 
         // Remove name from the config object itself as it's the key
         const { name, ...providerData } = providerForm;
-        
+
         // A3: Persist provider type when saving new providers
         if (isNewProvider && newProviderType) {
             providerData.type = newProviderType;
         }
-        
+
         newConfig.providers[providerName] = providerData;
 
         setParsedConfig(newConfig);
@@ -289,18 +291,18 @@ const ConfigEditor = () => {
         // Common fields (Name)
         const commonFields = (
             <div className="mb-4 space-y-2">
-                <label className="text-sm font-medium">Provider Name</label>
+                <label className="text-sm font-medium">{t('configEditor.providers.modal.providerNameLbl')}</label>
                 <input
                     type="text"
                     className="w-full p-2 rounded border border-input bg-background"
                     value={providerForm.name || ''}
                     onChange={(e) => setProviderForm({ ...providerForm, name: e.target.value })}
                     disabled={!isNewProvider}
-                    placeholder="e.g., my_deepgram"
+                    placeholder={t('configEditor.providers.modal.providerNamePlace')}
                 />
                 {isNewProvider && (
                     <div className="mt-2">
-                        <label className="text-sm font-medium">Provider Type</label>
+                        <label className="text-sm font-medium">{t('configEditor.providers.modal.providerTypeLbl')}</label>
                         <select
                             className="w-full p-2 rounded border border-input bg-background"
                             value={newProviderType}
@@ -310,13 +312,13 @@ const ConfigEditor = () => {
                                 setProviderForm({ name: providerForm.name });
                             }}
                         >
-                            <option value="deepgram">Deepgram</option>
-                            <option value="elevenlabs">ElevenLabs TTS / Agent</option>
-                            <option value="openai_realtime">OpenAI Realtime</option>
-                            <option value="google_live">Google Live</option>
-                            <option value="local">Local</option>
-                            <option value="openai">OpenAI (Standard)</option>
-                            <option value="telnyx">Telnyx (LLM)</option>
+                            <option value="deepgram">{t('configEditor.providers.modal.types.deepgram')}</option>
+                            <option value="elevenlabs">{t('configEditor.providers.modal.types.elevenlabs')}</option>
+                            <option value="openai_realtime">{t('configEditor.providers.modal.types.openai_realtime')}</option>
+                            <option value="google_live">{t('configEditor.providers.modal.types.google_live')}</option>
+                            <option value="local">{t('configEditor.providers.modal.types.local')}</option>
+                            <option value="openai">{t('configEditor.providers.modal.types.openai')}</option>
+                            <option value="telnyx">{t('configEditor.providers.modal.types.telnyx')}</option>
                         </select>
                     </div>
                 )}
@@ -370,28 +372,28 @@ const ConfigEditor = () => {
     };
 
     const tabs = [
-        { id: 'general', label: 'General' },
-        { id: 'asterisk', label: 'Asterisk' },
-        { id: 'contexts', label: 'Contexts' },
-        { id: 'providers', label: 'Providers' },
-        { id: 'pipelines', label: 'Pipelines' },
-        { id: 'vad', label: 'VAD' },
-        { id: 'streaming', label: 'Streaming' },
-        { id: 'llm', label: 'LLM' },
-        { id: 'tools', label: 'Tools' },
-        { id: 'audiosocket', label: 'AudioSocket' },
-        { id: 'yaml', label: 'Raw YAML' },
+        { id: 'general', label: t('configEditor.tabs.general') },
+        { id: 'asterisk', label: t('configEditor.tabs.asterisk') },
+        { id: 'contexts', label: t('configEditor.tabs.contexts') },
+        { id: 'providers', label: t('configEditor.tabs.providers') },
+        { id: 'pipelines', label: t('configEditor.tabs.pipelines') },
+        { id: 'vad', label: t('configEditor.tabs.vad') },
+        { id: 'streaming', label: t('configEditor.tabs.streaming') },
+        { id: 'llm', label: t('configEditor.tabs.llm') },
+        { id: 'tools', label: t('configEditor.tabs.tools') },
+        { id: 'audiosocket', label: t('configEditor.tabs.audiosocket') },
+        { id: 'yaml', label: t('configEditor.tabs.yaml') },
     ];
 
     return (
         <div className="h-full flex flex-col space-y-4">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Configuration</h1>
+                <h1 className="text-2xl font-bold">{t('configEditor.title')}</h1>
                 <div className="flex gap-2 items-center">
                     <div className="hidden xl:flex items-center text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-full border border-amber-200 dark:border-amber-900/50 mr-2">
                         <AlertCircle className="w-3.5 h-3.5 mr-1.5" />
-                        <span className="font-medium">Warning:</span>
-                        <span className="ml-1">Saves overwrite the full config file</span>
+                        <span className="font-medium">{t('configEditor.warningTitle')}</span>
+                        <span className="ml-1">{t('configEditor.warningDesc')}</span>
                     </div>
                     <button
                         onClick={async () => {
@@ -405,16 +407,16 @@ const ConfigEditor = () => {
                                 document.body.appendChild(link);
                                 link.click();
                                 link.remove();
-                                setSuccess('Configuration exported successfully');
+                                setSuccess(t('configEditor.toasts.exportSuccess'));
                                 setTimeout(() => setSuccess(null), 3000);
                             } catch (err: any) {
-                                setError('Failed to export configuration');
+                                setError(t('configEditor.toasts.exportFailed'));
                             }
                         }}
                         className="flex items-center px-4 py-2 bg-secondary text-foreground border border-border rounded-md hover:bg-accent"
                     >
                         <Download className="w-4 h-4 mr-2" />
-                        Export
+                        {t('configEditor.exportBtn')}
                     </button>
                     <button
                         onClick={handleSave}
@@ -422,7 +424,7 @@ const ConfigEditor = () => {
                         className="flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
                     >
                         <Save className="w-4 h-4 mr-2" />
-                        Save Changes
+                        {t('configEditor.saveBtn')}
                     </button>
                 </div>
             </div>
@@ -452,37 +454,36 @@ const ConfigEditor = () => {
                     <button onClick={() => setWarning(null)} className="hover:opacity-70">×</button>
                 </div>
             )}
-            
+
             {success && (
                 <div className="p-4 bg-green-500/10 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 flex justify-between items-center">
                     <span>{success}</span>
                     <button onClick={() => setSuccess(null)} className="hover:opacity-70">×</button>
                 </div>
             )}
-            
+
             {pendingApply && (
                 <div className={`${pendingApply ? 'bg-orange-500/15 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/20'} border text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between`}>
                     <div className="flex items-center">
                         <AlertCircle className="w-5 h-5 mr-2" />
                         {applyMethod === 'hot_reload'
-                            ? 'Changes saved. Apply Changes to hot reload AI Engine without a restart.'
-                            : 'Changes saved. Restart AI Engine to apply changes.'}
+                            ? t('configEditor.applyBanner.hotReload')
+                            : t('configEditor.applyBanner.restart')}
                     </div>
                     <button
                         onClick={handleApplyChanges}
                         disabled={applying || !pendingApply}
-                        className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                            pendingApply
+                        className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingApply
                                 ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
                                 : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                        } disabled:opacity-50`}
+                            } disabled:opacity-50`}
                     >
                         {applying ? (
                             <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                         ) : (
                             <RefreshCw className="w-3 h-3 mr-1.5" />
                         )}
-                        {applying ? 'Applying...' : applyMethod === 'hot_reload' ? 'Apply Changes' : 'Restart AI Engine'}
+                        {applying ? t('configEditor.applyBanner.applyingBtn') : applyMethod === 'hot_reload' ? t('configEditor.applyBanner.applyBtn') : t('configEditor.applyBanner.restartBtn')}
                     </button>
                 </div>
             )}
@@ -560,9 +561,9 @@ const ConfigEditor = () => {
                     <div className="space-y-6">
                         <div className="flex justify-between items-center">
                             <div>
-                                <h3 className="text-lg font-semibold">AI Providers</h3>
+                                <h3 className="text-lg font-semibold">{t('configEditor.providers.title')}</h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Configure connections to external AI services (STT, LLM, TTS)
+                                    {t('configEditor.providers.desc')}
                                 </p>
                             </div>
                             <button
@@ -570,7 +571,7 @@ const ConfigEditor = () => {
                                 className="flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
                             >
                                 <Server className="w-4 h-4 mr-2" />
-                                Add Provider
+                                {t('configEditor.providers.addBtn')}
                             </button>
                         </div>
 
@@ -580,8 +581,8 @@ const ConfigEditor = () => {
                                     <div>
                                         <h4 className="font-bold text-lg">{name}</h4>
                                         <div className="text-sm text-muted-foreground mt-1">
-                                            {providerData.model && <span className="mr-3">Model: {providerData.model}</span>}
-                                            {providerData.voice && <span>Voice: {providerData.voice}</span>}
+                                            {providerData.model && <span className="mr-3">{t('configEditor.providers.modelLbl')} {providerData.model}</span>}
+                                            {providerData.voice && <span>{t('configEditor.providers.voiceLbl')} {providerData.voice}</span>}
                                         </div>
                                     </div>
                                     <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -607,7 +608,7 @@ const ConfigEditor = () => {
                             <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                                 <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
                                     <h2 className="text-xl font-bold">
-                                        {isNewProvider ? 'Add Provider' : `Edit Provider: ${editingProvider}`}
+                                        {isNewProvider ? t('configEditor.providers.modal.addTitle') : t('configEditor.providers.modal.editTitle', { name: editingProvider })}
                                     </h2>
 
                                     {renderProviderForm()}
@@ -617,13 +618,13 @@ const ConfigEditor = () => {
                                             onClick={() => setEditingProvider(null)}
                                             className="px-4 py-2 rounded border border-input hover:bg-accent"
                                         >
-                                            Cancel
+                                            {t('configEditor.providers.modal.cancelBtn')}
                                         </button>
                                         <button
                                             onClick={handleProviderSave}
                                             className="px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90"
                                         >
-                                            Save Provider
+                                            {t('configEditor.providers.modal.saveBtn')}
                                         </button>
                                     </div>
                                 </div>
@@ -636,7 +637,7 @@ const ConfigEditor = () => {
                     <div className="grid grid-cols-1 gap-4">
                         {Object.keys(parsedConfig.pipelines || {}).length === 0 && (
                             <div className="text-center p-8 text-muted-foreground">
-                                No pipelines found.
+                                {t('configEditor.providers.noPipelines')}
                             </div>
                         )}
                         {Object.entries(parsedConfig.pipelines || {}).map(([name, config]: [string, any]) => (

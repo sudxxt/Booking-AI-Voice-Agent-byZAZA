@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, ArrowRight, Loader2, Cloud, Server, Shield, Zap, SkipForward, CheckCircle, CheckCircle2, XCircle, Terminal, Copy, HardDrive, Play, RefreshCw, Info, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
@@ -53,6 +54,7 @@ type LocalModelsStatus = {
 
 const Wizard = () => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -277,13 +279,13 @@ exten => s,1,NoOp(AI Agent Call)
     // Auto-select first available model when language changes
     useEffect(() => {
         if (modelCatalog?.stt?.length > 0) {
-            const sttModels = modelCatalog.stt.filter((m: any) => 
+            const sttModels = modelCatalog.stt.filter((m: any) =>
                 m.language === selectedLanguage || m.language === 'multi'
             );
-            const ttsModels = modelCatalog.tts.filter((m: any) => 
+            const ttsModels = modelCatalog.tts.filter((m: any) =>
                 m.language === selectedLanguage || m.language === 'multi'
             );
-            
+
             // Auto-select first STT model for the language
             if (sttModels.length > 0 && !sttModels.find((m: any) => m.id === config.local_stt_model)) {
                 setConfig(prev => ({
@@ -292,7 +294,7 @@ exten => s,1,NoOp(AI Agent Call)
                     local_stt_backend: sttModels[0].backend
                 }));
             }
-            
+
             // Auto-select first TTS model for the language
             if (ttsModels.length > 0 && !ttsModels.find((m: any) => m.id === config.local_tts_model)) {
                 setConfig(prev => ({
@@ -566,13 +568,13 @@ exten => s,1,NoOp(AI Agent Call)
                         downloadOutput: res.data.output || [],
                         downloadProgress: res.data.running
                             ? {
-                                  bytes_downloaded: res.data.bytes_downloaded || 0,
-                                  total_bytes: res.data.total_bytes || 0,
-                                  percent: res.data.percent || 0,
-                                  speed_bps: res.data.speed_bps || 0,
-                                  eta_seconds: res.data.eta_seconds,
-                                  current_file: res.data.current_file || ''
-                              }
+                                bytes_downloaded: res.data.bytes_downloaded || 0,
+                                total_bytes: res.data.total_bytes || 0,
+                                percent: res.data.percent || 0,
+                                speed_bps: res.data.speed_bps || 0,
+                                eta_seconds: res.data.eta_seconds,
+                                current_file: res.data.current_file || ''
+                            }
                             : null
                     }));
 
@@ -910,7 +912,7 @@ exten => s,1,NoOp(AI Agent Call)
         >
             {recommended && (
                 <div className="absolute -top-3 left-4 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
-                    Recommended
+                    {t('wizard.provider.recommended')}
                 </div>
             )}
             <div className="flex items-start space-x-4">
@@ -930,19 +932,19 @@ exten => s,1,NoOp(AI Agent Call)
             <div className="max-w-3xl w-full bg-card border border-border rounded-lg shadow-lg p-8">
                 <div className="mb-8 flex justify-between items-start">
                     <div>
-                        <h1 className="text-3xl font-bold text-foreground mb-2">Setup Wizard</h1>
+                        <h1 className="text-3xl font-bold text-foreground mb-2">{t('wizard.title')}</h1>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground overflow-x-auto">
-                            <span className={step >= 1 ? "text-primary font-medium whitespace-nowrap" : "whitespace-nowrap"}>1. Welcome</span>
+                            <span className={step >= 1 ? "text-primary font-medium whitespace-nowrap" : "whitespace-nowrap"}>{t('wizard.steps.welcome')}</span>
                             <span>&rarr;</span>
-                            <span className={step >= 2 ? "text-primary font-medium whitespace-nowrap" : "whitespace-nowrap"}>2. Provider</span>
+                            <span className={step >= 2 ? "text-primary font-medium whitespace-nowrap" : "whitespace-nowrap"}>{t('wizard.steps.provider')}</span>
                             <span>&rarr;</span>
-                            <span className={step >= 3 ? "text-primary font-medium whitespace-nowrap" : "whitespace-nowrap"}>3. API Keys</span>
+                            <span className={step >= 3 ? "text-primary font-medium whitespace-nowrap" : "whitespace-nowrap"}>{t('wizard.steps.apiKeys')}</span>
                             <span>&rarr;</span>
-                            <span className={step >= 4 ? "text-primary font-medium whitespace-nowrap" : "whitespace-nowrap"}>4. Config</span>
+                            <span className={step >= 4 ? "text-primary font-medium whitespace-nowrap" : "whitespace-nowrap"}>{t('wizard.steps.config')}</span>
                             {step === 5 && (
                                 <>
                                     <span>&rarr;</span>
-                                    <span className="text-primary font-medium whitespace-nowrap">5. Done</span>
+                                    <span className="text-primary font-medium whitespace-nowrap">{t('wizard.steps.done')}</span>
                                 </>
                             )}
                         </div>
@@ -954,7 +956,7 @@ exten => s,1,NoOp(AI Agent Call)
                             className="text-sm text-muted-foreground hover:text-foreground flex items-center"
                         >
                             <SkipForward className="w-4 h-4 mr-1" />
-                            Skip Setup
+                            {t('wizard.skipSetup')}
                         </button>
                     )}
                 </div>
@@ -969,13 +971,13 @@ exten => s,1,NoOp(AI Agent Call)
                 {step === 1 && (
                     <div className="space-y-6">
                         <div className="prose dark:prose-invert">
-                            <p className="text-lg">Welcome to the Asterisk AI Voice Agent setup.</p>
-                            <p>This wizard will help you configure the essential settings to get your agent up and running in minutes.</p>
+                            <p className="text-lg">{t('wizard.welcome.title')}</p>
+                            <p>{t('wizard.welcome.desc')}</p>
                             <div className="bg-muted p-4 rounded-lg">
-                                <h3 className="font-medium mb-2">You will need:</h3>
+                                <h3 className="font-medium mb-2">{t('wizard.welcome.need')}</h3>
                                 <ul className="list-disc list-inside space-y-1">
-                                    <li>API Keys (OpenAI, Deepgram, or Google)</li>
-                                    <li>Asterisk Connection Details (Host, Username, Password)</li>
+                                    <li>{t('wizard.welcome.needKeys')}</li>
+                                    <li>{t('wizard.welcome.needAsterisk')}</li>
                                 </ul>
                             </div>
                         </div>
@@ -984,61 +986,59 @@ exten => s,1,NoOp(AI Agent Call)
 
                 {step === 2 && (
                     <div className="space-y-4">
-                        <h2 className="text-xl font-semibold mb-4">Select Your AI Provider</h2>
+                        <h2 className="text-xl font-semibold mb-4">{t('wizard.provider.title')}</h2>
                         <div className="grid gap-4">
                             <ProviderCard
                                 id="google_live"
-                                title="Google Gemini Live"
-                                description="Real-time bidirectional streaming. Native audio processing, ultra-low latency (<1s)."
+                                title={t('wizard.provider.cards.google_live.title')}
+                                description={t('wizard.provider.cards.google_live.desc')}
                                 icon={Zap}
                                 recommended={true}
                             />
                             <ProviderCard
                                 id="openai_realtime"
-                                title="OpenAI Realtime"
-                                description="Fastest setup, natural conversations. Uses OpenAI's Realtime API for low-latency voice interactions."
+                                title={t('wizard.provider.cards.openai_realtime.title')}
+                                description={t('wizard.provider.cards.openai_realtime.desc')}
                                 icon={Cloud}
                             />
                             <ProviderCard
                                 id="deepgram"
-                                title="Deepgram Voice Agent"
-                                description="Enterprise-grade with 'Think' stage. Best for complex queries and high reliability."
+                                title={t('wizard.provider.cards.deepgram.title')}
+                                description={t('wizard.provider.cards.deepgram.desc')}
                                 icon={Server}
                             />
                             <ProviderCard
                                 id="local_hybrid"
-                                title="Local Hybrid"
-                                description="Privacy-focused. Audio stays local (STT/TTS), only text is sent to cloud LLM."
+                                title={t('wizard.provider.cards.local_hybrid.title')}
+                                description={t('wizard.provider.cards.local_hybrid.desc')}
                                 icon={Shield}
                             />
                             <ProviderCard
                                 id="local"
-                                title="Local (Full)"
-                                description="100% on-premises. All processing stays local - STT, LLM, and TTS. No API keys required."
+                                title={t('wizard.provider.cards.local.title')}
+                                description={t('wizard.provider.cards.local.desc')}
                                 icon={HardDrive}
                             />
                             <ProviderCard
                                 id="elevenlabs_agent"
-                                title="ElevenLabs Conversational"
-                                description="High-quality voices with pre-configured agent. Configure voice, prompt, and tools in ElevenLabs dashboard."
+                                title={t('wizard.provider.cards.elevenlabs_agent.title')}
+                                description={t('wizard.provider.cards.elevenlabs_agent.desc')}
                                 icon={Cloud}
                             />
                         </div>
                     </div>
-                )}
-
-                {step === 3 && (
+                )}                            {step === 3 && (
                     <div className="space-y-4">
-                        <h2 className="text-xl font-semibold mb-4">Configure API Keys</h2>
+                        <h2 className="text-xl font-semibold mb-4">{t('wizard.apiKeys.title')}</h2>
 
                         {config.provider === 'openai_realtime' && (
                             <div className="space-y-4">
                                 <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-md border border-blue-100 dark:border-blue-900/20 text-sm text-blue-800 dark:text-blue-300">
                                     <p className="font-semibold mb-1">OpenAI Realtime</p>
-                                    <p className="text-blue-700 dark:text-blue-400">Requires an OpenAI API key.</p>
+                                    <p className="text-blue-700 dark:text-blue-400">{t('wizard.apiKeys.openaiRealtime.desc')}</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">OpenAI API Key</label>
+                                    <label className="text-sm font-medium">{t('wizard.apiKeys.openaiRealtime.keyLabel')}</label>
                                     <div className="flex space-x-2">
                                         <input
                                             type="password"
@@ -1053,64 +1053,64 @@ exten => s,1,NoOp(AI Agent Call)
                                             className="px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
                                             disabled={loading}
                                         >
-                                            Test
+                                            {t('wizard.apiKeys.test')}
                                         </button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Required for OpenAI Realtime provider.</p>
+                                    <p className="text-xs text-muted-foreground">{t('wizard.apiKeys.openaiRealtime.keyHelp')}</p>
                                 </div>
                             </div>
                         )}
 
                         {config.provider === 'local_hybrid' && (
                             <div className="space-y-4">
-	                                <div className="space-y-6 border-b pb-6 mb-6">
-	                                    <h3 className="font-medium text-lg">Local AI Configuration</h3>
+                                <div className="space-y-6 border-b pb-6 mb-6">
+                                    <h3 className="font-medium text-lg">{t('wizard.apiKeys.localHybrid.title')}</h3>
 
-	                                    <div className="space-y-2">
-	                                        <label className="text-sm font-medium">Language</label>
-	                                        <select
-	                                            className="w-full p-2 rounded-md border border-input bg-background"
-	                                            value={selectedLanguage}
-	                                            onChange={e => setSelectedLanguage(e.target.value)}
-	                                        >
-	                                            {Object.keys(availableLanguages.languages || {}).length === 0 && (
-	                                                <option value="en-US">en-US</option>
-	                                            )}
-	                                            {Object.keys(availableLanguages.languages || {})
-	                                                .sort()
-	                                                .map((lang) => (
-	                                                    <option key={lang} value={lang}>
-	                                                        {availableLanguages.language_names?.[lang] || lang}
-	                                                    </option>
-	                                                ))}
-	                                        </select>
-	                                        <p className="text-xs text-muted-foreground">
-	                                            Used to filter available local STT/TTS models.
-	                                        </p>
-	                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">{t('wizard.apiKeys.localHybrid.langLabel')}</label>
+                                        <select
+                                            className="w-full p-2 rounded-md border border-input bg-background"
+                                            value={selectedLanguage}
+                                            onChange={e => setSelectedLanguage(e.target.value)}
+                                        >
+                                            {Object.keys(availableLanguages.languages || {}).length === 0 && (
+                                                <option value="en-US">en-US</option>
+                                            )}
+                                            {Object.keys(availableLanguages.languages || {})
+                                                .sort()
+                                                .map((lang) => (
+                                                    <option key={lang} value={lang}>
+                                                        {availableLanguages.language_names?.[lang] || lang}
+                                                    </option>
+                                                ))}
+                                        </select>
+                                        <p className="text-xs text-muted-foreground">
+                                            {t('wizard.apiKeys.localHybrid.langDesc')}
+                                        </p>
+                                    </div>
 
-	                                    {/* STT Config */}
+                                    {/* STT Config */}
                                     <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
-                                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Speech-to-Text (STT)</h4>
+                                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">{t('wizard.apiKeys.localHybrid.stt.title')}</h4>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-sm font-medium">Backend</label>
-	                                                <select
-	                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
-	                                                    value={config.local_stt_backend}
-	                                                    onChange={e => {
-	                                                        const backend = e.target.value;
-	                                                        const candidates = (modelCatalog.stt || []).filter((m: any) => {
-	                                                            const langOk = m.language === selectedLanguage || m.language === 'multi';
-	                                                            return langOk && (m.backend || '').toLowerCase() === backend.toLowerCase();
-	                                                        });
-	                                                        setConfig({
-	                                                            ...config,
-	                                                            local_stt_backend: backend,
-	                                                            local_stt_model: candidates[0]?.id || ''
-	                                                        });
-	                                                    }}
-	                                                >
+                                                <label className="text-sm font-medium">{t('wizard.apiKeys.localHybrid.stt.backendLabel')}</label>
+                                                <select
+                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
+                                                    value={config.local_stt_backend}
+                                                    onChange={e => {
+                                                        const backend = e.target.value;
+                                                        const candidates = (modelCatalog.stt || []).filter((m: any) => {
+                                                            const langOk = m.language === selectedLanguage || m.language === 'multi';
+                                                            return langOk && (m.backend || '').toLowerCase() === backend.toLowerCase();
+                                                        });
+                                                        setConfig({
+                                                            ...config,
+                                                            local_stt_backend: backend,
+                                                            local_stt_model: candidates[0]?.id || ''
+                                                        });
+                                                    }}
+                                                >
                                                     <option value="vosk">Vosk (Local)</option>
                                                     <option value="kroko">Kroko (Local/Cloud)</option>
                                                     <option value="sherpa">Sherpa (Local)</option>
@@ -1131,78 +1131,78 @@ exten => s,1,NoOp(AI Agent Call)
                                                 </div>
                                             )}
                                         </div>
-	                                        {config.local_stt_backend === 'kroko' && !config.kroko_embedded && (
-	                                            <div>
-	                                                <label className="text-sm font-medium">Kroko API Key</label>
-	                                                <input
-	                                                    type="password"
-	                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
-	                                                    value={config.kroko_api_key || ''}
-	                                                    onChange={e => setConfig({ ...config, kroko_api_key: e.target.value })}
-	                                                    placeholder="Kroko API Key"
-	                                                />
-	                                            </div>
-	                                        )}
+                                        {config.local_stt_backend === 'kroko' && !config.kroko_embedded && (
+                                            <div>
+                                                <label className="text-sm font-medium">Kroko API Key</label>
+                                                <input
+                                                    type="password"
+                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
+                                                    value={config.kroko_api_key || ''}
+                                                    onChange={e => setConfig({ ...config, kroko_api_key: e.target.value })}
+                                                    placeholder="Kroko API Key"
+                                                />
+                                            </div>
+                                        )}
 
-	                                        <div className="space-y-2">
-	                                            <label className="text-sm font-medium">Model</label>
-	                                            <div className="flex space-x-2">
-	                                                <select
-	                                                    className="w-full p-2 rounded-md border border-input bg-background"
-	                                                    value={config.local_stt_model || ''}
-	                                                    onChange={e => {
-	                                                        const modelId = e.target.value;
-	                                                        const picked = (modelCatalog.stt || []).find((m: any) => m.id === modelId);
-	                                                        setConfig({
-	                                                            ...config,
-	                                                            local_stt_model: modelId,
-	                                                            local_stt_backend: picked?.backend || config.local_stt_backend
-	                                                        });
-	                                                    }}
-	                                                >
-	                                                    {(() => {
-	                                                        const backend = (config.local_stt_backend || 'vosk').toLowerCase();
-	                                                        const candidates = (modelCatalog.stt || []).filter((m: any) => {
-	                                                            const langOk = m.language === selectedLanguage || m.language === 'multi';
-	                                                            return langOk && (m.backend || '').toLowerCase() === backend;
-	                                                        });
-	                                                        if (!candidates.length) {
-	                                                            return <option value="">No catalog models found for {backend}</option>;
-	                                                        }
-	                                                        return candidates.map((m: any) => (
-	                                                            <option key={m.id} value={m.id}>
-	                                                                {m.name}
-	                                                                {m.size_display ? ` • ${m.size_display}` : ''}
-	                                                                {m.auto_download ? ' • Auto-download' : ''}
-	                                                            </option>
-	                                                        ));
-	                                                    })()}
-	                                                </select>
-	                                                {localHybridSttNeedsDownload && !localHybridSttInstalled && (
-	                                                    <button
-	                                                        type="button"
-	                                                        onClick={() =>
-	                                                            startSelectedModelsDownload({ skipLlmDownload: true, markDownloaded: false })
-	                                                        }
-	                                                        className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
-	                                                        disabled={localAIStatus.downloading}
-	                                                    >
-	                                                        Download
-	                                                    </button>
-	                                                )}
-	                                            </div>
-	                                            {localHybridSttNeedsDownload && (
-	                                                <p className="text-xs text-muted-foreground">
-	                                                    {localHybridSttInstalled ? 'Installed.' : 'Not installed yet. Download required before continuing.'}
-	                                                </p>
-	                                            )}
-	                                            {!localHybridSttNeedsDownload && localHybridSelectedSttModel?.auto_download && (
-	                                                <p className="text-xs text-amber-700 dark:text-amber-400">
-	                                                    This model auto-downloads on first use. You can continue, but the first call may take longer.
-	                                                </p>
-	                                            )}
-	                                        </div>
-	                                    </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Model</label>
+                                            <div className="flex space-x-2">
+                                                <select
+                                                    className="w-full p-2 rounded-md border border-input bg-background"
+                                                    value={config.local_stt_model || ''}
+                                                    onChange={e => {
+                                                        const modelId = e.target.value;
+                                                        const picked = (modelCatalog.stt || []).find((m: any) => m.id === modelId);
+                                                        setConfig({
+                                                            ...config,
+                                                            local_stt_model: modelId,
+                                                            local_stt_backend: picked?.backend || config.local_stt_backend
+                                                        });
+                                                    }}
+                                                >
+                                                    {(() => {
+                                                        const backend = (config.local_stt_backend || 'vosk').toLowerCase();
+                                                        const candidates = (modelCatalog.stt || []).filter((m: any) => {
+                                                            const langOk = m.language === selectedLanguage || m.language === 'multi';
+                                                            return langOk && (m.backend || '').toLowerCase() === backend;
+                                                        });
+                                                        if (!candidates.length) {
+                                                            return <option value="">No catalog models found for {backend}</option>;
+                                                        }
+                                                        return candidates.map((m: any) => (
+                                                            <option key={m.id} value={m.id}>
+                                                                {m.name}
+                                                                {m.size_display ? ` • ${m.size_display}` : ''}
+                                                                {m.auto_download ? ' • Auto-download' : ''}
+                                                            </option>
+                                                        ));
+                                                    })()}
+                                                </select>
+                                                {localHybridSttNeedsDownload && !localHybridSttInstalled && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            startSelectedModelsDownload({ skipLlmDownload: true, markDownloaded: false })
+                                                        }
+                                                        className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                                                        disabled={localAIStatus.downloading}
+                                                    >
+                                                        Download
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {localHybridSttNeedsDownload && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {localHybridSttInstalled ? 'Installed.' : 'Not installed yet. Download required before continuing.'}
+                                                </p>
+                                            )}
+                                            {!localHybridSttNeedsDownload && localHybridSelectedSttModel?.auto_download && (
+                                                <p className="text-xs text-amber-700 dark:text-amber-400">
+                                                    This model auto-downloads on first use. You can continue, but the first call may take longer.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
 
                                     {/* TTS Config */}
                                     <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
@@ -1210,116 +1210,116 @@ exten => s,1,NoOp(AI Agent Call)
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-sm font-medium">Backend</label>
-	                                                <select
-	                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
-	                                                    value={
-	                                                        config.local_tts_backend === 'kokoro'
-	                                                            ? (config.kokoro_mode === 'local' ? 'kokoro_local' : 'kokoro_cloud')
-	                                                            : config.local_tts_backend
-	                                                    }
-	                                                    onChange={e => {
-	                                                        const val = e.target.value;
-	                                                        let nextBackend = val;
-	                                                        let nextKokoroMode = config.kokoro_mode;
-	                                                        if (val === 'kokoro_local') {
-	                                                            nextBackend = 'kokoro';
-	                                                            nextKokoroMode = 'local';
-	                                                        } else if (val === 'kokoro_cloud') {
-	                                                            nextBackend = 'kokoro';
-	                                                            nextKokoroMode = 'api';
-	                                                        }
-	                                                        const candidates = (modelCatalog.tts || []).filter((m: any) => {
-	                                                            const langOk = m.language === selectedLanguage || m.language === 'multi';
-	                                                            return langOk && (m.backend || '').toLowerCase() === String(nextBackend).toLowerCase();
-	                                                        });
-	                                                        setConfig({
-	                                                            ...config,
-	                                                            local_tts_backend: nextBackend,
-	                                                            kokoro_mode: nextKokoroMode,
-	                                                            local_tts_model: candidates[0]?.id || ''
-	                                                        });
-	                                                    }}
-	                                                >
+                                                <select
+                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
+                                                    value={
+                                                        config.local_tts_backend === 'kokoro'
+                                                            ? (config.kokoro_mode === 'local' ? 'kokoro_local' : 'kokoro_cloud')
+                                                            : config.local_tts_backend
+                                                    }
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        let nextBackend = val;
+                                                        let nextKokoroMode = config.kokoro_mode;
+                                                        if (val === 'kokoro_local') {
+                                                            nextBackend = 'kokoro';
+                                                            nextKokoroMode = 'local';
+                                                        } else if (val === 'kokoro_cloud') {
+                                                            nextBackend = 'kokoro';
+                                                            nextKokoroMode = 'api';
+                                                        }
+                                                        const candidates = (modelCatalog.tts || []).filter((m: any) => {
+                                                            const langOk = m.language === selectedLanguage || m.language === 'multi';
+                                                            return langOk && (m.backend || '').toLowerCase() === String(nextBackend).toLowerCase();
+                                                        });
+                                                        setConfig({
+                                                            ...config,
+                                                            local_tts_backend: nextBackend,
+                                                            kokoro_mode: nextKokoroMode,
+                                                            local_tts_model: candidates[0]?.id || ''
+                                                        });
+                                                    }}
+                                                >
                                                     <option value="piper">Piper (Local)</option>
                                                     <option value="kokoro_local">Kokoro (Local)</option>
                                                     <option value="kokoro_cloud">Kokoro (Cloud/API)</option>
                                                     <option value="melotts">MeloTTS (Local/CPU)</option>
-	                                                </select>
-	                                            </div></div>
+                                                </select>
+                                            </div></div>
 
-	                                        <div className="space-y-2">
-	                                            <label className="text-sm font-medium">Model</label>
-	                                            <div className="flex space-x-2">
-	                                                <select
-	                                                    className="w-full p-2 rounded-md border border-input bg-background"
-	                                                    value={config.local_tts_model || ''}
-	                                                    onChange={e => {
-	                                                        const modelId = e.target.value;
-	                                                        const picked = (modelCatalog.tts || []).find((m: any) => m.id === modelId);
-	                                                        setConfig({
-	                                                            ...config,
-	                                                            local_tts_model: modelId,
-	                                                            local_tts_backend: picked?.backend || config.local_tts_backend
-	                                                        });
-	                                                    }}
-	                                                    disabled={(config.local_tts_backend || '').toLowerCase() === 'melotts'}
-	                                                >
-	                                                    {(() => {
-	                                                        const backend = (config.local_tts_backend || 'piper').toLowerCase();
-	                                                        if (backend === 'melotts') {
-	                                                            return <option value="">MeloTTS (no downloadable model)</option>;
-	                                                        }
-	                                                        const candidates = (modelCatalog.tts || []).filter((m: any) => {
-	                                                            const langOk = m.language === selectedLanguage || m.language === 'multi';
-	                                                            return langOk && (m.backend || '').toLowerCase() === backend;
-	                                                        });
-	                                                        if (!candidates.length) {
-	                                                            return <option value="">No catalog models found for {backend}</option>;
-	                                                        }
-	                                                        return candidates.map((m: any) => (
-	                                                            <option key={m.id} value={m.id}>
-	                                                                {m.name}
-	                                                                {m.size_display ? ` • ${m.size_display}` : ''}
-	                                                                {m.auto_download ? ' • Auto-download' : ''}
-	                                                            </option>
-	                                                        ));
-	                                                    })()}
-	                                                </select>
-	                                                {localHybridTtsNeedsDownload && !localHybridTtsInstalled && (
-	                                                    <button
-	                                                        type="button"
-	                                                        onClick={() =>
-	                                                            startSelectedModelsDownload({ skipLlmDownload: true, markDownloaded: false })
-	                                                        }
-	                                                        className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
-	                                                        disabled={localAIStatus.downloading}
-	                                                    >
-	                                                        Download
-	                                                    </button>
-	                                                )}
-	                                            </div>
-	                                            {localHybridTtsNeedsDownload && (
-	                                                <p className="text-xs text-muted-foreground">
-	                                                    {localHybridTtsInstalled ? 'Installed.' : 'Not installed yet. Download required before continuing.'}
-	                                                </p>
-	                                            )}
-	                                            {(config.local_tts_backend || '').toLowerCase() === 'kokoro' &&
-	                                                (config.kokoro_mode || 'local').toLowerCase() !== 'local' && (
-	                                                    <p className="text-xs text-amber-700 dark:text-amber-400">
-	                                                        Kokoro in cloud/API mode does not require local model downloads.
-	                                                    </p>
-	                                                )}
-	                                            {!localHybridTtsNeedsDownload && localHybridSelectedTtsModel?.auto_download && (
-	                                                <p className="text-xs text-amber-700 dark:text-amber-400">
-	                                                    This model auto-downloads on first use. You can continue, but the first call may take longer.
-	                                                </p>
-	                                            )}
-	                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Model</label>
+                                            <div className="flex space-x-2">
+                                                <select
+                                                    className="w-full p-2 rounded-md border border-input bg-background"
+                                                    value={config.local_tts_model || ''}
+                                                    onChange={e => {
+                                                        const modelId = e.target.value;
+                                                        const picked = (modelCatalog.tts || []).find((m: any) => m.id === modelId);
+                                                        setConfig({
+                                                            ...config,
+                                                            local_tts_model: modelId,
+                                                            local_tts_backend: picked?.backend || config.local_tts_backend
+                                                        });
+                                                    }}
+                                                    disabled={(config.local_tts_backend || '').toLowerCase() === 'melotts'}
+                                                >
+                                                    {(() => {
+                                                        const backend = (config.local_tts_backend || 'piper').toLowerCase();
+                                                        if (backend === 'melotts') {
+                                                            return <option value="">MeloTTS (no downloadable model)</option>;
+                                                        }
+                                                        const candidates = (modelCatalog.tts || []).filter((m: any) => {
+                                                            const langOk = m.language === selectedLanguage || m.language === 'multi';
+                                                            return langOk && (m.backend || '').toLowerCase() === backend;
+                                                        });
+                                                        if (!candidates.length) {
+                                                            return <option value="">No catalog models found for {backend}</option>;
+                                                        }
+                                                        return candidates.map((m: any) => (
+                                                            <option key={m.id} value={m.id}>
+                                                                {m.name}
+                                                                {m.size_display ? ` • ${m.size_display}` : ''}
+                                                                {m.auto_download ? ' • Auto-download' : ''}
+                                                            </option>
+                                                        ));
+                                                    })()}
+                                                </select>
+                                                {localHybridTtsNeedsDownload && !localHybridTtsInstalled && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            startSelectedModelsDownload({ skipLlmDownload: true, markDownloaded: false })
+                                                        }
+                                                        className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                                                        disabled={localAIStatus.downloading}
+                                                    >
+                                                        Download
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {localHybridTtsNeedsDownload && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {localHybridTtsInstalled ? 'Installed.' : 'Not installed yet. Download required before continuing.'}
+                                                </p>
+                                            )}
+                                            {(config.local_tts_backend || '').toLowerCase() === 'kokoro' &&
+                                                (config.kokoro_mode || 'local').toLowerCase() !== 'local' && (
+                                                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                                                        Kokoro in cloud/API mode does not require local model downloads.
+                                                    </p>
+                                                )}
+                                            {!localHybridTtsNeedsDownload && localHybridSelectedTtsModel?.auto_download && (
+                                                <p className="text-xs text-amber-700 dark:text-amber-400">
+                                                    This model auto-downloads on first use. You can continue, but the first call may take longer.
+                                                </p>
+                                            )}
+                                        </div>
 
-	                                        {config.local_tts_backend === 'kokoro' && config.kokoro_mode === 'api' && (
-	                                            <div>
-	                                                <label className="text-sm font-medium">Kokoro API Key</label>
-	                                                <input
+                                        {config.local_tts_backend === 'kokoro' && config.kokoro_mode === 'api' && (
+                                            <div>
+                                                <label className="text-sm font-medium">Kokoro API Key</label>
+                                                <input
                                                     type="password"
                                                     className="w-full p-2 rounded-md border border-input bg-background mt-1"
                                                     value={config.kokoro_api_key || ''}
@@ -1328,9 +1328,9 @@ exten => s,1,NoOp(AI Agent Call)
                                                 />
                                             </div>
                                         )}
-	                                        {config.local_tts_backend === 'kokoro' && config.kokoro_mode === 'local' && (
-	                                            <div>
-	                                                <label className="text-sm font-medium">Voice</label>
+                                        {config.local_tts_backend === 'kokoro' && config.kokoro_mode === 'local' && (
+                                            <div>
+                                                <label className="text-sm font-medium">Voice</label>
                                                 <select
                                                     className="w-full p-2 rounded-md border border-input bg-background mt-1"
                                                     value={config.kokoro_voice || 'af_heart'}
@@ -1351,39 +1351,39 @@ exten => s,1,NoOp(AI Agent Call)
                                                 <p className="text-xs text-muted-foreground mt-1">
                                                     af=American Female, am=American Male, bf=British Female, bm=British Male
                                                 </p>
-	                                            </div>
-	                                        )}
-	                                    </div>
+                                            </div>
+                                        )}
+                                    </div>
 
-	                                    {(localHybridMissingRequired || localAIStatus.downloading) && (
-	                                        <div className="p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20 space-y-3">
-	                                            {localHybridMissingRequired && (
-	                                                <p className="text-sm text-amber-900 dark:text-amber-200">
-	                                                    Selected local STT/TTS models are not installed yet. Download them before continuing.
-	                                                </p>
-	                                            )}
-	                                            {localAIStatus.downloading && (
-	                                                <p className="text-sm text-amber-900 dark:text-amber-200">
-	                                                    Download in progress…
-	                                                </p>
-	                                            )}
-	                                            <div className="flex justify-end">
-	                                                <button
-	                                                    type="button"
-	                                                    onClick={() =>
-	                                                        startSelectedModelsDownload({ skipLlmDownload: true, markDownloaded: false })
-	                                                    }
-	                                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-	                                                    disabled={localAIStatus.downloading}
-	                                                >
-	                                                    {localAIStatus.downloading ? 'Downloading…' : 'Download Selected Models'}
-	                                                </button>
-	                                            </div>
-	                                        </div>
-	                                    )}
+                                    {(localHybridMissingRequired || localAIStatus.downloading) && (
+                                        <div className="p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20 space-y-3">
+                                            {localHybridMissingRequired && (
+                                                <p className="text-sm text-amber-900 dark:text-amber-200">
+                                                    Selected local STT/TTS models are not installed yet. Download them before continuing.
+                                                </p>
+                                            )}
+                                            {localAIStatus.downloading && (
+                                                <p className="text-sm text-amber-900 dark:text-amber-200">
+                                                    Download in progress…
+                                                </p>
+                                            )}
+                                            <div className="flex justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        startSelectedModelsDownload({ skipLlmDownload: true, markDownloaded: false })
+                                                    }
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                                                    disabled={localAIStatus.downloading}
+                                                >
+                                                    {localAIStatus.downloading ? 'Downloading…' : 'Download Selected Models'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
-	                                    {/* LLM Config for Hybrid */}
-	                                    <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
+                                    {/* LLM Config for Hybrid */}
+                                    <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
                                         <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Large Language Model (LLM)</h4>
                                         <div>
                                             <label className="text-sm font-medium">Provider</label>
@@ -1400,20 +1400,20 @@ exten => s,1,NoOp(AI Agent Call)
                                         {config.hybrid_llm_provider === 'groq' && (
                                             <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-md border border-amber-200 dark:border-amber-800">
                                                 <p className="text-sm text-amber-800 dark:text-amber-300">
-                                                    <strong>Note:</strong> Groq does not support function/tool calling reliably.
+                                                    {t('wizard.apiKeys.localHybrid.llm.groqNote')}
                                                 </p>
                                                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                                                    Tools are allowlisted per Context. If you use Groq as the LLM, keep context tools empty.
+                                                    {t('wizard.apiKeys.localHybrid.llm.groqDesc')}
                                                 </p>
                                             </div>
                                         )}
                                         {config.hybrid_llm_provider === 'ollama' && (
                                             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
                                                 <p className="text-sm text-blue-800 dark:text-blue-300">
-                                                    <strong>Ollama:</strong> Run your own LLM on a Mac, PC, or server.
+                                                    {t('wizard.apiKeys.localHybrid.llm.ollamaNote')}
                                                 </p>
                                                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                                    Configure the Ollama URL in Providers → ollama_llm after setup.
+                                                    {t('wizard.apiKeys.localHybrid.llm.ollamaDesc')}
                                                 </p>
                                             </div>
                                         )}
@@ -1423,8 +1423,8 @@ exten => s,1,NoOp(AI Agent Call)
                                 {config.hybrid_llm_provider !== 'ollama' && (
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">
-                                            {config.hybrid_llm_provider === 'groq' ? 'Groq API Key' : 'OpenAI API Key'}
-                                            <span className="text-muted-foreground font-normal ml-2">(for LLM only)</span>
+                                            {config.hybrid_llm_provider === 'groq' ? t('wizard.apiKeys.localHybrid.llm.groqKeyLabel') : t('wizard.apiKeys.localHybrid.llm.openaiKeyLabel')}
+                                            <span className="text-muted-foreground font-normal ml-2">{t('wizard.apiKeys.localHybrid.llm.forLlmOnly')}</span>
                                         </label>
                                         <div className="flex space-x-2">
                                             <input
@@ -1440,10 +1440,10 @@ exten => s,1,NoOp(AI Agent Call)
                                                 className="px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
                                                 disabled={loading}
                                             >
-                                                Test
+                                                {t('wizard.apiKeys.test')}
                                             </button>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">Required for Local Hybrid cloud LLM.</p>
+                                        <p className="text-xs text-muted-foreground">{t('wizard.apiKeys.localHybrid.llm.keyHelp')}</p>
                                     </div>
                                 )}
                             </div>
@@ -1452,13 +1452,13 @@ exten => s,1,NoOp(AI Agent Call)
                         {config.provider === 'deepgram' && (
                             <div className="space-y-4">
                                 <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-md border border-blue-100 dark:border-blue-900/20 text-sm text-blue-800 dark:text-blue-300">
-                                    <p className="font-semibold mb-1">Deepgram Voice Agent</p>
+                                    <p className="font-semibold mb-1">{t('wizard.apiKeys.deepgram.title')}</p>
                                     <p className="text-blue-700 dark:text-blue-400">
-                                        Requires both Deepgram API key (for STT/TTS) and OpenAI API key (for Think stage LLM).
+                                        {t('wizard.apiKeys.deepgram.desc')}
                                     </p>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Deepgram API Key</label>
+                                    <label className="text-sm font-medium">{t('wizard.apiKeys.deepgram.dgKeyLabel')}</label>
                                     <div className="flex space-x-2">
                                         <input
                                             type="password"
@@ -1473,13 +1473,13 @@ exten => s,1,NoOp(AI Agent Call)
                                             className="px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
                                             disabled={loading}
                                         >
-                                            Test
+                                            {t('wizard.apiKeys.test')}
                                         </button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">For Deepgram STT and TTS.</p>
+                                    <p className="text-xs text-muted-foreground">{t('wizard.apiKeys.deepgram.dgKeyHelp')}</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">OpenAI API Key (for Think stage)</label>
+                                    <label className="text-sm font-medium">{t('wizard.apiKeys.deepgram.oaKeyLabel')}</label>
                                     <div className="flex space-x-2">
                                         <input
                                             type="password"
@@ -1494,10 +1494,10 @@ exten => s,1,NoOp(AI Agent Call)
                                             className="px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
                                             disabled={loading}
                                         >
-                                            Test
+                                            {t('wizard.apiKeys.test')}
                                         </button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Deepgram's Think stage uses OpenAI for LLM reasoning.</p>
+                                    <p className="text-xs text-muted-foreground">{t('wizard.apiKeys.deepgram.oaKeyHelp')}</p>
                                 </div>
                             </div>
                         )}
@@ -1505,7 +1505,7 @@ exten => s,1,NoOp(AI Agent Call)
                         {config.provider === 'google_live' && (
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Google API Key</label>
+                                    <label className="text-sm font-medium">{t('wizard.apiKeys.googleLive.keyLabel')}</label>
                                     <div className="flex space-x-2">
                                         <input
                                             type="password"
@@ -1520,14 +1520,14 @@ exten => s,1,NoOp(AI Agent Call)
                                             className="px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
                                             disabled={loading}
                                         >
-                                            Test
+                                            {t('wizard.apiKeys.test')}
                                         </button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Required for Google Gemini Live provider.</p>
+                                    <p className="text-xs text-muted-foreground">{t('wizard.apiKeys.googleLive.keyHelp')}</p>
                                 </div>
                                 <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-md border border-blue-100 dark:border-blue-900/20 text-xs text-blue-700 dark:text-blue-400">
-                                    <p className="font-semibold mb-1">Using Google Cloud / Vertex AI?</p>
-                                    <p>For enterprise GCP deployments, Vertex AI offers GA models with improved function calling reliability. Configure Vertex AI via the <strong>Providers page</strong> after setup — it uses service account authentication instead of an API key.</p>
+                                    <p className="font-semibold mb-1">{t('wizard.apiKeys.googleLive.vertexInfoTitle')}</p>
+                                    <p>{t('wizard.apiKeys.googleLive.vertexInfoDesc')}</p>
                                 </div>
                             </div>
                         )}
@@ -1535,16 +1535,15 @@ exten => s,1,NoOp(AI Agent Call)
                         {config.provider === 'elevenlabs_agent' && (
                             <div className="space-y-4">
                                 <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-md border border-blue-100 dark:border-blue-900/20 text-sm text-blue-800 dark:text-blue-300">
-                                    <p className="font-semibold mb-1">ElevenLabs Conversational AI</p>
+                                    <p className="font-semibold mb-1">{t('wizard.apiKeys.elevenlabs.title')}</p>
                                     <p className="text-blue-700 dark:text-blue-400">
-                                        This provider uses a pre-configured agent from your ElevenLabs dashboard.
-                                        Voice, system prompt, and LLM model are configured there.
+                                        {t('wizard.apiKeys.elevenlabs.desc')}
                                     </p>
                                 </div>
 
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">
-                                        Agent ID
+                                        {t('wizard.apiKeys.elevenlabs.agentIdLabel')}
                                         <span className="text-destructive ml-1">*</span>
                                     </label>
                                     <input
@@ -1555,7 +1554,7 @@ exten => s,1,NoOp(AI Agent Call)
                                         placeholder="agent_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Get this from{' '}
+                                        {t('wizard.apiKeys.elevenlabs.agentIdHelp')}{' '}
                                         <a href="https://elevenlabs.io/app/agents" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                             elevenlabs.io/app/agents
                                         </a>
@@ -1563,7 +1562,7 @@ exten => s,1,NoOp(AI Agent Call)
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">ElevenLabs API Key</label>
+                                    <label className="text-sm font-medium">{t('wizard.apiKeys.elevenlabs.keyLabel')}</label>
                                     <div className="flex space-x-2">
                                         <input
                                             type="password"
@@ -1578,39 +1577,39 @@ exten => s,1,NoOp(AI Agent Call)
                                             className="px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
                                             disabled={loading}
                                         >
-                                            Test
+                                            {t('wizard.apiKeys.test')}
                                         </button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Required for ElevenLabs Conversational provider.</p>
+                                    <p className="text-xs text-muted-foreground">{t('wizard.apiKeys.elevenlabs.keyHelp')}</p>
                                 </div>
 
-                                        <div className="bg-amber-50/50 dark:bg-amber-900/10 p-4 rounded-md border border-amber-100 dark:border-amber-900/20">
-                                            <h4 className="font-semibold mb-2 text-amber-800 dark:text-amber-300 text-sm">Setup Requirements</h4>
-                                            <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
-                                                <li>Create an agent at elevenlabs.io/app/agents</li>
-                                                <li>Enable "Require authentication" in security settings</li>
-                                                <li>Add client tools (hangup_call, blind_transfer, etc.)</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                )}
+                                <div className="bg-amber-50/50 dark:bg-amber-900/10 p-4 rounded-md border border-amber-100 dark:border-amber-900/20">
+                                    <h4 className="font-semibold mb-2 text-amber-800 dark:text-amber-300 text-sm">{t('wizard.apiKeys.elevenlabs.setupReqs.title')}</h4>
+                                    <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
+                                        <li>{t('wizard.apiKeys.elevenlabs.setupReqs.createAgent')}</li>
+                                        <li>{t('wizard.apiKeys.elevenlabs.setupReqs.enableAuth')}</li>
+                                        <li>{t('wizard.apiKeys.elevenlabs.setupReqs.addTools')}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
 
                         {config.provider === 'local' && (
                             <div className="space-y-6">
                                 <div className="bg-green-50/50 dark:bg-green-900/10 p-4 rounded-md border border-green-100 dark:border-green-900/20">
                                     <p className="font-semibold mb-2 flex items-center gap-2 text-green-800 dark:text-green-300">
                                         <HardDrive className="w-4 h-4" />
-                                        Local AI Server Setup
+                                        {t('wizard.apiKeys.local.title')}
                                     </p>
                                     <p className="text-sm text-green-700 dark:text-green-400 mb-3">
-                                        Local (Full) mode runs entirely on your infrastructure. No API keys required.
+                                        {t('wizard.apiKeys.local.desc')}
                                     </p>
                                 </div>
 
                                 {/* System Detection */}
                                 <div className="bg-muted p-4 rounded-lg">
                                     <div className="flex justify-between items-center mb-3">
-                                        <h4 className="font-medium">System Detection</h4>
+                                        <h4 className="font-medium">{t('wizard.apiKeys.local.sysDetectTitle')}</h4>
                                         <button
                                             onClick={async () => {
                                                 setLoading(true);
@@ -1651,7 +1650,7 @@ exten => s,1,NoOp(AI Agent Call)
                                             disabled={loading}
                                             className="px-3 py-1 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                                         >
-                                            {loading ? 'Detecting...' : 'Detect System'}
+                                            {loading ? t('wizard.apiKeys.local.detectingBtn') : t('wizard.apiKeys.local.detectBtn')}
                                         </button>
                                     </div>
 
@@ -1659,17 +1658,17 @@ exten => s,1,NoOp(AI Agent Call)
                                     {localAIStatus.systemDetected && (
                                         <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
                                             <div className="p-2 bg-background rounded border">
-                                                <span className="text-muted-foreground block text-xs">CPU Cores</span>
+                                                <span className="text-muted-foreground block text-xs">{t('wizard.apiKeys.local.cpuCores')}</span>
                                                 <span className="font-medium">{localAIStatus.cpuCores}</span>
                                             </div>
                                             <div className="p-2 bg-background rounded border">
-                                                <span className="text-muted-foreground block text-xs">RAM</span>
+                                                <span className="text-muted-foreground block text-xs">{t('wizard.apiKeys.local.ram')}</span>
                                                 <span className="font-medium">{localAIStatus.ramGb} GB</span>
                                             </div>
                                             <div className="p-2 bg-background rounded border">
-                                                <span className="text-muted-foreground block text-xs">GPU</span>
+                                                <span className="text-muted-foreground block text-xs">{t('wizard.apiKeys.local.gpu')}</span>
                                                 <span className={`font-medium ${localAIStatus.gpuDetected ? 'text-green-500' : 'text-muted-foreground'}`}>
-                                                    {localAIStatus.gpuDetected ? 'Detected' : 'Not Detected'}
+                                                    {localAIStatus.gpuDetected ? t('wizard.apiKeys.local.gpuDetected') : t('wizard.apiKeys.local.gpuNotDetected')}
                                                 </span>
                                             </div>
                                         </div>
@@ -1690,7 +1689,7 @@ exten => s,1,NoOp(AI Agent Call)
                                         </p>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-sm font-medium">Primary Language</label>
+                                                <label className="text-sm font-medium">{t('wizard.apiKeys.local.langPrimary')}</label>
                                                 <select
                                                     className="w-full p-2 rounded-md border border-input bg-background mt-1"
                                                     value={selectedLanguage}
@@ -1752,7 +1751,7 @@ exten => s,1,NoOp(AI Agent Call)
                                         <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Speech-to-Text (STT)</h4>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-sm font-medium">Model</label>
+                                                <label className="text-sm font-medium">{t('wizard.apiKeys.local.sttModelLabel')}</label>
                                                 <select
                                                     className="w-full p-2 rounded-md border border-input bg-background mt-1"
                                                     value={config.local_stt_model || config.local_stt_backend}
@@ -1760,8 +1759,8 @@ exten => s,1,NoOp(AI Agent Call)
                                                         const val = e.target.value;
                                                         const model = modelCatalog?.stt?.find((m: any) => m.id === val);
                                                         if (model) {
-                                                            setConfig({ 
-                                                                ...config, 
+                                                            setConfig({
+                                                                ...config,
                                                                 local_stt_backend: model.backend,
                                                                 local_stt_model: model.id,
                                                                 kroko_embedded: model.backend === 'kroko' && model.embedded === true
@@ -1772,7 +1771,7 @@ exten => s,1,NoOp(AI Agent Call)
                                                     }}
                                                 >
                                                     {/* Language-specific models */}
-                                                    {modelCatalog?.stt?.filter((m: any) => 
+                                                    {modelCatalog?.stt?.filter((m: any) =>
                                                         m.language === selectedLanguage || m.language === 'multi'
                                                     ).map((model: any) => (
                                                         <option key={model.id} value={model.id}>
@@ -1780,18 +1779,18 @@ exten => s,1,NoOp(AI Agent Call)
                                                         </option>
                                                     ))}
                                                     {/* Fallback if no models for language */}
-                                                    {(!modelCatalog?.stt || modelCatalog.stt.filter((m: any) => 
+                                                    {(!modelCatalog?.stt || modelCatalog.stt.filter((m: any) =>
                                                         m.language === selectedLanguage || m.language === 'multi'
                                                     ).length === 0) && (
-                                                        <>
-                                                            <option value="vosk">Vosk (Local)</option>
-                                                            <option value="kroko_cloud">Kroko (Cloud)</option>
-                                                            <option value="faster_whisper">Faster-Whisper (Local)</option>
-                                                        </>
-                                                    )}
+                                                            <>
+                                                                <option value="vosk">Vosk (Local)</option>
+                                                                <option value="kroko_cloud">Kroko (Cloud)</option>
+                                                                <option value="faster_whisper">Faster-Whisper (Local)</option>
+                                                            </>
+                                                        )}
                                                 </select>
                                                 <p className="text-xs text-muted-foreground mt-1">
-                                                    Models filtered for {availableLanguages.language_names?.[selectedLanguage] || selectedLanguage}
+                                                    {t('wizard.apiKeys.local.langFilteredModels')} {availableLanguages.language_names?.[selectedLanguage] || selectedLanguage}
                                                 </p>
                                             </div>
                                         </div>
@@ -1809,29 +1808,29 @@ exten => s,1,NoOp(AI Agent Call)
                                         )}
                                     </div>
 
-	                                    {/* TTS Config */}
-	                                    <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
-	                                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Text-to-Speech (TTS)</h4>
-	                                        <div className="grid grid-cols-2 gap-4">
-	                                            <div>
-	                                                <label className="text-sm font-medium">Voice / Model</label>
-	                                                <select
-	                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
-	                                                    value={config.local_tts_model || config.local_tts_backend}
-	                                                    onChange={e => {
-	                                                        const val = e.target.value;
-	                                                        const model = modelCatalog?.tts?.find((m: any) => m.id === val);
-	                                                        if (model) {
-	                                                            setConfig({ 
-	                                                                ...config, 
-	                                                                local_tts_backend: model.backend,
-	                                                                local_tts_model: model.id,
-	                                                            });
-	                                                        }
-	                                                    }}
-	                                                >
+                                    {/* TTS Config */}
+                                    <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
+                                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">{t('wizard.apiKeys.local.ttsTitle')}</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-sm font-medium">{t('wizard.apiKeys.local.ttsModelLabel')}</label>
+                                                <select
+                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
+                                                    value={config.local_tts_model || config.local_tts_backend}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const model = modelCatalog?.tts?.find((m: any) => m.id === val);
+                                                        if (model) {
+                                                            setConfig({
+                                                                ...config,
+                                                                local_tts_backend: model.backend,
+                                                                local_tts_model: model.id,
+                                                            });
+                                                        }
+                                                    }}
+                                                >
                                                     {/* Language-specific voices */}
-                                                    {modelCatalog?.tts?.filter((m: any) => 
+                                                    {modelCatalog?.tts?.filter((m: any) =>
                                                         m.language === selectedLanguage || m.language === 'multi'
                                                     ).map((model: any) => (
                                                         <option key={model.id} value={model.id}>
@@ -1839,108 +1838,106 @@ exten => s,1,NoOp(AI Agent Call)
                                                         </option>
                                                     ))}
                                                     {/* Fallback if no models for language */}
-                                                    {(!modelCatalog?.tts || modelCatalog.tts.filter((m: any) => 
+                                                    {(!modelCatalog?.tts || modelCatalog.tts.filter((m: any) =>
                                                         m.language === selectedLanguage || m.language === 'multi'
                                                     ).length === 0) && (
-                                                        <>
-                                                            <option value="piper">Piper (Local)</option>
-                                                            <option value="kokoro">Kokoro (Premium)</option>
-                                                            <option value="melotts">MeloTTS (Local)</option>
-                                                        </>
-                                                    )}
+                                                            <>
+                                                                <option value="piper">Piper (Local)</option>
+                                                                <option value="kokoro">Kokoro (Premium)</option>
+                                                                <option value="melotts">MeloTTS (Local)</option>
+                                                            </>
+                                                        )}
                                                 </select>
-	                                                <p className="text-xs text-muted-foreground mt-1">
-	                                                    Voices filtered for {availableLanguages.language_names?.[selectedLanguage] || selectedLanguage}
-	                                                </p>
-	                                            </div>
-	                                            {config.local_tts_backend === 'kokoro' && (
-	                                                <div>
-	                                                    <label className="text-sm font-medium">Kokoro Mode</label>
-	                                                    <select
-	                                                        className="w-full p-2 rounded-md border border-input bg-background mt-1"
-	                                                        value={(config.kokoro_mode || 'local').toLowerCase()}
-	                                                        onChange={e => setConfig({ ...config, kokoro_mode: e.target.value })}
-	                                                    >
-	                                                        <option value="local">Local (downloaded files)</option>
-	                                                        <option value="api">Cloud/API (remote endpoint)</option>
-	                                                        {(showAdvancedKokoro || (config.kokoro_mode || '').toLowerCase() === 'hf') && (
-	                                                            <option value="hf">HuggingFace (auto-download, Advanced)</option>
-	                                                        )}
-	                                                    </select>
-	                                                    <label className="flex items-center space-x-2 cursor-pointer mt-2">
-	                                                        <input
-	                                                            type="checkbox"
-	                                                            checked={showAdvancedKokoro}
-	                                                            onChange={e => setShowAdvancedKokoro(e.target.checked)}
-	                                                            className="rounded border-gray-300"
-	                                                        />
-	                                                        <span className="text-sm text-muted-foreground">Show advanced modes</span>
-	                                                    </label>
-	                                                </div>
-	                                            )}
-	                                            {config.local_tts_backend === 'kokoro' && ['local', 'hf'].includes((config.kokoro_mode || 'local').toLowerCase()) && (
-	                                                <div>
-	                                                    <label className="text-sm font-medium">Voice</label>
-	                                                    <select
-	                                                        className="w-full p-2 rounded-md border border-input bg-background mt-1"
-	                                                        value={config.kokoro_voice || 'af_heart'}
-	                                                        onChange={e => setConfig({ ...config, kokoro_voice: e.target.value })}
-	                                                    >
-	                                                        <option value="af_heart">Heart (Female, US)</option>
-	                                                        <option value="af_bella">Bella (Female, US)</option>
-	                                                        <option value="af_nicole">Nicole (Female, US)</option>
-	                                                        <option value="af_sarah">Sarah (Female, US)</option>
-	                                                        <option value="af_sky">Sky (Female, US)</option>
-	                                                        <option value="am_adam">Adam (Male, US)</option>
-	                                                        <option value="am_michael">Michael (Male, US)</option>
-	                                                        <option value="bf_emma">Emma (Female, UK)</option>
-	                                                        <option value="bf_isabella">Isabella (Female, UK)</option>
-	                                                        <option value="bm_george">George (Male, UK)</option>
-	                                                        <option value="bm_lewis">Lewis (Male, UK)</option>
-	                                                    </select>
-	                                                    <p className="text-xs text-muted-foreground mt-1">
-	                                                        af=American Female, am=American Male, bf=British Female, bm=British Male
-	                                                    </p>
-	                                                </div>
-	                                            )}
-	                                        </div>
-	                                        {config.local_tts_backend === 'kokoro' && (config.kokoro_mode || '').toLowerCase() === 'api' && (
-	                                            <div>
-	                                                <label className="text-sm font-medium">Kokoro Web API</label>
-	                                                <input
-	                                                    type="text"
-	                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
-	                                                    value={config.kokoro_api_base_url || ''}
-	                                                    onChange={e => setConfig({ ...config, kokoro_api_base_url: e.target.value })}
-	                                                    placeholder="https://voice-generator.pages.dev/api/v1"
-	                                                />
-	                                                <p className="text-xs text-muted-foreground mt-1">
-	                                                    Supports OpenAI-compatible `audio/speech` endpoint. Recommended to self-host for reliability.
-	                                                </p>
-	                                                <label className="text-sm font-medium mt-3 block">Token (optional)</label>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {t('wizard.apiKeys.local.langFilteredVoices')} {availableLanguages.language_names?.[selectedLanguage] || selectedLanguage}
+                                                </p>
+                                            </div>
+                                            {config.local_tts_backend === 'kokoro' && (
+                                                <div>
+                                                    <label className="text-sm font-medium">{t('wizard.apiKeys.localHybrid.tts.kokoroModeLabel')}</label>
+                                                    <select
+                                                        className="w-full p-2 rounded-md border border-input bg-background mt-1"
+                                                        value={(config.kokoro_mode || 'local').toLowerCase()}
+                                                        onChange={e => setConfig({ ...config, kokoro_mode: e.target.value })}
+                                                    >
+                                                        <option value="local">{t('wizard.apiKeys.localHybrid.tts.kokoroModes.local')}</option>
+                                                        <option value="api">{t('wizard.apiKeys.localHybrid.tts.kokoroModes.api')}</option>
+                                                        {(showAdvancedKokoro || (config.kokoro_mode || '').toLowerCase() === 'hf') && (
+                                                            <option value="hf">{t('wizard.apiKeys.localHybrid.tts.kokoroModes.hf')}</option>
+                                                        )}
+                                                    </select>
+                                                    <label className="flex items-center space-x-2 cursor-pointer mt-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={showAdvancedKokoro}
+                                                            onChange={e => setShowAdvancedKokoro(e.target.checked)}
+                                                            className="rounded border-gray-300"
+                                                        />
+                                                        <span className="text-sm text-muted-foreground">{t('wizard.apiKeys.localHybrid.tts.showAdvanced')}</span>
+                                                    </label>
+                                                </div>
+                                            )}
+                                            {config.local_tts_backend === 'kokoro' && ['local', 'hf'].includes((config.kokoro_mode || 'local').toLowerCase()) && (
+                                                <div>
+                                                    <label className="text-sm font-medium">{t('wizard.apiKeys.localHybrid.tts.voiceLabel')}</label>
+                                                    <select
+                                                        className="w-full p-2 rounded-md border border-input bg-background mt-1"
+                                                        value={config.kokoro_voice || 'af_heart'}
+                                                        onChange={e => setConfig({ ...config, kokoro_voice: e.target.value })}
+                                                    >
+                                                        <option value="af_heart">Heart (Female, US)</option>
+                                                        <option value="af_bella">Bella (Female, US)</option>
+                                                        <option value="af_nicole">Nicole (Female, US)</option>
+                                                        <option value="af_sarah">Sarah (Female, US)</option>
+                                                        <option value="af_sky">Sky (Female, US)</option>
+                                                        <option value="am_adam">Adam (Male, US)</option>
+                                                        <option value="am_michael">Michael (Male, US)</option>
+                                                        <option value="bf_emma">Emma (Female, UK)</option>
+                                                        <option value="bf_isabella">Isabella (Female, UK)</option>
+                                                        <option value="bm_george">George (Male, UK)</option>
+                                                        <option value="bm_lewis">Lewis (Male, UK)</option>
+                                                    </select>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {t('wizard.apiKeys.localHybrid.tts.voiceHelp')}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {config.local_tts_backend === 'kokoro' && (config.kokoro_mode || '').toLowerCase() === 'api' && (
+                                            <div>
+                                                <label className="text-sm font-medium">{t('wizard.apiKeys.localHybrid.tts.kokoroApiLabel')}</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full p-2 rounded-md border border-input bg-background mt-1"
+                                                    value={config.kokoro_api_base_url || ''}
+                                                    onChange={e => setConfig({ ...config, kokoro_api_base_url: e.target.value })}
+                                                    placeholder="https://voice-generator.pages.dev/api/v1"
+                                                />
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {t('wizard.apiKeys.localHybrid.tts.kokoroApiHelp')}
+                                                </p>
+                                                <label className="text-sm font-medium mt-3 block">{t('wizard.apiKeys.localHybrid.tts.kokoroTokenLabel')}</label>
                                                 <input
                                                     type="password"
                                                     className="w-full p-2 rounded-md border border-input bg-background mt-1"
-	                                                    value={config.kokoro_api_key || ''}
-	                                                    onChange={e => setConfig({ ...config, kokoro_api_key: e.target.value })}
-	                                                    placeholder="Bearer token (optional; Dashboard requires a token to enable Cloud/API selection)"
-	                                                />
-	                                            </div>
-	                                        )}
-	                                        {config.local_tts_backend === 'kokoro' && (config.kokoro_mode || '').toLowerCase() === 'hf' && (
-	                                            <div className="text-xs text-muted-foreground">
-	                                                HuggingFace mode forces Kokoro to load via the HuggingFace cache inside the container and may
-	                                                download weights/voices on first use. Rebuilding the container can trigger re-downloads unless
-	                                                the cache is persisted; prefer Local mode for production.
-	                                            </div>
-	                                        )}
-	                                    </div>
+                                                    value={config.kokoro_api_key || ''}
+                                                    onChange={e => setConfig({ ...config, kokoro_api_key: e.target.value })}
+                                                    placeholder="Bearer token (optional; Dashboard requires a token to enable Cloud/API selection)"
+                                                />
+                                            </div>
+                                        )}
+                                        {config.local_tts_backend === 'kokoro' && (config.kokoro_mode || '').toLowerCase() === 'hf' && (
+                                            <div className="text-xs text-muted-foreground">
+                                                {t('wizard.apiKeys.localHybrid.tts.kokoroHfWarning')}
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {/* LLM Config */}
                                     <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
-                                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Large Language Model (LLM)</h4>
+                                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">{t('wizard.apiKeys.local.llmTitle')}</h4>
                                         <div>
-                                            <label className="text-sm font-medium">Model</label>
+                                            <label className="text-sm font-medium">{t('wizard.apiKeys.local.llmModelLabel')}</label>
                                             <select
                                                 className="w-full p-2 rounded-md border border-input bg-background mt-1"
                                                 value={config.local_llm_model}
@@ -1954,15 +1951,15 @@ exten => s,1,NoOp(AI Agent Call)
                                                         {model.description ? ` • ${model.description}` : ''}
                                                     </option>
                                                 ))}
-                                                <option value="custom_gguf_url">Custom GGUF (URL)</option>
+                                                <option value="custom_gguf_url">{t('wizard.apiKeys.local.llmCustomUrl')}</option>
                                             </select>
                                             {config.local_llm_model === 'custom_gguf_url' && (
                                                 <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800 space-y-3">
                                                     <p className="text-sm text-blue-800 dark:text-blue-300">
-                                                        Provide a direct URL to a llama.cpp-compatible `.gguf` file. This will be downloaded into `models/llm/`.
+                                                        {t('wizard.apiKeys.local.llmCustomDesc')}
                                                     </p>
                                                     <div className="space-y-2">
-                                                        <label className="text-xs font-medium text-blue-700 dark:text-blue-300">GGUF URL</label>
+                                                        <label className="text-xs font-medium text-blue-700 dark:text-blue-300">{t('wizard.apiKeys.local.llmUrlLabel')}</label>
                                                         <input
                                                             type="text"
                                                             className="w-full p-2 rounded-md border border-input bg-background"
@@ -1972,7 +1969,7 @@ exten => s,1,NoOp(AI Agent Call)
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="text-xs font-medium text-blue-700 dark:text-blue-300">Filename (optional)</label>
+                                                        <label className="text-xs font-medium text-blue-700 dark:text-blue-300">{t('wizard.apiKeys.local.llmFilenameLabel')}</label>
                                                         <input
                                                             type="text"
                                                             className="w-full p-2 rounded-md border border-input bg-background"
@@ -1981,7 +1978,7 @@ exten => s,1,NoOp(AI Agent Call)
                                                             placeholder="my-model.Q4_K_M.gguf"
                                                         />
                                                         <p className="text-xs text-blue-600 dark:text-blue-400">
-                                                            If blank, filename is inferred from the URL.
+                                                            {t('wizard.apiKeys.local.llmFilenameHelp')}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -1994,31 +1991,31 @@ exten => s,1,NoOp(AI Agent Call)
                                         <div className="flex justify-between items-center">
                                             <div>
                                                 <p className="font-medium text-blue-800 dark:text-blue-300">
-                                                    Download Required Models
+                                                    {t('wizard.apiKeys.local.downloadTitle')}
                                                 </p>
                                                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                                    Downloads models for selected backends.
+                                                    {t('wizard.apiKeys.local.downloadDesc')}
                                                 </p>
                                             </div>
-		                                            <button
-		                                                onClick={() => startSelectedModelsDownload()}
-		                                                disabled={localAIStatus.downloading || localAIStatus.downloadCompleted}
-		                                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-		                                            >
+                                            <button
+                                                onClick={() => startSelectedModelsDownload()}
+                                                disabled={localAIStatus.downloading || localAIStatus.downloadCompleted}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                                            >
                                                 {localAIStatus.downloading ? (
                                                     <span className="flex items-center gap-2">
                                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                                        Downloading...
+                                                        {t('wizard.apiKeys.local.downloading')}
                                                     </span>
                                                 ) : localAIStatus.downloadCompleted ? (
                                                     <span className="flex items-center gap-2">
                                                         <CheckCircle2 className="w-4 h-4" />
-                                                        Downloaded
+                                                        {t('wizard.apiKeys.local.downloaded')}
                                                     </span>
                                                 ) : (
                                                     <span className="flex items-center gap-2">
                                                         <Cloud className="w-4 h-4" />
-                                                        Download Models
+                                                        {t('wizard.apiKeys.local.downloadModels')}
                                                     </span>
                                                 )}
                                             </button>
@@ -2034,7 +2031,7 @@ exten => s,1,NoOp(AI Agent Call)
                                                     </span>
                                                 </div>
                                                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                                                    <div 
+                                                    <div
                                                         className="bg-blue-600 h-3 rounded-full transition-all duration-300"
                                                         style={{ width: `${localAIStatus.downloadProgress.percent}%` }}
                                                     />
@@ -2044,7 +2041,7 @@ exten => s,1,NoOp(AI Agent Call)
                                                     <span>
                                                         {(localAIStatus.downloadProgress.speed_bps / (1024 * 1024)).toFixed(2)} MB/s
                                                         {localAIStatus.downloadProgress.eta_seconds && (
-                                                            <> • ETA: {Math.floor(localAIStatus.downloadProgress.eta_seconds / 60)}m {localAIStatus.downloadProgress.eta_seconds % 60}s</>
+                                                            <> • {t('wizard.apiKeys.local.eta')} {Math.floor(localAIStatus.downloadProgress.eta_seconds / 60)}m {localAIStatus.downloadProgress.eta_seconds % 60}s</>
                                                         )}
                                                     </span>
                                                 </div>
@@ -2072,14 +2069,13 @@ exten => s,1,NoOp(AI Agent Call)
                             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                                 <p className="text-green-800 dark:text-green-300 flex items-center font-medium">
                                     <CheckCircle className="w-5 h-5 mr-2" />
-                                    Models downloaded successfully!
+                                    {t('wizard.apiKeys.local.downloadCompleteTitle')}
                                 </p>
                                 <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                                    Click Next to continue with the setup.
+                                    {t('wizard.apiKeys.local.downloadCompleteDesc')}
                                 </p>
                                 <p className="text-sm text-blue-600 dark:text-blue-400 mt-2 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                                    💡 <strong>Tip:</strong> You can download additional models and voices later from{' '}
-                                    <span className="font-semibold">System → Models</span> in the Admin UI.
+                                    💡 <strong>{t('wizard.apiKeys.local.downloadTip')}</strong> {t('wizard.apiKeys.local.downloadTipDesc')}
                                 </p>
                             </div>
                         )}
@@ -2089,10 +2085,10 @@ exten => s,1,NoOp(AI Agent Call)
 
                 {step === 4 && (
                     <div className="space-y-4">
-                        <h2 className="text-xl font-semibold mb-4">Agent Configuration</h2>
+                        <h2 className="text-xl font-semibold mb-4">{t('wizard.config.title')}</h2>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Asterisk Host</label>
+                                <label className="text-sm font-medium">{t('wizard.config.host')}</label>
                                 <input
                                     type="text"
                                     className="w-full p-2 rounded-md border border-input bg-background"
@@ -2101,7 +2097,7 @@ exten => s,1,NoOp(AI Agent Call)
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">ARI Username</label>
+                                <label className="text-sm font-medium">{t('wizard.config.user')}</label>
                                 <input
                                     type="text"
                                     className="w-full p-2 rounded-md border border-input bg-background"
@@ -2110,7 +2106,7 @@ exten => s,1,NoOp(AI Agent Call)
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">ARI Port</label>
+                                <label className="text-sm font-medium">{t('wizard.config.port')}</label>
                                 <input
                                     type="number"
                                     className="w-full p-2 rounded-md border border-input bg-background"
@@ -2119,7 +2115,7 @@ exten => s,1,NoOp(AI Agent Call)
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">ARI Scheme</label>
+                                <label className="text-sm font-medium">{t('wizard.config.scheme')}</label>
                                 <select
                                     className="w-full p-2 rounded-md border border-input bg-background"
                                     value={config.asterisk_scheme}
@@ -2138,15 +2134,15 @@ exten => s,1,NoOp(AI Agent Call)
                                             checked={config.asterisk_ssl_verify !== false}
                                             onChange={e => setConfig({ ...config, asterisk_ssl_verify: e.target.checked })}
                                         />
-                                        Verify SSL Certificate
+                                        {t('wizard.config.verifySsl')}
                                     </label>
                                     <p className="text-xs text-muted-foreground">
-                                        Uncheck for self-signed certificates or IP/hostname mismatches
+                                        {t('wizard.config.verifySslHelp')}
                                     </p>
                                 </div>
                             )}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Stasis App Name</label>
+                                <label className="text-sm font-medium">{t('wizard.config.appName')}</label>
                                 <input
                                     type="text"
                                     className="w-full p-2 rounded-md border border-input bg-background"
@@ -2162,15 +2158,14 @@ exten => s,1,NoOp(AI Agent Call)
                                 <div className="flex items-start gap-2 mb-3">
                                     <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5" />
                                     <div>
-                                        <p className="text-sm font-medium text-yellow-500">Remote Asterisk Detected</p>
+                                        <p className="text-sm font-medium text-yellow-500">{t('wizard.config.remoteDetectedTitle')}</p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            You're using a hostname ({config.asterisk_host}). For RTP audio security, 
-                                            please enter the actual IP address of your Asterisk server.
+                                            {t('wizard.config.remoteDetectedDesc1')}{config.asterisk_host}{t('wizard.config.remoteDetectedDesc2')}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Asterisk Server IP Address</label>
+                                    <label className="text-sm font-medium">{t('wizard.config.serverIp')}</label>
                                     <input
                                         type="text"
                                         placeholder="e.g., 192.168.1.100 or 203.0.113.50"
@@ -2179,7 +2174,7 @@ exten => s,1,NoOp(AI Agent Call)
                                         onChange={e => setConfig({ ...config, asterisk_server_ip: e.target.value })}
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        This IP will be used for RTP packet validation (allowed_remote_hosts).
+                                        {t('wizard.config.serverIpHelp')}
                                         {config.asterisk_scheme === 'https' && ' Using HTTPS/WSS for secure ARI connection.'}
                                     </p>
                                 </div>
@@ -2187,7 +2182,7 @@ exten => s,1,NoOp(AI Agent Call)
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">ARI Password</label>
+                            <label className="text-sm font-medium">{t('wizard.config.pass')}</label>
                             <input
                                 type="password"
                                 className="w-full p-2 rounded-md border border-input bg-background"
@@ -2217,7 +2212,7 @@ exten => s,1,NoOp(AI Agent Call)
                                     disabled={loading}
                                 >
                                     {loading ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Server className="w-3 h-3 mr-2" />}
-                                    Check Local Server
+                                    {t('wizard.config.checkLocal')}
                                 </button>
                             )}
                             <button
@@ -2226,27 +2221,27 @@ exten => s,1,NoOp(AI Agent Call)
                                 disabled={loading}
                             >
                                 {loading ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Zap className="w-3 h-3 mr-2" />}
-                                Test Connection
+                                {t('wizard.config.testConn')}
                             </button>
                         </div>
                         <div className="border-t border-border my-4 pt-4">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="text-sm font-semibold">Default Context Settings</span>
+                                <span className="text-sm font-semibold">{t('wizard.config.defaultContext')}</span>
                                 <div className="group relative">
                                     <Info className="w-4 h-4 text-muted-foreground cursor-help" />
                                     <div className="absolute left-0 bottom-full mb-2 w-72 p-2 bg-popover text-popover-foreground text-xs rounded-md shadow-lg border border-border opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
-                                        These settings become the default when no <code className="bg-muted px-1 rounded">AI_CONTEXT</code> variable is passed from the Asterisk dialplan. You can create additional contexts with different personas in the Contexts page.
+                                        {t('wizard.config.defaultContextHelp')}
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium">AI Name</label>
+                                <label className="text-sm font-medium">{t('wizard.config.aiName')}</label>
                                 <div className="group relative">
                                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                                     <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-popover text-popover-foreground text-xs rounded-md shadow-lg border border-border opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
-                                        The name your AI agent will use to identify itself to callers.
+                                        {t('wizard.config.aiNameHelp')}
                                     </div>
                                 </div>
                             </div>
@@ -2260,11 +2255,11 @@ exten => s,1,NoOp(AI Agent Call)
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium">AI Role</label>
+                                <label className="text-sm font-medium">{t('wizard.config.aiRole')}</label>
                                 <div className="group relative">
                                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                                     <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-popover text-popover-foreground text-xs rounded-md shadow-lg border border-border opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
-                                        Defines the AI's persona and behavior. This becomes part of the system prompt.
+                                        {t('wizard.config.aiRoleHelp')}
                                     </div>
                                 </div>
                             </div>
@@ -2278,11 +2273,11 @@ exten => s,1,NoOp(AI Agent Call)
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium">Greeting Message</label>
+                                <label className="text-sm font-medium">{t('wizard.config.greeting')}</label>
                                 <div className="group relative">
                                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                                     <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-popover text-popover-foreground text-xs rounded-md shadow-lg border border-border opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
-                                        The first message spoken when a call connects. Keep it brief and welcoming.
+                                        {t('wizard.config.greetingHelp')}
                                     </div>
                                 </div>
                             </div>
@@ -2301,9 +2296,9 @@ exten => s,1,NoOp(AI Agent Call)
                         <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                             <CheckCircle className="w-8 h-8" />
                         </div>
-                        <h2 className="text-2xl font-bold">Setup Complete!</h2>
+                        <h2 className="text-2xl font-bold">{t('wizard.done.title')}</h2>
                         <p className="text-muted-foreground">
-                            Your AI Agent is configured and ready.
+                            {t('wizard.done.desc')}
                         </p>
 
                         {/* Local AI Server Setup - Only for Local provider */}
@@ -2313,7 +2308,7 @@ exten => s,1,NoOp(AI Agent Call)
                                 <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                                     <h3 className="font-semibold mb-2 flex items-center text-green-800 dark:text-green-300">
                                         <HardDrive className="w-4 h-4 mr-2" />
-                                        Downloaded Models
+                                        {t('wizard.done.downloadedModelsTitle')}
                                     </h3>
                                     <p className="text-sm text-green-700 dark:text-green-400">
                                         Tier: {localAIStatus.tier} | {localAIStatus.tierInfo?.models || 'Models ready'}
@@ -2324,11 +2319,11 @@ exten => s,1,NoOp(AI Agent Call)
                                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                     <h3 className="font-semibold mb-3 flex items-center text-blue-800 dark:text-blue-300">
                                         <Server className="w-4 h-4 mr-2" />
-                                        Local AI Server
+                                        {t('wizard.done.localAIServerTitle')}
                                     </h3>
 
                                     {!localAIStatus.serverStarted ? (
-                                    <button
+                                        <button
                                             onClick={async () => {
                                                 try {
                                                     await startLocalAIServer();
@@ -2342,12 +2337,12 @@ exten => s,1,NoOp(AI Agent Call)
                                             {startingLocalServer ? (
                                                 <>
                                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                    Starting...
+                                                    {t('wizard.done.starting')}
                                                 </>
                                             ) : (
                                                 <>
                                                     <Play className="w-4 h-4 mr-2" />
-                                                    Start Local AI Server
+                                                    {t('wizard.done.startLocalServer')}
                                                 </>
                                             )}
                                         </button>
@@ -2357,12 +2352,12 @@ exten => s,1,NoOp(AI Agent Call)
                                                 {localAIStatus.serverReady ? (
                                                     <span className="text-green-600 dark:text-green-400 flex items-center">
                                                         <CheckCircle className="w-4 h-4 mr-2" />
-                                                        Server Ready!
+                                                        {t('wizard.done.serverReady')}
                                                     </span>
                                                 ) : (
                                                     <span className="text-blue-600 dark:text-blue-400 flex items-center">
                                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                                                        Starting up... (loading models)
+                                                        {t('wizard.done.startingUp')}
                                                     </span>
                                                 )}
                                             </div>
@@ -2374,7 +2369,7 @@ exten => s,1,NoOp(AI Agent Call)
                                                         <div key={i} className="whitespace-pre-wrap">{line}</div>
                                                     ))
                                                 ) : (
-                                                    <div className="text-gray-500">Waiting for logs...</div>
+                                                    <div className="text-gray-500">{t('wizard.done.waitingLogs')}</div>
                                                 )}
                                             </div>
                                         </div>
@@ -2386,10 +2381,10 @@ exten => s,1,NoOp(AI Agent Call)
                                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                         <h3 className="font-semibold mb-3 flex items-center text-blue-800 dark:text-blue-300">
                                             <Server className="w-4 h-4 mr-2" />
-                                            Start AI Engine
+                                            {t('wizard.done.startEngineTitle')}
                                         </h3>
                                         <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">
-                                            Local AI Server is ready. Now start the AI Engine to connect to Asterisk.
+                                            {t('wizard.done.startEngineDescLocal')}
                                         </p>
                                         <button
                                             onClick={async () => {
@@ -2427,16 +2422,16 @@ exten => s,1,NoOp(AI Agent Call)
                                             {startingEngine ? (
                                                 <>
                                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                    Building & Starting AI Engine...
+                                                    {t('wizard.done.buildingEngine')}
                                                 </>
                                             ) : (
                                                 <>
                                                     <Play className="w-4 h-4 mr-2" />
-                                                    Start AI Engine
+                                                    {t('wizard.done.startEngine')}
                                                 </>
                                             )}
                                         </button>
-                                        
+
                                         {/* Progress Steps - show during build or after completion */}
                                         {startingEngine && engineProgress.steps.length === 0 && (
                                             <div className="mt-4 space-y-2 text-sm text-muted-foreground">
@@ -2474,7 +2469,7 @@ exten => s,1,NoOp(AI Agent Call)
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center text-green-700 dark:text-green-400">
                                                 <CheckCircle className="w-5 h-5 mr-2" />
-                                                <span className="font-medium">AI Engine is running</span>
+                                                <span className="font-medium">{t('wizard.done.engineRunning')}</span>
                                             </div>
                                             <button
                                                 onClick={async () => {
@@ -2525,7 +2520,7 @@ exten => s,1,NoOp(AI Agent Call)
                                                 className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
                                             >
                                                 <RefreshCw className={`w-4 h-4 ${reloadingEngine ? 'animate-spin' : ''}`} />
-                                                {reloadingEngine ? 'Applying...' : 'Apply Changes'}
+                                                {reloadingEngine ? t('wizard.done.applying') : t('wizard.done.applyChanges')}
                                             </button>
                                         </div>
                                     </div>
@@ -2538,7 +2533,7 @@ exten => s,1,NoOp(AI Agent Call)
                                             onClick={() => navigate('/')}
                                             className="w-full px-4 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                                         >
-                                            Go to Dashboard
+                                            {t('wizard.done.goToDashboard')}
                                         </button>
                                     </div>
                                 )}
@@ -2548,7 +2543,7 @@ exten => s,1,NoOp(AI Agent Call)
                                     <div className="bg-muted p-4 rounded-lg">
                                         <h3 className="font-semibold mb-2 flex items-center">
                                             <Terminal className="w-4 h-4 mr-2" />
-                                            Asterisk Dialplan for Local Provider
+                                            {t('wizard.done.dialplanTitleLocal')}
                                         </h3>
                                         <pre className="bg-black text-green-400 p-3 rounded-md overflow-x-auto text-xs font-mono">
                                             {`[from-ai-agent-local]
@@ -2568,12 +2563,12 @@ exten => s,1,NoOp(AI Agent - Local Full)
                             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-left border border-blue-200 dark:border-blue-800">
                                 <h3 className="font-semibold mb-3 flex items-center text-blue-800 dark:text-blue-300">
                                     <Server className="w-4 h-4 mr-2" />
-                                    Start AI Engine
+                                    {t('wizard.done.startEngineTitle')}
                                 </h3>
                                 <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">
                                     {engineStatus.exists
-                                        ? "The AI Engine container exists but is not running. Click below to start it."
-                                        : "The AI Engine container needs to be created. Run the command below, then click Start."}
+                                        ? t('wizard.done.startEngineDescExists')
+                                        : t('wizard.done.startEngineDescCreate')}
                                 </p>
                                 {!engineStatus.exists && (
                                     <pre className="bg-black text-green-400 p-3 rounded-md text-xs font-mono mb-4 overflow-x-auto">
@@ -2625,7 +2620,7 @@ exten => s,1,NoOp(AI Agent - Local Full)
                                         </>
                                     )}
                                 </button>
-                                
+
                                 {/* Progress Steps - show during build or after completion */}
                                 {startingEngine && engineProgress.steps.length === 0 && (
                                     <div className="mt-4 space-y-2 text-sm text-muted-foreground">
@@ -2663,7 +2658,7 @@ exten => s,1,NoOp(AI Agent - Local Full)
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center text-green-700 dark:text-green-400">
                                         <CheckCircle className="w-5 h-5 mr-2" />
-                                        <span className="font-medium">AI Engine is running</span>
+                                        <span className="font-medium">{t('wizard.done.engineRunning')}</span>
                                     </div>
                                     <button
                                         onClick={async () => {
@@ -2673,9 +2668,9 @@ exten => s,1,NoOp(AI Agent - Local Full)
                                                 if (res.data.restart_required) {
                                                     // New provider needs full restart
                                                     const shouldRestart = await confirm({
-                                                        title: 'Restart Required',
-                                                        description: 'New provider detected. A full restart is needed to load it. Restart now?',
-                                                        confirmText: 'Restart',
+                                                        title: t('wizard.modals.restartRequiredTitle'),
+                                                        description: t('wizard.modals.restartRequiredDesc'),
+                                                        confirmText: t('wizard.modals.restart'),
                                                         variant: 'default'
                                                     });
                                                     if (shouldRestart) {
@@ -2683,30 +2678,30 @@ exten => s,1,NoOp(AI Agent - Local Full)
                                                         const restartRes = await axios.post('/api/system/containers/ai_engine/restart?force=false&recreate=true');
                                                         if (restartRes.data?.status === 'warning') {
                                                             const confirmForce = await confirm({
-                                                                title: 'Force Restart?',
-                                                                description: `${restartRes.data.message}\n\nForce restart anyway? This may disconnect active calls.`,
-                                                                confirmText: 'Force Restart',
+                                                                title: t('wizard.modals.forceRestartTitle'),
+                                                                description: `${restartRes.data.message}\n\n${t('wizard.modals.forceRestartDesc')}`,
+                                                                confirmText: t('wizard.modals.forceRestart'),
                                                                 variant: 'destructive'
                                                             });
                                                             if (confirmForce) {
                                                                 await axios.post('/api/system/containers/ai_engine/restart?force=true&recreate=true');
-                                                                showToast('AI Engine restarted! New provider is now available.', 'success');
+                                                                showToast(t('wizard.toasts.restartSuccessNewProv'), 'success');
                                                             } else {
-                                                                showToast('Restart skipped due to active calls. Restart later to use new provider.', 'warning');
+                                                                showToast(t('wizard.toasts.restartSkippedNewProv'), 'warning');
                                                             }
                                                         } else if (restartRes.data?.status === 'degraded') {
-                                                            showToast('AI Engine restarted but may not be fully healthy. Verify manually.', 'warning');
+                                                            showToast(t('wizard.toasts.degraded'), 'warning');
                                                         } else {
-                                                            showToast('AI Engine restarted! New provider is now available.', 'success');
+                                                            showToast(t('wizard.toasts.restartSuccessNewProv'), 'success');
                                                         }
                                                     } else {
-                                                        showToast('Config saved. Restart AI Engine later to use new provider.', 'success');
+                                                        showToast(t('wizard.toasts.configSavedNewProv'), 'success');
                                                     }
                                                 } else {
-                                                    showToast('AI Engine configuration reloaded successfully!', 'success');
+                                                    showToast(t('wizard.toasts.reloadingSuccess'), 'success');
                                                 }
                                             } catch (err: any) {
-                                                showToast(err.response?.data?.detail || 'Failed to reload', 'error');
+                                                showToast(err.response?.data?.detail || t('wizard.toasts.reloadedFailed'), 'error');
                                             } finally {
                                                 setReloadingEngine(false);
                                             }
@@ -2715,11 +2710,11 @@ exten => s,1,NoOp(AI Agent - Local Full)
                                         className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
                                     >
                                         <RefreshCw className={`w-4 h-4 ${reloadingEngine ? 'animate-spin' : ''}`} />
-                                        {reloadingEngine ? 'Applying...' : 'Apply Changes'}
+                                        {reloadingEngine ? t('wizard.done.applying') : t('wizard.done.applyChanges')}
                                     </button>
                                 </div>
                                 <p className="text-xs text-green-600 dark:text-green-500 mt-2">
-                                    Click "Apply Changes" to activate your new provider settings.
+                                    {t('wizard.done.applyChangesHint')}
                                 </p>
                             </div>
                         )}
@@ -2730,10 +2725,10 @@ exten => s,1,NoOp(AI Agent - Local Full)
                                 <div className="bg-muted p-4 rounded-lg text-left">
                                     <h3 className="font-semibold mb-2 flex items-center">
                                         <Terminal className="w-4 h-4 mr-2" />
-                                        Next Step: Update Asterisk Dialplan
+                                        {t('wizard.done.dialplanTitleRemote')}
                                     </h3>
                                     <p className="text-sm text-muted-foreground mb-3">
-                                        Add this to your <code>extensions_custom.conf</code> to route calls to the agent:
+                                        {t('wizard.done.dialplanDescRemote')}
                                     </p>
                                     <div className="relative group">
                                         <pre className="bg-black text-green-400 p-4 rounded-md overflow-x-auto text-sm font-mono">
@@ -2742,8 +2737,8 @@ exten => s,1,NoOp(AI Agent - Local Full)
                                         <button
                                             onClick={() => {
                                                 navigator.clipboard.writeText(nonLocalDialplanSnippet)
-                                                    .then(() => showToast('Copied to clipboard!', 'success'))
-                                                    .catch(() => showToast('Failed to copy to clipboard', 'error'));
+                                                    .then(() => showToast(t('wizard.toasts.copySuccess'), 'success'))
+                                                    .catch(() => showToast(t('wizard.toasts.copyFailed'), 'error'));
                                             }}
                                             className="absolute top-2 right-2 p-1 bg-white/10 rounded hover:bg-white/20 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                                             title="Copy to clipboard"
@@ -2758,7 +2753,7 @@ exten => s,1,NoOp(AI Agent - Local Full)
                                         onClick={() => navigate('/')}
                                         className="w-full px-4 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                                     >
-                                        Go to Dashboard
+                                        {t('wizard.done.goToDashboard')}
                                     </button>
                                 </div>
                             </>
@@ -2773,26 +2768,26 @@ exten => s,1,NoOp(AI Agent - Local Full)
                             className="px-4 py-2 rounded-md border border-input hover:bg-accent hover:text-accent-foreground"
                             disabled={loading}
                         >
-                            Back
+                            {t('wizard.nav.back')}
                         </button>
                     ) : <div></div>}
 
-	                    {step < 5 && (
-	                        <button
-	                            onClick={handleNext}
-	                            disabled={
-	                                loading ||
-	                                (step === 3 &&
-	                                    ((config.provider === 'local' &&
-	                                        (localAIStatus.downloading ||
-	                                            (!localAIStatus.downloadCompleted && !!localAIStatus.tier))) ||
-	                                        (config.provider === 'local_hybrid' &&
-	                                            (localAIStatus.downloading || localHybridMissingRequired))))
-	                            }
-	                            className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-	                        >
+                    {step < 5 && (
+                        <button
+                            onClick={handleNext}
+                            disabled={
+                                loading ||
+                                (step === 3 &&
+                                    ((config.provider === 'local' &&
+                                        (localAIStatus.downloading ||
+                                            (!localAIStatus.downloadCompleted && !!localAIStatus.tier))) ||
+                                        (config.provider === 'local_hybrid' &&
+                                            (localAIStatus.downloading || localHybridMissingRequired))))
+                            }
+                            className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {step === 4 ? 'Finish Setup' : 'Next'}
+                            {step === 4 ? t('wizard.nav.finish') : t('wizard.nav.next')}
                             {step < 4 && <ArrowRight className="w-4 h-4 ml-2" />}
                         </button>
                     )}
@@ -2800,22 +2795,22 @@ exten => s,1,NoOp(AI Agent - Local Full)
                 {showSkipConfirm && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <div className="bg-card border border-border p-6 rounded-lg shadow-lg max-w-md w-full">
-                            <h3 className="text-lg font-semibold mb-2">Skip Setup?</h3>
+                            <h3 className="text-lg font-semibold mb-2">{t('wizard.modals.skipTitle')}</h3>
                             <p className="text-muted-foreground mb-4">
-                                Are you sure you want to skip setup? You will need to manually configure the environment variables later.
+                                {t('wizard.modals.skipDesc')}
                             </p>
                             <div className="flex justify-end space-x-2">
                                 <button
                                     onClick={() => setShowSkipConfirm(false)}
                                     className="px-4 py-2 rounded-md border border-input hover:bg-accent hover:text-accent-foreground"
                                 >
-                                    Cancel
+                                    {t('wizard.modals.cancel')}
                                 </button>
                                 <button
                                     onClick={confirmSkip}
                                     className="px-4 py-2 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
-                                    Skip Setup
+                                    {t('wizard.modals.skip')}
                                 </button>
                             </div>
                         </div>
@@ -2823,27 +2818,27 @@ exten => s,1,NoOp(AI Agent - Local Full)
                 )}
 
                 {/* Toast Notification */}
-	                {toast && (
-	                    <div className="fixed bottom-4 right-4 z-50">
-	                        <div
-	                            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-in slide-in-from-right ${toast.type === 'success'
-	                                ? 'bg-green-500 text-white'
-	                                : toast.type === 'warning'
-	                                    ? 'bg-yellow-500 text-white'
-	                                    : 'bg-red-500 text-white'
-	                                }`}
-	                        >
-	                            {toast.type === 'success' ? (
-	                                <CheckCircle2 className="w-4 h-4" />
-	                            ) : toast.type === 'warning' ? (
-	                                <AlertTriangle className="w-4 h-4" />
-	                            ) : (
-	                                <XCircle className="w-4 h-4" />
-	                            )}
-	                            {toast.message}
-	                        </div>
-	                    </div>
-	                )}
+                {toast && (
+                    <div className="fixed bottom-4 right-4 z-50">
+                        <div
+                            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-in slide-in-from-right ${toast.type === 'success'
+                                ? 'bg-green-500 text-white'
+                                : toast.type === 'warning'
+                                    ? 'bg-yellow-500 text-white'
+                                    : 'bg-red-500 text-white'
+                                }`}
+                        >
+                            {toast.type === 'success' ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                            ) : toast.type === 'warning' ? (
+                                <AlertTriangle className="w-4 h-4" />
+                            ) : (
+                                <XCircle className="w-4 h-4" />
+                            )}
+                            {toast.message}
+                        </div>
+                    </div>
+                )}
             </div>
         </div >
     );

@@ -11,6 +11,7 @@ import ToolForm from '../components/config/ToolForm';
 import HTTPToolForm from '../components/config/HTTPToolForm';
 import { useAuth } from '../auth/AuthContext';
 import { sanitizeConfigForSave } from '../utils/configSanitizers';
+import { useTranslation } from 'react-i18next';
 
 type ToolPhase = 'in_call' | 'pre_call' | 'post_call' | 'catalog';
 
@@ -32,6 +33,7 @@ type ToolDef = {
 };
 
 const ToolsPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const { token } = useAuth();
     const [config, setConfig] = useState<any>({});
@@ -142,7 +144,7 @@ const ToolsPage = () => {
         } catch (err: any) {
             console.error('Failed to save config', err);
             const detail = err.response?.data?.detail || err.message || 'Unknown error';
-            toast.error('Failed to save configuration', { description: detail });
+            toast.error(t('toolsPage.toasts.saveFailed'), { description: detail });
             throw err;
         } finally {
             setSaving(false);
@@ -150,7 +152,7 @@ const ToolsPage = () => {
     };
 
     const handleSave = async () => {
-        await persistConfigNow(configRef.current, 'Tools configuration saved');
+        await persistConfigNow(configRef.current, t('toolsPage.toasts.saveSuccess'));
     };
 
     const handleRestartAIEngine = async (force: boolean = false) => {
@@ -162,9 +164,9 @@ const ToolsPage = () => {
 
             if (response.data.status === 'warning') {
                 const confirmForce = await confirm({
-                    title: 'Force Restart?',
-                    description: `${response.data.message}\n\nDo you want to force restart anyway? This may disconnect active calls.`,
-                    confirmText: 'Force Restart',
+                    title: t('restart.confirmTitleForce'),
+                    description: t('restart.confirmDescForce', { message: response.data.message }),
+                    confirmText: t('restart.btnForce'),
                     variant: 'destructive'
                 });
                 if (confirmForce) {
@@ -175,14 +177,14 @@ const ToolsPage = () => {
             }
 
             if (response.data.status === 'degraded') {
-                toast.warning('AI Engine restarted but may not be fully healthy', { description: response.data.output || 'Please verify manually' });
+                toast.warning(t('errors.degraded'), { description: response.data.output || t('errors.degradedDesc') });
                 return;
             }
 
             setPendingRestart(false);
-            toast.success('AI Engine restarted! Changes are now active.');
+            toast.success(t('errors.success'));
         } catch (error: any) {
-            toast.error('Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
+            toast.error(t('errors.restartFailed'), { description: error.response?.data?.detail || error.message });
         } finally {
             setRestartingEngine(false);
         }
@@ -197,17 +199,17 @@ const ToolsPage = () => {
         // Built-in tools that ToolForm manages: transfer, hangup_call, leave_voicemail, 
         // send_email_summary, request_transcript
         const builtInToolKeys = ['transfer', 'attended_transfer', 'cancel_transfer', 'hangup_call', 'leave_voicemail', 'send_email_summary', 'request_transcript'];
-        
+
         const existingTools = baseConfig.tools || {};
         const preservedTools: Record<string, any> = {};
-        
+
         Object.entries(existingTools).forEach(([k, v]) => {
             // Preserve if:
             // 1. It's a phase-based HTTP tool (has kind and phase)
             // 2. It's NOT a built-in tool that ToolForm manages (those get updated from toolsOnly)
             const isPhaseHttpTool = v && typeof v === 'object' && (v as any).kind && (v as any).phase;
             const isBuiltInTool = builtInToolKeys.includes(k);
-            
+
             if (isPhaseHttpTool || !isBuiltInTool) {
                 // Only preserve if not being explicitly set in toolsOnly
                 if (!(k in toolsOnly)) {
@@ -242,13 +244,13 @@ const ToolsPage = () => {
                 <div className="flex items-center justify-between rounded-md border border-red-500/30 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
                     <div className="flex items-center">
                         <AlertCircle className="mr-2 h-5 w-5" />
-                        Tools editing is disabled while `config/ai-agent.yaml` has YAML errors. Fix the YAML and reload.
+                        {t('toolsPage.yamlError')}
                     </div>
                     <button
                         onClick={() => window.location.reload()}
                         className="flex items-center text-xs px-3 py-1.5 rounded transition-colors bg-red-500 text-white hover:bg-red-600 font-medium"
                     >
-                        Reload
+                        {t('toolsPage.reload')}
                     </button>
                 </div>
             </div>
@@ -260,30 +262,29 @@ const ToolsPage = () => {
             <div className={`${pendingRestart ? 'bg-orange-500/15 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/20'} border text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between`}>
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    Tool configuration changes require an AI Engine restart to take effect.
+                    {t('toolsPage.restartWarning')}
                 </div>
                 <button
                     onClick={() => handleRestartAIEngine(false)}
                     disabled={restartingEngine || !pendingRestart}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
-                            : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                        ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
+                        : 'bg-yellow-500/20 hover:bg-yellow-500/30'
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Restarting...' : 'Restart AI Engine'}
+                    {restartingEngine ? t('toolsPage.restarting') : t('toolsPage.restartEngine')}
                 </button>
             </div>
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Tools & Capabilities</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('toolsPage.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Configure the tools and capabilities available to the AI agent.
+                        {t('toolsPage.description')}
                     </p>
                 </div>
                 <button
@@ -292,7 +293,7 @@ const ToolsPage = () => {
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 >
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? t('toolsPage.saving') : t('toolsPage.saveChanges')}
                 </button>
             </div>
 
@@ -301,56 +302,52 @@ const ToolsPage = () => {
                 <div className="flex space-x-1">
                     <button
                         onClick={() => setActivePhase('pre_call')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                            activePhase === 'pre_call'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activePhase === 'pre_call'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                            }`}
                     >
                         <Search className="w-4 h-4" />
-                        Pre-Call
+                        {t('toolsPage.tabs.preCall')}
                     </button>
                     <button
                         onClick={() => setActivePhase('in_call')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                            activePhase === 'in_call'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activePhase === 'in_call'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                            }`}
                     >
                         <Phone className="w-4 h-4" />
-                        In-Call
+                        {t('toolsPage.tabs.inCall')}
                     </button>
                     <button
                         onClick={() => setActivePhase('post_call')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                            activePhase === 'post_call'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activePhase === 'post_call'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                            }`}
                     >
                         <Webhook className="w-4 h-4" />
-                        Post-Call
+                        {t('toolsPage.tabs.postCall')}
                     </button>
                     <button
                         onClick={() => setActivePhase('catalog')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                            activePhase === 'catalog'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activePhase === 'catalog'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                            }`}
                     >
                         <BookOpen className="w-4 h-4" />
-                        Catalog
+                        {t('toolsPage.tabs.catalog')}
                     </button>
                 </div>
             </div>
 
             {/* Pre-Call Phase */}
             {activePhase === 'pre_call' && (
-                <ConfigSection 
-                    title="Pre-Call Tools" 
-                    description="Tools that run before the AI speaks. Use for CRM lookups, caller enrichment, and context injection."
+                <ConfigSection
+                    title={t('toolsPage.sections.preCallTitle')}
+                    description={t('toolsPage.sections.preCallDesc')}
                 >
                     <ConfigCard>
                         <HTTPToolForm
@@ -366,7 +363,7 @@ const ToolsPage = () => {
             {/* In-Call Phase (existing tools + HTTP tools) */}
             {activePhase === 'in_call' && (
                 <>
-                    <ConfigSection title="Built-in Tools" description="Core tools available during the conversation (transfer, hangup, email, etc.)">
+                    <ConfigSection title={t('toolsPage.sections.inCallTitle')} description={t('toolsPage.sections.inCallDesc')}>
                         <ConfigCard>
                             <ToolForm
                                 config={{ ...(config.tools || {}), farewell_hangup_delay_sec: config.farewell_hangup_delay_sec }}
@@ -377,9 +374,9 @@ const ToolsPage = () => {
                             />
                         </ConfigCard>
                     </ConfigSection>
-                    <ConfigSection 
-                        title="In-Call HTTP Tools" 
-                        description="HTTP lookup tools the AI can invoke during conversation to fetch data (e.g., check availability, lookup order status)."
+                    <ConfigSection
+                        title={t('toolsPage.sections.inCallHttpTitle')}
+                        description={t('toolsPage.sections.inCallHttpDesc')}
                     >
                         <ConfigCard>
                             <HTTPToolForm
@@ -395,9 +392,9 @@ const ToolsPage = () => {
 
             {/* Post-Call Phase */}
             {activePhase === 'post_call' && (
-                <ConfigSection 
-                    title="Post-Call Tools" 
-                    description="Tools that run after the call ends. Use for webhooks, CRM updates, and integrations."
+                <ConfigSection
+                    title={t('toolsPage.sections.postCallTitle')}
+                    description={t('toolsPage.sections.postCallDesc')}
                 >
                     <ConfigCard>
                         <HTTPToolForm
@@ -412,8 +409,8 @@ const ToolsPage = () => {
 
             {activePhase === 'catalog' && (
                 <ConfigSection
-                    title="Tool Catalog (Read-only)"
-                    description="Reference for all tools currently registered in the AI Engine, including built-in, HTTP, and MCP tools. This does not change tool behavior."
+                    title={t('toolsPage.sections.catalogTitle')}
+                    description={t('toolsPage.sections.catalogDesc')}
                 >
                     <ConfigCard>
                         <div className="space-y-4">
@@ -423,7 +420,7 @@ const ToolsPage = () => {
                                     <input
                                         type="text"
                                         className="w-full pl-10 pr-3 py-2 rounded border border-input bg-background text-sm"
-                                        placeholder="Search tools (name, description, phase, source)"
+                                        placeholder={t('toolsPage.catalog.searchPlaceholder')}
                                         value={toolCatalogQuery}
                                         onChange={(e) => setToolCatalogQuery(e.target.value)}
                                     />
@@ -439,7 +436,7 @@ const ToolsPage = () => {
                                     ) : (
                                         <RefreshCw className="w-4 h-4 mr-2" />
                                     )}
-                                    Refresh
+                                    {t('toolsPage.catalog.refresh')}
                                 </button>
                             </div>
 
@@ -454,25 +451,25 @@ const ToolsPage = () => {
                                     <thead className="bg-secondary/40 text-muted-foreground">
                                         <tr>
                                             <th className="text-left px-3 py-2 w-10"></th>
-                                            <th className="text-left px-3 py-2">Tool</th>
-                                            <th className="text-left px-3 py-2">Phase</th>
-                                            <th className="text-left px-3 py-2">Source</th>
-                                            <th className="text-left px-3 py-2">Description</th>
-                                            <th className="text-left px-3 py-2 w-16">Params</th>
+                                            <th className="text-left px-3 py-2">{t('toolsPage.catalog.columns.tool')}</th>
+                                            <th className="text-left px-3 py-2">{t('toolsPage.catalog.columns.phase')}</th>
+                                            <th className="text-left px-3 py-2">{t('toolsPage.catalog.columns.source')}</th>
+                                            <th className="text-left px-3 py-2">{t('toolsPage.catalog.columns.description')}</th>
+                                            <th className="text-left px-3 py-2 w-16">{t('toolsPage.catalog.columns.params')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {(() => {
                                             const q = toolCatalogQuery.trim().toLowerCase();
                                             const filtered = (toolCatalog || [])
-                                                .filter((t) => {
+                                                .filter((tool) => {
                                                     if (!q) return true;
                                                     const hay = [
-                                                        t.name,
-                                                        t.description,
-                                                        t.phase,
-                                                        t.source,
-                                                        t.category,
+                                                        tool.name,
+                                                        tool.description,
+                                                        tool.phase,
+                                                        tool.source,
+                                                        tool.category,
                                                     ]
                                                         .filter(Boolean)
                                                         .join(' ')
@@ -487,7 +484,7 @@ const ToolsPage = () => {
                                                         <td className="px-3 py-3" colSpan={6}>
                                                             <div className="flex items-center text-muted-foreground">
                                                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                                Loading tool catalog...
+                                                                {t('toolsPage.catalog.loading')}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -498,53 +495,53 @@ const ToolsPage = () => {
                                                 return (
                                                     <tr>
                                                         <td className="px-3 py-3 text-muted-foreground" colSpan={6}>
-                                                            No tools match this search.
+                                                            {t('toolsPage.catalog.noTools')}
                                                         </td>
                                                     </tr>
                                                 );
                                             }
 
-                                            return filtered.flatMap((t) => {
-                                                const expanded = !!toolCatalogExpanded[t.name];
-                                                const params = Array.isArray(t.parameters) ? t.parameters : [];
+                                            return filtered.flatMap((tool) => {
+                                                const expanded = !!toolCatalogExpanded[tool.name];
+                                                const params = Array.isArray(tool.parameters) ? tool.parameters : [];
                                                 return [
                                                     (
-                                                        <tr key={t.name} className="border-t border-border align-top">
+                                                        <tr key={tool.name} className="border-t border-border align-top">
                                                             <td className="px-3 py-2">
                                                                 <button
                                                                     type="button"
                                                                     className="text-muted-foreground hover:text-foreground"
-                                                                    onClick={() => setToolCatalogExpanded((prev) => ({ ...prev, [t.name]: !expanded }))}
+                                                                    onClick={() => setToolCatalogExpanded((prev) => ({ ...prev, [tool.name]: !expanded }))}
                                                                     aria-label={expanded ? 'Collapse tool details' : 'Expand tool details'}
                                                                 >
                                                                     {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                                                 </button>
                                                             </td>
                                                             <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">
-                                                                {t.name}
-                                                                {t.is_global ? (
+                                                                {tool.name}
+                                                                {tool.is_global ? (
                                                                     <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded border border-border bg-secondary/40 text-muted-foreground">
-                                                                        global
+                                                                        {t('toolsPage.catalog.global')}
                                                                     </span>
                                                                 ) : null}
                                                             </td>
-                                                            <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{t.phase || '-'}</td>
-                                                            <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{t.source || 'unknown'}</td>
-                                                            <td className="px-3 py-2 text-foreground/90">{t.description || '-'}</td>
+                                                            <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{tool.phase || '-'}</td>
+                                                            <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{tool.source || t('toolsPage.catalog.unknown')}</td>
+                                                            <td className="px-3 py-2 text-foreground/90">{tool.description || '-'}</td>
                                                             <td className="px-3 py-2 text-muted-foreground text-right">{params.length}</td>
                                                         </tr>
                                                     ),
                                                     expanded ? (
-                                                        <tr key={`${t.name}-details`} className="border-t border-border bg-secondary/20">
+                                                        <tr key={`${tool.name}-details`} className="border-t border-border bg-secondary/20">
                                                             <td className="px-3 py-2" colSpan={6}>
                                                                 {params.length === 0 ? (
-                                                                    <div className="text-xs text-muted-foreground">No parameters.</div>
+                                                                    <div className="text-xs text-muted-foreground">{t('toolsPage.catalog.noParams')}</div>
                                                                 ) : (
                                                                     <div className="space-y-2">
-                                                                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Parameters</div>
+                                                                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('toolsPage.catalog.parameters')}</div>
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                                             {params.map((p) => (
-                                                                                <div key={`${t.name}-${p.name}`} className="rounded border border-border bg-background/60 p-2">
+                                                                                <div key={`${tool.name}-${p.name}`} className="rounded border border-border bg-background/60 p-2">
                                                                                     <div className="flex items-center justify-between">
                                                                                         <div className="text-xs font-medium text-foreground">
                                                                                             {p.name}{p.required ? <span className="ml-1 text-red-500">*</span> : null}

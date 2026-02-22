@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { toast } from 'sonner';
 import yaml from 'js-yaml';
-import { Save, Zap, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { Save, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { YamlErrorBanner, YamlErrorInfo } from '../../components/ui/YamlErrorBanner';
 import { ConfigSection } from '../../components/ui/ConfigSection';
 import { ConfigCard } from '../../components/ui/ConfigCard';
@@ -10,6 +11,7 @@ import { FormInput, FormSelect, FormSwitch } from '../../components/ui/FormCompo
 import { sanitizeConfigForSave } from '../../utils/configSanitizers';
 
 const StreamingPage = () => {
+    const { t } = useTranslation();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
     const [yamlError, setYamlError] = useState<YamlErrorInfo | null>(null);
@@ -46,10 +48,10 @@ const StreamingPage = () => {
             const sanitized = sanitizeConfigForSave(config);
             await axios.post('/api/config/yaml', { content: yaml.dump(sanitized) });
             setPendingRestart(true);
-            toast.success('Streaming configuration saved');
+            toast.success(t('advanced.streaming.saveSuccess'));
         } catch (err) {
             console.error('Failed to save config', err);
-            toast.error('Failed to save configuration');
+            toast.error(t('advanced.streaming.saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -82,10 +84,10 @@ const StreamingPage = () => {
 
             if (response.data.status === 'success') {
                 setPendingRestart(false);
-                toast.success('AI Engine restarted! Changes are now active.');
+                toast.success(t('advanced.streaming.restartSuccess'));
             }
         } catch (error: any) {
-            toast.error('Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
+            toast.error(t('modals.restartFailed'), { description: error.response?.data?.detail || error.message });
         } finally {
             setRestartingEngine(false);
         }
@@ -101,7 +103,7 @@ const StreamingPage = () => {
         });
     };
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading configuration...</div>;
+    if (loading) return <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>;
 
     if (yamlError) return (
         <div className="space-y-6">
@@ -116,31 +118,30 @@ const StreamingPage = () => {
             <div className={`${pendingRestart ? 'bg-orange-500/15 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/20'} border text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between`}>
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    Changes to streaming configurations require an AI Engine restart to take effect.
+                    {t('advanced.streaming.restartWarning')}
                 </div>
                 <button
                     onClick={() => handleReloadAIEngine(false)}
                     disabled={restartingEngine}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium' 
-                            : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                        ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
+                        : 'bg-yellow-500/20 hover:bg-yellow-500/30'
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Restarting...' : 'Reload AI Engine'}
+                    {restartingEngine ? t('advanced.streaming.restarting') : t('advanced.streaming.reloadAIEngine')}
                 </button>
             </div>
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Streaming Settings</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('advanced.streaming.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Fine-tune real-time audio streaming performance and latency.
+                        {t('advanced.streaming.desc')}
                     </p>
                 </div>
                 <button
@@ -149,118 +150,118 @@ const StreamingPage = () => {
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 >
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? t('advanced.streaming.saving') : t('advanced.streaming.saveChanges')}
                 </button>
             </div>
 
-            <ConfigSection title="Playback Mode" description="Choose how AI responses are delivered to callers.">
+            <ConfigSection title={t('advanced.streaming.playbackModeTitle')} description={t('advanced.streaming.playbackModeDesc')}>
                 <ConfigCard>
                     <FormSelect
-                        label="Downstream Mode"
+                        label={t('advanced.streaming.downstreamModeLabel')}
                         value={config.downstream_mode || 'stream'}
                         onChange={(e) => setConfig({ ...config, downstream_mode: e.target.value })}
                         options={[
-                            { value: 'stream', label: 'Streaming (Real-time)' },
-                            { value: 'file', label: 'File-based (Debugging)' }
+                            { value: 'stream', label: t('advanced.streaming.downstreamModeStream') },
+                            { value: 'file', label: t('advanced.streaming.downstreamModeFile') }
                         ]}
-                        tooltip="Use 'stream' for production (low latency). Use 'file' for debugging playback issues."
+                        tooltip={t('advanced.streaming.downstreamModeTooltip')}
                     />
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection title="Audio Stream Parameters" description="Core settings for audio packet handling.">
+            <ConfigSection title={t('advanced.streaming.audioStreamParamsTitle')} description={t('advanced.streaming.audioStreamParamsDesc')}>
                 <ConfigCard>
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Chunk Size (ms)"
+                                label={t('advanced.streaming.chunkSizeLabel')}
                                 type="number"
                                 value={streamingConfig.chunk_size_ms || 20}
                                 onChange={(e) => updateStreamingConfig('chunk_size_ms', parseInt(e.target.value))}
-                                tooltip="Duration of each audio packet."
+                                tooltip={t('advanced.streaming.chunkSizeTooltip')}
                             />
                             <FormInput
-                                label="Sample Rate"
+                                label={t('advanced.streaming.sampleRateLabel')}
                                 type="number"
                                 value={streamingConfig.sample_rate || 8000}
                                 onChange={(e) => updateStreamingConfig('sample_rate', parseInt(e.target.value))}
-                                tooltip="Audio sampling rate (Hz)."
+                                tooltip={t('advanced.streaming.sampleRateTooltip')}
                             />
                             <FormInput
-                                label="Jitter Buffer (ms)"
+                                label={t('advanced.streaming.jitterBufferLabel')}
                                 type="number"
                                 value={streamingConfig.jitter_buffer_ms || 950}
                                 onChange={(e) => updateStreamingConfig('jitter_buffer_ms', parseInt(e.target.value))}
-                                tooltip="Buffer to smooth out network variations."
+                                tooltip={t('advanced.streaming.jitterBufferTooltip')}
                             />
                             <FormInput
-                                label="Connection Timeout (ms)"
+                                label={t('advanced.streaming.connTimeoutLabel')}
                                 type="number"
                                 value={streamingConfig.connection_timeout_ms || 120000}
                                 onChange={(e) => updateStreamingConfig('connection_timeout_ms', parseInt(e.target.value))}
-                                tooltip="Maximum time to wait for provider connection before failing (default: 120000ms = 2 min)."
+                                tooltip={t('advanced.streaming.connTimeoutTooltip')}
                             />
                             <FormInput
-                                label="Keepalive Interval (ms)"
+                                label={t('advanced.streaming.keepaliveLabel')}
                                 type="number"
                                 value={streamingConfig.keepalive_interval_ms || 5000}
                                 onChange={(e) => updateStreamingConfig('keepalive_interval_ms', parseInt(e.target.value))}
-                                tooltip="How often to send keepalive pings to prevent connection timeout (default: 5000ms)."
+                                tooltip={t('advanced.streaming.keepaliveTooltip')}
                             />
                             <FormInput
-                                label="Provider Grace Period (ms)"
+                                label={t('advanced.streaming.graceLabel')}
                                 type="number"
                                 value={streamingConfig.provider_grace_ms || 200}
                                 onChange={(e) => updateStreamingConfig('provider_grace_ms', parseInt(e.target.value))}
-                                tooltip="Wait time for provider response before considering it unresponsive (default: 200ms)."
+                                tooltip={t('advanced.streaming.graceTooltip')}
                             />
                             <FormInput
-                                label="Fallback Timeout (ms)"
+                                label={t('advanced.streaming.fallbackLabel')}
                                 type="number"
                                 value={streamingConfig.fallback_timeout_ms || 8000}
                                 onChange={(e) => updateStreamingConfig('fallback_timeout_ms', parseInt(e.target.value))}
-                                tooltip="Time before switching to fallback provider if primary fails (default: 8000ms)."
+                                tooltip={t('advanced.streaming.fallbackTooltip')}
                             />
                             <FormInput
-                                label="Low Watermark (ms)"
+                                label={t('advanced.streaming.lowWatermarkLabel')}
                                 type="number"
                                 value={streamingConfig.low_watermark_ms || 80}
                                 onChange={(e) => updateStreamingConfig('low_watermark_ms', parseInt(e.target.value))}
-                                tooltip="Minimum audio buffered before playback starts - lower = faster but may be choppy (default: 80ms)."
+                                tooltip={t('advanced.streaming.lowWatermarkTooltip')}
                             />
                             <FormInput
-                                label="Min Start (ms)"
+                                label={t('advanced.streaming.minStartLabel')}
                                 type="number"
                                 value={streamingConfig.min_start_ms || 120}
                                 onChange={(e) => updateStreamingConfig('min_start_ms', parseInt(e.target.value))}
-                                tooltip="Minimum audio required before starting response playback (default: 120ms)."
+                                tooltip={t('advanced.streaming.minStartTooltip')}
                             />
                             <FormInput
-                                label="Greeting Min Start (ms)"
+                                label={t('advanced.streaming.greetMinStartLabel')}
                                 type="number"
                                 value={streamingConfig.greeting_min_start_ms || 40}
                                 onChange={(e) => updateStreamingConfig('greeting_min_start_ms', parseInt(e.target.value))}
-                                tooltip="Reduced min start for greetings - faster initial response (default: 40ms)."
+                                tooltip={t('advanced.streaming.greetMinStartTooltip')}
                             />
                             <FormInput
-                                label="Greeting RTP Wait (ms)"
+                                label={t('advanced.streaming.greetRtpWaitLabel')}
                                 type="number"
                                 value={streamingConfig.greeting_rtp_wait_ms || 250}
                                 onChange={(e) => updateStreamingConfig('greeting_rtp_wait_ms', parseInt(e.target.value))}
-                                tooltip="ExternalMedia only: How long to wait for RTP endpoint before falling back to file playback for greeting (default: 250ms). Increase if greetings are cut off."
+                                tooltip={t('advanced.streaming.greetRtpWaitTooltip')}
                             />
                             <FormInput
-                                label="Empty Backoff Ticks Max"
+                                label={t('advanced.streaming.emptyBackoffLabel')}
                                 type="number"
                                 value={streamingConfig.empty_backoff_ticks_max || 5}
                                 onChange={(e) => updateStreamingConfig('empty_backoff_ticks_max', parseInt(e.target.value))}
-                                tooltip="Max retries when buffer is empty before pausing playback (default: 5)."
+                                tooltip={t('advanced.streaming.emptyBackoffTooltip')}
                             />
                         </div>
 
                         <FormSwitch
-                            label="Continuous Stream"
-                            description="Keep the stream open even during silence."
+                            label={t('advanced.streaming.contStreamLabel')}
+                            description={t('advanced.streaming.contStreamDesc')}
                             checked={streamingConfig.continuous_stream ?? true}
                             onChange={(e) => updateStreamingConfig('continuous_stream', e.target.checked)}
                         />
@@ -268,94 +269,94 @@ const StreamingPage = () => {
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection title="Audio Normalizer" description="Normalize audio levels for consistent volume.">
+            <ConfigSection title={t('advanced.streaming.normTitle')} description={t('advanced.streaming.normDesc')}>
                 <ConfigCard>
                     <div className="space-y-6">
                         <FormSwitch
-                            label="Enable Normalizer"
-                            description="Automatically adjust audio gain."
+                            label={t('advanced.streaming.enableNormLabel')}
+                            description={t('advanced.streaming.enableNormDesc')}
                             checked={streamingConfig.normalizer?.enabled ?? true}
                             onChange={(e) => updateStreamingConfig('normalizer', { ...streamingConfig.normalizer, enabled: e.target.checked })}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Max Gain (dB)"
+                                label={t('advanced.streaming.maxGainLabel')}
                                 type="number"
                                 value={streamingConfig.normalizer?.max_gain_db || 18}
                                 onChange={(e) => updateStreamingConfig('normalizer', { ...streamingConfig.normalizer, max_gain_db: parseInt(e.target.value) })}
                                 disabled={!streamingConfig.normalizer?.enabled}
-                                tooltip="Maximum volume boost applied to quiet audio (default: 18dB)."
+                                tooltip={t('advanced.streaming.maxGainTooltip')}
                             />
                             <FormInput
-                                label="Target RMS"
+                                label={t('advanced.streaming.targetRmsLabel')}
                                 type="number"
                                 value={streamingConfig.normalizer?.target_rms || 1400}
                                 onChange={(e) => updateStreamingConfig('normalizer', { ...streamingConfig.normalizer, target_rms: parseInt(e.target.value) })}
                                 disabled={!streamingConfig.normalizer?.enabled}
-                                tooltip="Target audio level for normalization - higher = louder output (default: 1400)."
+                                tooltip={t('advanced.streaming.targetRmsTooltip')}
                             />
                         </div>
                     </div>
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection title="Egress Format" description="Control audio byte ordering and format for downstream playback.">
+            <ConfigSection title={t('advanced.streaming.egressTitle')} description={t('advanced.streaming.egressDesc')}>
                 <ConfigCard>
                     <div className="space-y-6">
                         <FormSelect
-                            label="Egress Swap Mode"
+                            label={t('advanced.streaming.egressSwapLabel')}
                             value={streamingConfig.egress_swap_mode || 'auto'}
                             onChange={(e) => updateStreamingConfig('egress_swap_mode', e.target.value)}
                             options={[
-                                { value: 'auto', label: 'Auto (detect from system)' },
-                                { value: 'swap', label: 'Swap (force byte swap)' },
-                                { value: 'none', label: 'None (no byte swap)' }
+                                { value: 'auto', label: t('advanced.streaming.swapModeAuto') },
+                                { value: 'swap', label: t('advanced.streaming.swapModeSwap') },
+                                { value: 'none', label: t('advanced.streaming.swapModeNone') }
                             ]}
-                            tooltip="Controls PCM16 byte ordering for downstream playback. 'auto' detects system endianness. Use 'swap' if audio sounds garbled/static, 'none' if already correct."
+                            tooltip={t('advanced.streaming.egressSwapTooltip')}
                         />
                         <FormSwitch
-                            label="Force μ-law Encoding"
-                            description="Always encode egress audio as μ-law regardless of profile."
+                            label={t('advanced.streaming.forceMulawLabel')}
+                            description={t('advanced.streaming.forceMulawDesc')}
                             checked={streamingConfig.egress_force_mulaw ?? false}
                             onChange={(e) => updateStreamingConfig('egress_force_mulaw', e.target.checked)}
-                            tooltip="Force μ-law (G.711) encoding for all downstream audio. Enable if Asterisk expects μ-law but provider sends PCM16. Typically needed for telephony compatibility."
+                            tooltip={t('advanced.streaming.forceMulawTooltip')}
                         />
                     </div>
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection title="Diagnostics" description="Tools for debugging audio stream issues.">
+            <ConfigSection title={t('advanced.streaming.diagTitle')} description={t('advanced.streaming.diagDesc')}>
                 <ConfigCard>
                     <div className="space-y-6">
                         <FormSwitch
-                            label="Enable Audio Taps"
-                            description="Record raw audio streams to disk for analysis."
+                            label={t('advanced.streaming.enableTapsLabel')}
+                            description={t('advanced.streaming.enableTapsDesc')}
                             checked={streamingConfig.diag_enable_taps ?? false}
                             onChange={(e) => updateStreamingConfig('diag_enable_taps', e.target.checked)}
                         />
                         <FormInput
-                            label="Output Directory"
+                            label={t('advanced.streaming.outDirLabel')}
                             value={streamingConfig.diag_out_dir || '/tmp/ai-engine-taps'}
                             onChange={(e) => updateStreamingConfig('diag_out_dir', e.target.value)}
                             disabled={!streamingConfig.diag_enable_taps}
-                            tooltip="Directory to save diagnostic audio recordings."
+                            tooltip={t('advanced.streaming.outDirTooltip')}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Diag Pre Seconds"
+                                label={t('advanced.streaming.preSecsLabel')}
                                 type="number"
                                 value={streamingConfig.diag_pre_secs || 1}
                                 onChange={(e) => updateStreamingConfig('diag_pre_secs', parseInt(e.target.value))}
                                 disabled={!streamingConfig.diag_enable_taps}
-                                tooltip="Seconds of audio to capture before an event (default: 1)."
+                                tooltip={t('advanced.streaming.preSecsTooltip')}
                             />
                             <FormInput
-                                label="Diag Post Seconds"
+                                label={t('advanced.streaming.postSecsLabel')}
                                 type="number"
                                 value={streamingConfig.diag_post_secs || 1}
                                 onChange={(e) => updateStreamingConfig('diag_post_secs', parseInt(e.target.value))}
                                 disabled={!streamingConfig.diag_enable_taps}
-                                tooltip="Seconds of audio to capture after an event (default: 1)."
+                                tooltip={t('advanced.streaming.postSecsTooltip')}
                             />
                         </div>
                     </div>

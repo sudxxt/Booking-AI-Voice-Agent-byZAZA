@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { toast } from 'sonner';
 import yaml from 'js-yaml';
@@ -10,6 +11,7 @@ import { FormInput } from '../../components/ui/FormComponents';
 import { sanitizeConfigForSave } from '../../utils/configSanitizers';
 
 const LLMPage = () => {
+    const { t } = useTranslation();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
     const [yamlError, setYamlError] = useState<YamlErrorInfo | null>(null);
@@ -46,10 +48,10 @@ const LLMPage = () => {
             const sanitized = sanitizeConfigForSave(config);
             await axios.post('/api/config/yaml', { content: yaml.dump(sanitized) });
             setPendingRestart(true);
-            toast.success('LLM configuration saved');
+            toast.success(t('advanced.llm.saveSuccess'));
         } catch (err) {
             console.error('Failed to save config', err);
-            toast.error('Failed to save configuration');
+            toast.error(t('advanced.llm.saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -82,10 +84,10 @@ const LLMPage = () => {
 
             if (response.data.status === 'success') {
                 setPendingRestart(false);
-                toast.success('AI Engine restarted! Changes are now active.');
+                toast.success(t('advanced.llm.restartSuccess'));
             }
         } catch (error: any) {
-            toast.error('Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
+            toast.error(t('modals.restartFailed'), { description: error.response?.data?.detail || error.message });
         } finally {
             setRestartingEngine(false);
         }
@@ -101,7 +103,7 @@ const LLMPage = () => {
         });
     };
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading configuration...</div>;
+    if (loading) return <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>;
 
     if (yamlError) return (
         <div className="space-y-6">
@@ -116,31 +118,30 @@ const LLMPage = () => {
             <div className={`${pendingRestart ? 'bg-orange-500/15 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/20'} border text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between`}>
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    LLM configuration changes require an AI Engine restart to take effect.
+                    {t('advanced.llm.restartWarning')}
                 </div>
                 <button
                     onClick={() => handleReloadAIEngine(false)}
                     disabled={restartingEngine}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium' 
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
                             : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Restarting...' : 'Restart AI Engine'}
+                    {restartingEngine ? t('advanced.llm.restarting') : t('advanced.llm.restartAIEngine')}
                 </button>
             </div>
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">LLM Defaults</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('advanced.llm.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Set default parameters for Large Language Model interactions.
+                        {t('advanced.llm.desc')}
                     </p>
                 </div>
                 <button
@@ -149,32 +150,32 @@ const LLMPage = () => {
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 >
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? t('advanced.llm.saving') : t('advanced.llm.saveChanges')}
                 </button>
             </div>
 
-            <ConfigSection title="Default Parameters" description="Fallback settings when not specified by a context.">
+            <ConfigSection title={t('advanced.llm.defaultParamsTitle')} description={t('advanced.llm.defaultParamsDesc')}>
                 <ConfigCard>
                     <div className="space-y-6">
                         <FormInput
-                            label="Initial Greeting"
+                            label={t('advanced.llm.initialGreetingLabel')}
                             value={llmConfig.initial_greeting || ''}
                             onChange={(e) => updateLLMConfig('initial_greeting', e.target.value)}
-                            placeholder="Hello, how can I help you today?"
-                            tooltip="The first message spoken by the AI when the call starts."
+                            placeholder={t('advanced.llm.initialGreetingPlaceholder')}
+                            tooltip={t('advanced.llm.initialGreetingTooltip')}
                         />
                         <div className="space-y-2">
                             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                System Prompt
+                                {t('advanced.llm.systemPromptLabel')}
                             </label>
                             <textarea
                                 className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 value={llmConfig.prompt || ''}
                                 onChange={(e) => updateLLMConfig('prompt', e.target.value)}
-                                placeholder="You are a helpful AI assistant..."
+                                placeholder={t('advanced.llm.systemPromptPlaceholder')}
                             />
                             <p className="text-xs text-muted-foreground">
-                                The core personality and instructions for the AI.
+                                {t('advanced.llm.systemPromptDesc')}
                             </p>
                         </div>
                     </div>

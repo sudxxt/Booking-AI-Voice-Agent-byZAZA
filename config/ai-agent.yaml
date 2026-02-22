@@ -1931,11 +1931,6 @@ tools:
         target: '2765'
         type: extension
         live_agent: false
-      sales_queue: null
-      sales_team: null
-      support_agent: null
-      support_queue: null
-      support_team: null
     enabled: false
 mcp:
   enabled: false

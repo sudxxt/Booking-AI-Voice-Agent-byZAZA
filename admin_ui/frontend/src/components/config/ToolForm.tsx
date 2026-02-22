@@ -67,220 +67,220 @@ const hasLiveAgentExpertSettings = (ext: any) => {
 };
 
 const ToolForm = ({ config, contexts, hangupUsage, onChange, onSaveNow }: ToolFormProps) => {
-			    const [editingDestination, setEditingDestination] = useState<string | null>(null);
-			    const [destinationForm, setDestinationForm] = useState<any>({});
-	        const [emailDefaults, setEmailDefaults] = useState<any>(null);
-	        const [emailDefaultsError, setEmailDefaultsError] = useState<string | null>(null);
-	        const [showSummaryEmailAdvanced, setShowSummaryEmailAdvanced] = useState(false);
-	        const [showTranscriptEmailAdvanced, setShowTranscriptEmailAdvanced] = useState(false);
-	        const [templateModalOpen, setTemplateModalOpen] = useState(false);
-	        const [templateModalTool, setTemplateModalTool] = useState<'send_email_summary' | 'request_transcript'>('send_email_summary');
-	        const [internalAliasesDraftByRowId, setInternalAliasesDraftByRowId] = useState<Record<string, string>>({});
-	        const internalAliasesCommittedRef = useRef<Record<string, string>>({});
-	        const [showHangupExpert, setShowHangupExpert] = useState<boolean>(() => {
-	            try {
-	                const v = localStorage.getItem(HANGUP_EXPERT_STORAGE_KEY);
-	                if (v === 'true') return true;
-                if (v === 'false') return false;
-            } catch {
-                // Ignore storage failures (private browsing, blocked storage, etc.).
-            }
-            return false;
+    const [editingDestination, setEditingDestination] = useState<string | null>(null);
+    const [destinationForm, setDestinationForm] = useState<any>({});
+    const [emailDefaults, setEmailDefaults] = useState<any>(null);
+    const [emailDefaultsError, setEmailDefaultsError] = useState<string | null>(null);
+    const [showSummaryEmailAdvanced, setShowSummaryEmailAdvanced] = useState(false);
+    const [showTranscriptEmailAdvanced, setShowTranscriptEmailAdvanced] = useState(false);
+    const [templateModalOpen, setTemplateModalOpen] = useState(false);
+    const [templateModalTool, setTemplateModalTool] = useState<'send_email_summary' | 'request_transcript'>('send_email_summary');
+    const [internalAliasesDraftByRowId, setInternalAliasesDraftByRowId] = useState<Record<string, string>>({});
+    const internalAliasesCommittedRef = useRef<Record<string, string>>({});
+    const [showHangupExpert, setShowHangupExpert] = useState<boolean>(() => {
+        try {
+            const v = localStorage.getItem(HANGUP_EXPERT_STORAGE_KEY);
+            if (v === 'true') return true;
+            if (v === 'false') return false;
+        } catch {
+            // Ignore storage failures (private browsing, blocked storage, etc.).
+        }
+        return false;
+    });
+    const [showLiveAgentsExpert, setShowLiveAgentsExpert] = useState<boolean>(() =>
+        Object.values(config?.extensions?.internal || {}).some((ext: any) => hasLiveAgentExpertSettings(ext))
+    );
+    const [showSummaryEmailExpert, setShowSummaryEmailExpert] = useState<boolean>(() => Boolean(config?.send_email_summary?.from_name));
+    const [showTranscriptEmailExpert, setShowTranscriptEmailExpert] = useState<boolean>(() => Boolean(config?.request_transcript?.from_name));
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(HANGUP_EXPERT_STORAGE_KEY, showHangupExpert ? 'true' : 'false');
+        } catch {
+            // Ignore.
+        }
+    }, [showHangupExpert]);
+
+    useEffect(() => {
+        const internal = config?.extensions?.internal || {};
+        const rowIdsInUse = new Set<string>();
+
+        setInternalAliasesDraftByRowId((prev) => {
+            let next: Record<string, string> | null = null;
+            const ensureNext = () => (next ??= { ...prev });
+
+            Object.entries(internal).forEach(([key, ext]: [string, any]) => {
+                const rowId = getInternalExtRowId(key);
+                rowIdsInUse.add(rowId);
+
+                const committed = Array.isArray(ext?.aliases) ? ext.aliases.join(', ') : String(ext?.aliases || '');
+                const prevCommitted = internalAliasesCommittedRef.current[rowId];
+                const draft = prev[rowId];
+
+                internalAliasesCommittedRef.current[rowId] = committed;
+
+                // Sync committed -> draft when (a) draft is uninitialized, or (b) draft matches the
+                // last committed value (meaning the user hasn't started editing).
+                if (draft === undefined || (prevCommitted !== undefined && draft === prevCommitted && draft !== committed)) {
+                    ensureNext()[rowId] = committed;
+                }
+            });
+
+            // Drop draft rows that no longer exist.
+            Object.keys(prev).forEach((rowId) => {
+                if (!rowIdsInUse.has(rowId)) {
+                    ensureNext();
+                    delete next![rowId];
+                    delete internalAliasesCommittedRef.current[rowId];
+                }
+            });
+
+            return next ?? prev;
         });
-        const [showLiveAgentsExpert, setShowLiveAgentsExpert] = useState<boolean>(() =>
-            Object.values(config?.extensions?.internal || {}).some((ext: any) => hasLiveAgentExpertSettings(ext))
-        );
-        const [showSummaryEmailExpert, setShowSummaryEmailExpert] = useState<boolean>(() => Boolean(config?.send_email_summary?.from_name));
-        const [showTranscriptEmailExpert, setShowTranscriptEmailExpert] = useState<boolean>(() => Boolean(config?.request_transcript?.from_name));
+    }, [config?.extensions?.internal]);
 
-	        useEffect(() => {
-	            try {
-	                localStorage.setItem(HANGUP_EXPERT_STORAGE_KEY, showHangupExpert ? 'true' : 'false');
-	            } catch {
-	                // Ignore.
-	            }
-	        }, [showHangupExpert]);
+    // Per-context override draft rows
+    const [summaryAdminCtx, setSummaryAdminCtx] = useState('');
+    const [summaryAdminVal, setSummaryAdminVal] = useState('');
+    const [summaryFromCtx, setSummaryFromCtx] = useState('');
+    const [summaryFromVal, setSummaryFromVal] = useState('');
+    const [transcriptAdminCtx, setTranscriptAdminCtx] = useState('');
+    const [transcriptAdminVal, setTranscriptAdminVal] = useState('');
+    const [transcriptFromCtx, setTranscriptFromCtx] = useState('');
+    const [transcriptFromVal, setTranscriptFromVal] = useState('');
 
-	        useEffect(() => {
-	            const internal = config?.extensions?.internal || {};
-	            const rowIdsInUse = new Set<string>();
+    // Keep a stable React key per internal extension row so key renames don't blow away focus/cursor.
+    const internalExtRowIdsRef = useRef<Record<string, string>>({});
+    const internalExtRowIdCounterRef = useRef(0);
+    const internalExtRowMetaRef = useRef<Record<string, { autoDerivedKey: boolean }>>({});
+    const internalExtRenameToastKeyRef = useRef<string>('');
+    const [internalExtStatusByRowId, setInternalExtStatusByRowId] = useState<Record<string, any>>({});
+    const liveAgentsCount = Object.keys(config.extensions?.internal || {}).length;
+    const hasLiveAgents = liveAgentsCount > 0;
+    const hasLiveAgentDestinationOverride = Boolean((config.transfer?.live_agent_destination_key || '').trim());
+    const [showLiveAgentRoutingAdvanced, setShowLiveAgentRoutingAdvanced] = useState<boolean>(
+        () => !hasLiveAgents || hasLiveAgentDestinationOverride
+    );
 
-	            setInternalAliasesDraftByRowId((prev) => {
-	                let next: Record<string, string> | null = null;
-	                const ensureNext = () => (next ??= { ...prev });
+    const isNumericKey = (k: string) => /^\d+$/.test((k || '').trim());
 
-	                Object.entries(internal).forEach(([key, ext]: [string, any]) => {
-	                    const rowId = getInternalExtRowId(key);
-	                    rowIdsInUse.add(rowId);
+    const extractNumericExtensionKeyFromDialString = (raw: string): string => {
+        const s = (raw || '').trim();
+        if (!s) return '';
 
-	                    const committed = Array.isArray(ext?.aliases) ? ext.aliases.join(', ') : String(ext?.aliases || '');
-	                    const prevCommitted = internalAliasesCommittedRef.current[rowId];
-	                    const draft = prev[rowId];
+        const digitsOnly = s.match(/^(\d+)$/);
+        if (digitsOnly) return digitsOnly[1];
 
-	                    internalAliasesCommittedRef.current[rowId] = committed;
+        // Common dial-string formats: PJSIP/2765, SIP/6000, Local/2765@from-internal
+        const m = s.match(/(?:^|[^A-Za-z0-9])(?:PJSIP|SIP|IAX2|DAHDI|LOCAL)\/(\d+)/i);
+        return m ? (m[1] || '') : '';
+    };
 
-	                    // Sync committed -> draft when (a) draft is uninitialized, or (b) draft matches the
-	                    // last committed value (meaning the user hasn't started editing).
-	                    if (draft === undefined || (prevCommitted !== undefined && draft === prevCommitted && draft !== committed)) {
-	                        ensureNext()[rowId] = committed;
-	                    }
-	                });
+    const getInternalExtRowId = (configKey: string) => {
+        const map = internalExtRowIdsRef.current;
+        if (!map[configKey]) {
+            internalExtRowIdCounterRef.current += 1;
+            map[configKey] = `internal-ext-row-${internalExtRowIdCounterRef.current}`;
+        }
+        const rowId = map[configKey];
+        if (!internalExtRowMetaRef.current[rowId]) {
+            internalExtRowMetaRef.current[rowId] = { autoDerivedKey: false };
+        }
+        return rowId;
+    };
 
-	                // Drop draft rows that no longer exist.
-	                Object.keys(prev).forEach((rowId) => {
-	                    if (!rowIdsInUse.has(rowId)) {
-	                        ensureNext();
-	                        delete next![rowId];
-	                        delete internalAliasesCommittedRef.current[rowId];
-	                    }
-	                });
+    const getInternalExtRowMeta = (rowId: string) => {
+        if (!internalExtRowMetaRef.current[rowId]) {
+            internalExtRowMetaRef.current[rowId] = { autoDerivedKey: false };
+        }
+        return internalExtRowMetaRef.current[rowId];
+    };
 
-	                return next ?? prev;
-	            });
-	        }, [config?.extensions?.internal]);
+    const moveInternalExtRowId = (fromKey: string, toKey: string) => {
+        const map = internalExtRowIdsRef.current;
+        if (fromKey === toKey) return;
+        if (!map[fromKey]) {
+            getInternalExtRowId(fromKey);
+        }
+        if (!map[toKey] && map[fromKey]) {
+            map[toKey] = map[fromKey];
+        }
+        delete map[fromKey];
+    };
 
-	        // Per-context override draft rows
-	        const [summaryAdminCtx, setSummaryAdminCtx] = useState('');
-	        const [summaryAdminVal, setSummaryAdminVal] = useState('');
-	        const [summaryFromCtx, setSummaryFromCtx] = useState('');
-        const [summaryFromVal, setSummaryFromVal] = useState('');
-        const [transcriptAdminCtx, setTranscriptAdminCtx] = useState('');
-        const [transcriptAdminVal, setTranscriptAdminVal] = useState('');
-        const [transcriptFromCtx, setTranscriptFromCtx] = useState('');
-        const [transcriptFromVal, setTranscriptFromVal] = useState('');
+    const deleteInternalExtRowId = (k: string) => {
+        const rowId = internalExtRowIdsRef.current[k];
+        if (rowId) {
+            delete internalExtRowMetaRef.current[rowId];
+        }
+        delete internalExtRowIdsRef.current[k];
+    };
 
-        // Keep a stable React key per internal extension row so key renames don't blow away focus/cursor.
-        const internalExtRowIdsRef = useRef<Record<string, string>>({});
-        const internalExtRowIdCounterRef = useRef(0);
-        const internalExtRowMetaRef = useRef<Record<string, { autoDerivedKey: boolean }>>({});
-        const internalExtRenameToastKeyRef = useRef<string>('');
-        const [internalExtStatusByRowId, setInternalExtStatusByRowId] = useState<Record<string, any>>({});
-        const liveAgentsCount = Object.keys(config.extensions?.internal || {}).length;
-        const hasLiveAgents = liveAgentsCount > 0;
-        const hasLiveAgentDestinationOverride = Boolean((config.transfer?.live_agent_destination_key || '').trim());
-        const [showLiveAgentRoutingAdvanced, setShowLiveAgentRoutingAdvanced] = useState<boolean>(
-            () => !hasLiveAgents || hasLiveAgentDestinationOverride
-        );
+    const _statusDotClass = (status: string, loading: boolean) => {
+        if (loading) return 'bg-muted animate-pulse';
+        if (status === 'available') return 'bg-emerald-500';
+        if (status === 'busy') return 'bg-red-500';
+        return 'bg-amber-500';
+    };
 
-        const isNumericKey = (k: string) => /^\d+$/.test((k || '').trim());
+    const _statusPillClass = (status: string, loading: boolean) => {
+        if (loading) return 'border-border bg-muted/40 text-muted-foreground';
+        if (status === 'available') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700';
+        if (status === 'busy') return 'border-red-500/30 bg-red-500/10 text-red-700';
+        return 'border-amber-500/30 bg-amber-500/10 text-amber-800';
+    };
 
-        const extractNumericExtensionKeyFromDialString = (raw: string): string => {
-            const s = (raw || '').trim();
-            if (!s) return '';
+    const _statusLabel = (status: string, loading: boolean, checkedAt?: string) => {
+        if (loading) return 'Checking';
+        if (!checkedAt) return 'Check status';
+        if (status === 'available') return 'Available';
+        if (status === 'busy') return 'Busy';
+        return 'Unknown';
+    };
 
-            const digitsOnly = s.match(/^(\d+)$/);
-            if (digitsOnly) return digitsOnly[1];
+    const checkLiveAgentStatus = async (rowId: string, key: string, ext: any) => {
+        const dialString = String(ext?.dial_string || '');
+        const tech = String(ext?.device_state_tech || 'auto');
+        const numericKey = isNumericKey(key) ? String(key).trim() : extractNumericExtensionKeyFromDialString(dialString);
+        if (!numericKey) {
+            toast.error('Set a numeric extension or dial string (e.g. PJSIP/2765) before checking status.');
+            return;
+        }
 
-            // Common dial-string formats: PJSIP/2765, SIP/6000, Local/2765@from-internal
-            const m = s.match(/(?:^|[^A-Za-z0-9])(?:PJSIP|SIP|IAX2|DAHDI|LOCAL)\/(\d+)/i);
-            return m ? (m[1] || '') : '';
-        };
+        setInternalExtStatusByRowId((prev) => ({
+            ...prev,
+            [rowId]: { ...(prev[rowId] || {}), loading: true, error: '' },
+        }));
 
-        const getInternalExtRowId = (configKey: string) => {
-            const map = internalExtRowIdsRef.current;
-            if (!map[configKey]) {
-                internalExtRowIdCounterRef.current += 1;
-                map[configKey] = `internal-ext-row-${internalExtRowIdCounterRef.current}`;
-            }
-            const rowId = map[configKey];
-            if (!internalExtRowMetaRef.current[rowId]) {
-                internalExtRowMetaRef.current[rowId] = { autoDerivedKey: false };
-            }
-            return rowId;
-        };
-
-        const getInternalExtRowMeta = (rowId: string) => {
-            if (!internalExtRowMetaRef.current[rowId]) {
-                internalExtRowMetaRef.current[rowId] = { autoDerivedKey: false };
-            }
-            return internalExtRowMetaRef.current[rowId];
-        };
-
-        const moveInternalExtRowId = (fromKey: string, toKey: string) => {
-            const map = internalExtRowIdsRef.current;
-            if (fromKey === toKey) return;
-            if (!map[fromKey]) {
-                getInternalExtRowId(fromKey);
-            }
-            if (!map[toKey] && map[fromKey]) {
-                map[toKey] = map[fromKey];
-            }
-            delete map[fromKey];
-        };
-
-        const deleteInternalExtRowId = (k: string) => {
-            const rowId = internalExtRowIdsRef.current[k];
-            if (rowId) {
-                delete internalExtRowMetaRef.current[rowId];
-            }
-            delete internalExtRowIdsRef.current[k];
-        };
-
-        const _statusDotClass = (status: string, loading: boolean) => {
-            if (loading) return 'bg-muted animate-pulse';
-            if (status === 'available') return 'bg-emerald-500';
-            if (status === 'busy') return 'bg-red-500';
-            return 'bg-amber-500';
-        };
-
-        const _statusPillClass = (status: string, loading: boolean) => {
-            if (loading) return 'border-border bg-muted/40 text-muted-foreground';
-            if (status === 'available') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700';
-            if (status === 'busy') return 'border-red-500/30 bg-red-500/10 text-red-700';
-            return 'border-amber-500/30 bg-amber-500/10 text-amber-800';
-        };
-
-        const _statusLabel = (status: string, loading: boolean, checkedAt?: string) => {
-            if (loading) return 'Checking';
-            if (!checkedAt) return 'Check status';
-            if (status === 'available') return 'Available';
-            if (status === 'busy') return 'Busy';
-            return 'Unknown';
-        };
-
-        const checkLiveAgentStatus = async (rowId: string, key: string, ext: any) => {
-            const dialString = String(ext?.dial_string || '');
-            const tech = String(ext?.device_state_tech || 'auto');
-            const numericKey = isNumericKey(key) ? String(key).trim() : extractNumericExtensionKeyFromDialString(dialString);
-            if (!numericKey) {
-                toast.error('Set a numeric extension or dial string (e.g. PJSIP/2765) before checking status.');
-                return;
-            }
-
+        try {
+            const res = await axios.get('/api/system/ari/extension-status', {
+                params: { key: numericKey, device_state_tech: tech, dial_string: dialString },
+            });
+            const data = res?.data || {};
             setInternalExtStatusByRowId((prev) => ({
                 ...prev,
-                [rowId]: { ...(prev[rowId] || {}), loading: true, error: '' },
+                [rowId]: {
+                    loading: false,
+                    success: Boolean(data.success),
+                    status: String(data.status || 'unknown'),
+                    state: String(data.state || ''),
+                    source: String(data.source || ''),
+                    checkedAt: new Date().toISOString(),
+                    error: String(data.error || ''),
+                },
             }));
-
-            try {
-                const res = await axios.get('/api/system/ari/extension-status', {
-                    params: { key: numericKey, device_state_tech: tech, dial_string: dialString },
-                });
-                const data = res?.data || {};
-                setInternalExtStatusByRowId((prev) => ({
-                    ...prev,
-                    [rowId]: {
-                        loading: false,
-                        success: Boolean(data.success),
-                        status: String(data.status || 'unknown'),
-                        state: String(data.state || ''),
-                        source: String(data.source || ''),
-                        checkedAt: new Date().toISOString(),
-                        error: String(data.error || ''),
-                    },
-                }));
-                if (!data.success && data.error) {
-                    toast.error(String(data.error));
-                }
-            } catch (e: any) {
-                const err = e?.response?.data?.detail || e?.message || 'Status check failed.';
-                setInternalExtStatusByRowId((prev) => ({
-                    ...prev,
-                    [rowId]: { ...(prev[rowId] || {}), loading: false, success: false, status: 'unknown', error: String(err) },
-                }));
-                toast.error(String(err));
+            if (!data.success && data.error) {
+                toast.error(String(data.error));
             }
-        };
+        } catch (e: any) {
+            const err = e?.response?.data?.detail || e?.message || 'Status check failed.';
+            setInternalExtStatusByRowId((prev) => ({
+                ...prev,
+                [rowId]: { ...(prev[rowId] || {}), loading: false, success: false, status: 'unknown', error: String(err) },
+            }));
+            toast.error(String(err));
+        }
+    };
 
     const updateConfig = (field: string, value: any) => {
         onChange({ ...config, [field]: value });
@@ -599,53 +599,53 @@ const ToolForm = ({ config, contexts, hangupUsage, onChange, onSaveNow }: ToolFo
                         />
                     </div>
 
-	                    {config.transfer?.enabled !== false && (
-	                        <div className="mt-4 space-y-4">
-	                            <FormInput
-	                                label="Channel Technology"
-	                                value={config.transfer?.technology || 'SIP'}
-	                                onChange={(e) => updateNestedConfig('transfer', 'technology', e.target.value)}
-	                                tooltip="Channel technology for extension transfers (SIP, PJSIP, IAX2, etc.). Default: SIP"
-	                                placeholder="SIP"
-	                            />
-                                <FormSwitch
-                                    label="Advanced: Route Live Agent via Destination"
-                                    description={
-                                        hasLiveAgents
-                                            ? "Default: live_agent_transfer uses Live Agents. Enable only if you want live-agent requests routed to a transfer destination (queue/ring group/extension)."
-                                            : "No Live Agents configured. Enable to select which transfer destination should handle live-agent requests."
+                    {config.transfer?.enabled !== false && (
+                        <div className="mt-4 space-y-4">
+                            <FormInput
+                                label="Channel Technology"
+                                value={config.transfer?.technology || 'SIP'}
+                                onChange={(e) => updateNestedConfig('transfer', 'technology', e.target.value)}
+                                tooltip="Channel technology for extension transfers (SIP, PJSIP, IAX2, etc.). Default: SIP"
+                                placeholder="SIP"
+                            />
+                            <FormSwitch
+                                label="Advanced: Route Live Agent via Destination"
+                                description={
+                                    hasLiveAgents
+                                        ? "Default: live_agent_transfer uses Live Agents. Enable only if you want live-agent requests routed to a transfer destination (queue/ring group/extension)."
+                                        : "No Live Agents configured. Enable to select which transfer destination should handle live-agent requests."
+                                }
+                                checked={showLiveAgentRoutingAdvanced}
+                                onChange={(e) => {
+                                    const enabled = e.target.checked;
+                                    setShowLiveAgentRoutingAdvanced(enabled);
+                                    if (!enabled) {
+                                        // Disable override behavior and reduce config confusion.
+                                        unsetNestedConfig('transfer', 'live_agent_destination_key');
                                     }
-                                    checked={showLiveAgentRoutingAdvanced}
-                                    onChange={(e) => {
-                                        const enabled = e.target.checked;
-                                        setShowLiveAgentRoutingAdvanced(enabled);
-                                        if (!enabled) {
-                                            // Disable override behavior and reduce config confusion.
-                                            unsetNestedConfig('transfer', 'live_agent_destination_key');
-                                        }
-                                    }}
-                                    className="mb-0 border border-border rounded-lg p-3 bg-background/50"
+                                }}
+                                className="mb-0 border border-border rounded-lg p-3 bg-background/50"
+                            />
+                            {showLiveAgentRoutingAdvanced && (
+                                <FormSelect
+                                    label="Live Agent Destination Key (Advanced)"
+                                    value={config.transfer?.live_agent_destination_key || ''}
+                                    onChange={(e) => updateNestedConfig('transfer', 'live_agent_destination_key', e.target.value)}
+                                    options={[
+                                        { value: '', label: 'Not set (auto: destinations.live_agent or key live_agent)' },
+                                        ...Object.entries(config.transfer?.destinations || {})
+                                            .filter(([key, dest]: [string, any]) => key === 'live_agent' || Boolean(dest?.live_agent))
+                                            .map(([key]) => key)
+                                            .sort()
+                                            .map((key) => ({ value: key, label: key })),
+                                    ]}
+                                    tooltip="Advanced/legacy override for live_agent_transfer. When set, live-agent requests route to this destination key instead of Live Agents."
                                 />
-                                {showLiveAgentRoutingAdvanced && (
-	                                <FormSelect
-	                                    label="Live Agent Destination Key (Advanced)"
-	                                    value={config.transfer?.live_agent_destination_key || ''}
-	                                    onChange={(e) => updateNestedConfig('transfer', 'live_agent_destination_key', e.target.value)}
-	                                    options={[
-	                                        { value: '', label: 'Not set (auto: destinations.live_agent or key live_agent)' },
-	                                        ...Object.entries(config.transfer?.destinations || {})
-	                                            .filter(([key, dest]: [string, any]) => key === 'live_agent' || Boolean(dest?.live_agent))
-	                                            .map(([key]) => key)
-	                                            .sort()
-	                                            .map((key) => ({ value: key, label: key })),
-	                                    ]}
-	                                    tooltip="Advanced/legacy override for live_agent_transfer. When set, live-agent requests route to this destination key instead of Live Agents."
-	                                />
-                                )}
-	                            <div className="flex justify-between items-center">
-	                                <FormLabel>Destinations</FormLabel>
-	                                <button
-	                                    onClick={handleAddDestination}
+                            )}
+                            <div className="flex justify-between items-center">
+                                <FormLabel>Destinations</FormLabel>
+                                <button
+                                    onClick={handleAddDestination}
                                     className="text-xs flex items-center bg-secondary px-2 py-1 rounded hover:bg-secondary/80 transition-colors"
                                 >
                                     <Plus className="w-3 h-3 mr-1" /> Add Destination
@@ -653,26 +653,29 @@ const ToolForm = ({ config, contexts, hangupUsage, onChange, onSaveNow }: ToolFo
                             </div>
 
                             <div className="grid grid-cols-1 gap-2">
-	                                {Object.entries(config.transfer?.destinations || {}).map(([key, dest]: [string, any]) => (
-	                                    <div key={key} className="flex items-center justify-between p-3 bg-accent/30 rounded border border-border/50">
-	                                        <div>
-	                                            <div className="font-medium text-sm">{key}</div>
-	                                            <div className="text-xs text-muted-foreground">
-	                                                {dest.type} • {dest.target} • {dest.description}
-	                                                {dest.type === 'extension' && dest.attended_allowed ? ' • attended' : ''}
-	                                                {dest.type === 'extension' && showLiveAgentRoutingAdvanced && dest.live_agent ? ' • live-agent' : ''}
-	                                            </div>
-	                                        </div>
-	                                        <div className="flex items-center gap-1">
-	                                            <button onClick={() => handleEditDestination(key, dest)} className="p-1.5 hover:bg-background rounded text-muted-foreground hover:text-foreground">
-	                                                <Settings className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => handleDeleteDestination(key)} className="p-1.5 hover:bg-destructive/10 rounded text-destructive">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                {Object.entries(config.transfer?.destinations || {}).map(([key, dest]: [string, any]) => {
+                                    const destObj = dest || {};
+                                    return (
+                                        <div key={key} className="flex items-center justify-between p-3 bg-accent/30 rounded border border-border/50">
+                                            <div>
+                                                <div className="font-medium text-sm">{key}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {destObj.type || 'extension'} • {destObj.target || 'N/A'} • {destObj.description || 'No description'}
+                                                    {destObj.type === 'extension' && destObj.attended_allowed ? ' • attended' : ''}
+                                                    {destObj.type === 'extension' && showLiveAgentRoutingAdvanced && destObj.live_agent ? ' • live-agent' : ''}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <button onClick={() => handleEditDestination(key, destObj)} className="p-1.5 hover:bg-background rounded text-muted-foreground hover:text-foreground">
+                                                    <Settings className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleDeleteDestination(key)} className="p-1.5 hover:bg-destructive/10 rounded text-destructive">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         </div>
                     )}
@@ -946,279 +949,279 @@ const ToolForm = ({ config, contexts, hangupUsage, onChange, onSaveNow }: ToolFo
                     )}
                 </div>
 
-	                {/* Extensions (basic editor) */}
-	                <div className="border border-border rounded-lg p-4 bg-card/50">
-	                    <div className="flex justify-between items-center mb-4">
-	                        <FormLabel>Live Agents</FormLabel>
-	                        <button
-	                            onClick={() => {
-	                                const existing = config.extensions?.internal || {};
-	                                let idx = Object.keys(existing).length + 1;
+                {/* Extensions (basic editor) */}
+                <div className="border border-border rounded-lg p-4 bg-card/50">
+                    <div className="flex justify-between items-center mb-4">
+                        <FormLabel>Live Agents</FormLabel>
+                        <button
+                            onClick={() => {
+                                const existing = config.extensions?.internal || {};
+                                let idx = Object.keys(existing).length + 1;
                                 let key = `ext_${idx}`;
-	                                while (Object.prototype.hasOwnProperty.call(existing, key)) {
-	                                    idx += 1;
-	                                    key = `ext_${idx}`;
-	                                }
-                                    const rowId = getInternalExtRowId(key);
-                                    getInternalExtRowMeta(rowId).autoDerivedKey = true;
-	                                updateNestedConfig('extensions', 'internal', { ...existing, [key]: { name: '', description: '', dial_string: '', transfer: true, device_state_tech: 'auto', action_type: 'transfer', aliases: [], pass_caller_info: false } });
-	                            }}
-	                            className="text-xs flex items-center bg-secondary px-2 py-1 rounded hover:bg-secondary/80 transition-colors"
-	                        >
-	                            <Plus className="w-3 h-3 mr-1" /> Add Live Agent
-		                        </button>
-		                    </div>
-                            <div className="mb-4 border border-amber-300/40 rounded-lg p-3 bg-amber-500/5">
-                                <FormSwitch
-                                    label="Live Agent Expert Settings"
-                                    description="Expose advanced live-agent routing fields for each agent row."
-                                    checked={showLiveAgentsExpert}
-                                    onChange={(e) => setShowLiveAgentsExpert(e.target.checked)}
-                                    className="mb-0 border-0 p-0 bg-transparent"
-                                />
-                                <p className={`text-xs mt-2 ${showLiveAgentsExpert ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
-                                    {showLiveAgentsExpert
-                                        ? 'Warning: advanced routing fields can change transfer behavior in live calls.'
-                                        : 'Advanced fields are visible with defaults and locked until enabled.'}
-                                </p>
-                            </div>
-		                    <div className="space-y-2">
-	                        {Object.entries(config.extensions?.internal || {}).map(([key, ext]: [string, any]) => (
-                                (() => {
-                                    const rowId = getInternalExtRowId(key);
-                                    const st = internalExtStatusByRowId[rowId] || {};
-                                    const status = String(st.status || 'unknown');
-                                    const loading = Boolean(st.loading);
-                                    const dotClass = _statusDotClass(status, loading);
-                                    const pillClass = _statusPillClass(status, loading);
-                                    const label = _statusLabel(status, loading, st.checkedAt);
-                                    const titleParts: string[] = [];
-                                    titleParts.push('Checks Asterisk ARI device/endpoint state');
-                                    titleParts.push('Click to refresh');
-                                    if (st.source) titleParts.push(`source=${st.source}`);
-                                    if (st.state) titleParts.push(`state=${st.state}`);
-                                    if (st.checkedAt) titleParts.push(`checked=${st.checkedAt}`);
-                                    if (st.error) titleParts.push(`error=${st.error}`);
-                                    const title = titleParts.join(' • ');
+                                while (Object.prototype.hasOwnProperty.call(existing, key)) {
+                                    idx += 1;
+                                    key = `ext_${idx}`;
+                                }
+                                const rowId = getInternalExtRowId(key);
+                                getInternalExtRowMeta(rowId).autoDerivedKey = true;
+                                updateNestedConfig('extensions', 'internal', { ...existing, [key]: { name: '', description: '', dial_string: '', transfer: true, device_state_tech: 'auto', action_type: 'transfer', aliases: [], pass_caller_info: false } });
+                            }}
+                            className="text-xs flex items-center bg-secondary px-2 py-1 rounded hover:bg-secondary/80 transition-colors"
+                        >
+                            <Plus className="w-3 h-3 mr-1" /> Add Live Agent
+                        </button>
+                    </div>
+                    <div className="mb-4 border border-amber-300/40 rounded-lg p-3 bg-amber-500/5">
+                        <FormSwitch
+                            label="Live Agent Expert Settings"
+                            description="Expose advanced live-agent routing fields for each agent row."
+                            checked={showLiveAgentsExpert}
+                            onChange={(e) => setShowLiveAgentsExpert(e.target.checked)}
+                            className="mb-0 border-0 p-0 bg-transparent"
+                        />
+                        <p className={`text-xs mt-2 ${showLiveAgentsExpert ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                            {showLiveAgentsExpert
+                                ? 'Warning: advanced routing fields can change transfer behavior in live calls.'
+                                : 'Advanced fields are visible with defaults and locked until enabled.'}
+                        </p>
+                    </div>
+                    <div className="space-y-2">
+                        {Object.entries(config.extensions?.internal || {}).map(([key, ext]: [string, any]) => (
+                            (() => {
+                                const rowId = getInternalExtRowId(key);
+                                const st = internalExtStatusByRowId[rowId] || {};
+                                const status = String(st.status || 'unknown');
+                                const loading = Boolean(st.loading);
+                                const dotClass = _statusDotClass(status, loading);
+                                const pillClass = _statusPillClass(status, loading);
+                                const label = _statusLabel(status, loading, st.checkedAt);
+                                const titleParts: string[] = [];
+                                titleParts.push('Checks Asterisk ARI device/endpoint state');
+                                titleParts.push('Click to refresh');
+                                if (st.source) titleParts.push(`source=${st.source}`);
+                                if (st.state) titleParts.push(`state=${st.state}`);
+                                if (st.checkedAt) titleParts.push(`checked=${st.checkedAt}`);
+                                if (st.error) titleParts.push(`error=${st.error}`);
+                                const title = titleParts.join(' • ');
 
-                                    return (
-	                            <div key={rowId} className="grid grid-cols-1 md:grid-cols-12 gap-2 p-3 border rounded bg-background/50 items-center">
-	                                <div className="md:col-span-1">
-                                        {(() => {
-                                            const derived = extractNumericExtensionKeyFromDialString(ext?.dial_string || '');
-                                            const displayKey = isNumericKey(key) ? key : derived;
-                                            return (
-	                                            <input
-	                                                className="w-full border rounded px-2 py-1 text-sm bg-muted text-muted-foreground"
-	                                                placeholder="Auto"
-	                                                value={displayKey || ''}
-	                                                disabled
-	                                                title="Auto-derived from dial string (e.g. PJSIP/2765 -> 2765). Numeric keys are locked to prevent accidental renames."
-	                                            />
-                                            );
-                                        })()}
-	                                </div>
-	                                <div className="md:col-span-2">
-	                                    <input
-	                                        className="w-full border rounded px-2 py-1 text-sm"
-	                                        placeholder="Name"
-                                        value={ext.name || ''}
-                                        onChange={(e) => {
-                                            const updated = { ...(config.extensions?.internal || {}) };
-                                            updated[key] = { ...ext, name: e.target.value };
-                                            updateNestedConfig('extensions', 'internal', updated);
-                                        }}
-                                        title="Agent Name"
-                                    />
-                                </div>
-	                                <div className="md:col-span-2">
-	                                    <input
-	                                        className="w-full border rounded px-2 py-1 text-sm"
-	                                        placeholder="Dial String"
-	                                        value={ext.dial_string || ''}
-	                                        onChange={(e) => {
-                                                const nextDial = e.target.value;
-	                                            const existing = { ...(config.extensions?.internal || {}) };
-	                                            existing[key] = { ...ext, dial_string: nextDial };
-
-                                                const rowId = getInternalExtRowId(key);
-                                                const meta = getInternalExtRowMeta(rowId);
-
-                                                const derivedKey = extractNumericExtensionKeyFromDialString(nextDial);
-                                                const canAutoRename =
-                                                    Boolean(derivedKey) &&
-                                                    derivedKey !== key &&
-                                                    // Always allow placeholder keys to be renamed.
-                                                    (!isNumericKey(key) || meta.autoDerivedKey);
-
-                                                if (canAutoRename) {
-                                                    if (Object.prototype.hasOwnProperty.call(existing, derivedKey)) {
-                                                        const toastKey = `internal-ext-rename-conflict:${rowId}:${derivedKey}`;
-                                                        if (internalExtRenameToastKeyRef.current !== toastKey) {
-                                                            internalExtRenameToastKeyRef.current = toastKey;
-                                                            toast.error(`An extension with key '${derivedKey}' already exists.`);
-                                                        }
-                                                    } else {
-                                                        meta.autoDerivedKey = true;
-                                                        const renamed: Record<string, any> = {};
-                                                        Object.entries(existing).forEach(([k, v]) => {
-                                                            if (k === key) renamed[derivedKey] = v;
-                                                            else renamed[k] = v;
-                                                        });
-                                                        moveInternalExtRowId(key, derivedKey);
-                                                        updateNestedConfig('extensions', 'internal', renamed);
-                                                        return;
-                                                    }
-                                                }
-
-	                                            updateNestedConfig('extensions', 'internal', existing);
-	                                        }}
-	                                        title="PJSIP/..."
-	                                    />
-	                                </div>
-                                <div className="md:col-span-2">
-                                    <select
-                                        className="w-full border rounded px-2 py-1 text-sm bg-background"
-                                        value={ext.device_state_tech || 'auto'}
-                                        onChange={(e) => {
-                                            const updated = { ...(config.extensions?.internal || {}) };
-                                            updated[key] = { ...ext, device_state_tech: e.target.value };
-                                            updateNestedConfig('extensions', 'internal', updated);
-                                        }}
-                                        title="Device state technology for availability checks"
-                                    >
-                                        <option value="auto">Device Tech: auto</option>
-                                        <option value="PJSIP">PJSIP</option>
-                                        <option value="SIP">SIP</option>
-                                        <option value="IAX2">IAX2</option>
-                                        <option value="DAHDI">DAHDI</option>
-                                    </select>
-                                </div>
-                                <div className="md:col-span-2">
-                                    <input
-                                        className="w-full border rounded px-2 py-1 text-sm"
-                                        placeholder="Description"
-                                        value={ext.description || ''}
-                                        onChange={(e) => {
-                                            const updated = { ...(config.extensions?.internal || {}) };
-                                            updated[key] = { ...ext, description: e.target.value };
-                                            updateNestedConfig('extensions', 'internal', updated);
-                                        }}
-	                                        title="Description"
-	                                    />
-	                                </div>
-                                    <>
-                                        <div className="md:col-span-2">
-                                            <select
-                                                className="w-full border rounded px-2 py-1 text-sm bg-background disabled:cursor-not-allowed disabled:opacity-50"
-                                                value={ext.action_type || 'transfer'}
-                                                onChange={(e) => {
-                                                    const updated = { ...(config.extensions?.internal || {}) };
-                                                    updated[key] = { ...ext, action_type: e.target.value };
-                                                    updateNestedConfig('extensions', 'internal', updated);
-                                                }}
-                                                title="Action type used when transfer tool resolves this target"
-                                                disabled={!showLiveAgentsExpert}
-                                            >
-                                                <option value="transfer">action_type: transfer</option>
-                                                <option value="voicemail">action_type: voicemail</option>
-                                                <option value="queue">action_type: queue</option>
-                                                <option value="ringgroup">action_type: ringgroup</option>
-                                            </select>
+                                return (
+                                    <div key={rowId} className="grid grid-cols-1 md:grid-cols-12 gap-2 p-3 border rounded bg-background/50 items-center">
+                                        <div className="md:col-span-1">
+                                            {(() => {
+                                                const derived = extractNumericExtensionKeyFromDialString(ext?.dial_string || '');
+                                                const displayKey = isNumericKey(key) ? key : derived;
+                                                return (
+                                                    <input
+                                                        className="w-full border rounded px-2 py-1 text-sm bg-muted text-muted-foreground"
+                                                        placeholder="Auto"
+                                                        value={displayKey || ''}
+                                                        disabled
+                                                        title="Auto-derived from dial string (e.g. PJSIP/2765 -> 2765). Numeric keys are locked to prevent accidental renames."
+                                                    />
+                                                );
+                                            })()}
                                         </div>
-	                                        <div className="md:col-span-2">
-	                                            <input
-	                                                className="w-full border rounded px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-	                                                placeholder="Aliases (comma-separated)"
-	                                                value={internalAliasesDraftByRowId[rowId] ?? (Array.isArray(ext.aliases) ? ext.aliases.join(', ') : (ext.aliases || ''))}
-	                                                onChange={(e) => {
-	                                                    const raw = String(e.target.value || '');
-	                                                    setInternalAliasesDraftByRowId((prev) => ({ ...prev, [rowId]: raw }));
-	                                                }}
-	                                                onBlur={() => {
-	                                                    const raw = internalAliasesDraftByRowId[rowId] ?? '';
-	                                                    const aliases = String(raw)
-	                                                        .split(',')
-	                                                        .map((s) => s.trim())
-	                                                        .filter(Boolean);
-	                                                    const committed = aliases.join(', ');
-
-	                                                    internalAliasesCommittedRef.current[rowId] = committed;
-	                                                    setInternalAliasesDraftByRowId((prev) => ({ ...prev, [rowId]: committed }));
-
-	                                                    const updated = { ...(config.extensions?.internal || {}) };
-	                                                    updated[key] = { ...ext, aliases };
-	                                                    updateNestedConfig('extensions', 'internal', updated);
-	                                                }}
-	                                                title="Alternative names users can say to target this live agent"
-	                                                disabled={!showLiveAgentsExpert}
-	                                            />
-	                                        </div>
                                         <div className="md:col-span-2">
-                                            <FormSwitch
-                                                label="Pass Caller Info"
-                                                description="Include caller name/number and last transcript in transfer context."
-                                                checked={ext.pass_caller_info ?? false}
+                                            <input
+                                                className="w-full border rounded px-2 py-1 text-sm"
+                                                placeholder="Name"
+                                                value={ext.name || ''}
                                                 onChange={(e) => {
                                                     const updated = { ...(config.extensions?.internal || {}) };
-                                                    updated[key] = { ...ext, pass_caller_info: e.target.checked };
+                                                    updated[key] = { ...ext, name: e.target.value };
                                                     updateNestedConfig('extensions', 'internal', updated);
                                                 }}
-                                                disabled={!showLiveAgentsExpert}
+                                                title="Agent Name"
                                             />
                                         </div>
-                                    </>
-	                                <div className="md:col-span-3 flex justify-end items-center gap-3 min-w-0 overflow-hidden">
-                                        <button
-                                            type="button"
-                                            className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium border ${pillClass} hover:bg-accent/40 transition-colors min-w-0 max-w-[150px] overflow-hidden`}
-                                            title={title}
-                                            onClick={() => checkLiveAgentStatus(rowId, key, ext)}
-                                        >
-                                            {loading ? (
-                                                <Loader2 className="w-3 h-3 animate-spin shrink-0" />
-                                            ) : (
-                                                <span className={`w-2 h-2 rounded-full ${dotClass} shrink-0`} />
-                                            )}
-                                            <span className="truncate whitespace-nowrap">{label}</span>
-                                        </button>
-                                        <div className="shrink-0">
-	                                        <FormSwitch
-	                                            checked={ext.transfer ?? true}
-	                                            onChange={(e) => {
-	                                                const updated = { ...(config.extensions?.internal || {}) };
-	                                                updated[key] = { ...ext, transfer: e.target.checked };
-	                                                updateNestedConfig('extensions', 'internal', updated);
-	                                            }}
-	                                            className="mb-0 border-0 p-0 bg-transparent"
-	                                            label=""
-	                                            description=""
-	                                        />
+                                        <div className="md:col-span-2">
+                                            <input
+                                                className="w-full border rounded px-2 py-1 text-sm"
+                                                placeholder="Dial String"
+                                                value={ext.dial_string || ''}
+                                                onChange={(e) => {
+                                                    const nextDial = e.target.value;
+                                                    const existing = { ...(config.extensions?.internal || {}) };
+                                                    existing[key] = { ...ext, dial_string: nextDial };
+
+                                                    const rowId = getInternalExtRowId(key);
+                                                    const meta = getInternalExtRowMeta(rowId);
+
+                                                    const derivedKey = extractNumericExtensionKeyFromDialString(nextDial);
+                                                    const canAutoRename =
+                                                        Boolean(derivedKey) &&
+                                                        derivedKey !== key &&
+                                                        // Always allow placeholder keys to be renamed.
+                                                        (!isNumericKey(key) || meta.autoDerivedKey);
+
+                                                    if (canAutoRename) {
+                                                        if (Object.prototype.hasOwnProperty.call(existing, derivedKey)) {
+                                                            const toastKey = `internal-ext-rename-conflict:${rowId}:${derivedKey}`;
+                                                            if (internalExtRenameToastKeyRef.current !== toastKey) {
+                                                                internalExtRenameToastKeyRef.current = toastKey;
+                                                                toast.error(`An extension with key '${derivedKey}' already exists.`);
+                                                            }
+                                                        } else {
+                                                            meta.autoDerivedKey = true;
+                                                            const renamed: Record<string, any> = {};
+                                                            Object.entries(existing).forEach(([k, v]) => {
+                                                                if (k === key) renamed[derivedKey] = v;
+                                                                else renamed[k] = v;
+                                                            });
+                                                            moveInternalExtRowId(key, derivedKey);
+                                                            updateNestedConfig('extensions', 'internal', renamed);
+                                                            return;
+                                                        }
+                                                    }
+
+                                                    updateNestedConfig('extensions', 'internal', existing);
+                                                }}
+                                                title="PJSIP/..."
+                                            />
                                         </div>
-                                        <div className="shrink-0">
-	                                        <button
-	                                            onClick={() => {
-	                                                const updated = { ...(config.extensions?.internal || {}) };
-	                                                delete updated[key];
-                                                    deleteInternalExtRowId(key);
-	                                                updateNestedConfig('extensions', 'internal', updated);
-	                                            }}
-	                                            className="p-2 text-destructive hover:bg-destructive/10 rounded"
-	                                            title="Delete Extension"
-	                                        >
-	                                            <Trash2 className="w-4 h-4" />
-	                                        </button>
+                                        <div className="md:col-span-2">
+                                            <select
+                                                className="w-full border rounded px-2 py-1 text-sm bg-background"
+                                                value={ext.device_state_tech || 'auto'}
+                                                onChange={(e) => {
+                                                    const updated = { ...(config.extensions?.internal || {}) };
+                                                    updated[key] = { ...ext, device_state_tech: e.target.value };
+                                                    updateNestedConfig('extensions', 'internal', updated);
+                                                }}
+                                                title="Device state technology for availability checks"
+                                            >
+                                                <option value="auto">Device Tech: auto</option>
+                                                <option value="PJSIP">PJSIP</option>
+                                                <option value="SIP">SIP</option>
+                                                <option value="IAX2">IAX2</option>
+                                                <option value="DAHDI">DAHDI</option>
+                                            </select>
                                         </div>
-	                                </div>
-	                            </div>
-                                    );
-                                })()
-	                        ))}
-	                        {Object.keys(config.extensions?.internal || {}).length === 0 && (
-	                            <div className="text-sm text-muted-foreground">No live agents configured.</div>
-	                        )}
-	                    </div>
-	                </div>
+                                        <div className="md:col-span-2">
+                                            <input
+                                                className="w-full border rounded px-2 py-1 text-sm"
+                                                placeholder="Description"
+                                                value={ext.description || ''}
+                                                onChange={(e) => {
+                                                    const updated = { ...(config.extensions?.internal || {}) };
+                                                    updated[key] = { ...ext, description: e.target.value };
+                                                    updateNestedConfig('extensions', 'internal', updated);
+                                                }}
+                                                title="Description"
+                                            />
+                                        </div>
+                                        <>
+                                            <div className="md:col-span-2">
+                                                <select
+                                                    className="w-full border rounded px-2 py-1 text-sm bg-background disabled:cursor-not-allowed disabled:opacity-50"
+                                                    value={ext.action_type || 'transfer'}
+                                                    onChange={(e) => {
+                                                        const updated = { ...(config.extensions?.internal || {}) };
+                                                        updated[key] = { ...ext, action_type: e.target.value };
+                                                        updateNestedConfig('extensions', 'internal', updated);
+                                                    }}
+                                                    title="Action type used when transfer tool resolves this target"
+                                                    disabled={!showLiveAgentsExpert}
+                                                >
+                                                    <option value="transfer">action_type: transfer</option>
+                                                    <option value="voicemail">action_type: voicemail</option>
+                                                    <option value="queue">action_type: queue</option>
+                                                    <option value="ringgroup">action_type: ringgroup</option>
+                                                </select>
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <input
+                                                    className="w-full border rounded px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                    placeholder="Aliases (comma-separated)"
+                                                    value={internalAliasesDraftByRowId[rowId] ?? (Array.isArray(ext.aliases) ? ext.aliases.join(', ') : (ext.aliases || ''))}
+                                                    onChange={(e) => {
+                                                        const raw = String(e.target.value || '');
+                                                        setInternalAliasesDraftByRowId((prev) => ({ ...prev, [rowId]: raw }));
+                                                    }}
+                                                    onBlur={() => {
+                                                        const raw = internalAliasesDraftByRowId[rowId] ?? '';
+                                                        const aliases = String(raw)
+                                                            .split(',')
+                                                            .map((s) => s.trim())
+                                                            .filter(Boolean);
+                                                        const committed = aliases.join(', ');
+
+                                                        internalAliasesCommittedRef.current[rowId] = committed;
+                                                        setInternalAliasesDraftByRowId((prev) => ({ ...prev, [rowId]: committed }));
+
+                                                        const updated = { ...(config.extensions?.internal || {}) };
+                                                        updated[key] = { ...ext, aliases };
+                                                        updateNestedConfig('extensions', 'internal', updated);
+                                                    }}
+                                                    title="Alternative names users can say to target this live agent"
+                                                    disabled={!showLiveAgentsExpert}
+                                                />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <FormSwitch
+                                                    label="Pass Caller Info"
+                                                    description="Include caller name/number and last transcript in transfer context."
+                                                    checked={ext.pass_caller_info ?? false}
+                                                    onChange={(e) => {
+                                                        const updated = { ...(config.extensions?.internal || {}) };
+                                                        updated[key] = { ...ext, pass_caller_info: e.target.checked };
+                                                        updateNestedConfig('extensions', 'internal', updated);
+                                                    }}
+                                                    disabled={!showLiveAgentsExpert}
+                                                />
+                                            </div>
+                                        </>
+                                        <div className="md:col-span-3 flex justify-end items-center gap-3 min-w-0 overflow-hidden">
+                                            <button
+                                                type="button"
+                                                className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium border ${pillClass} hover:bg-accent/40 transition-colors min-w-0 max-w-[150px] overflow-hidden`}
+                                                title={title}
+                                                onClick={() => checkLiveAgentStatus(rowId, key, ext)}
+                                            >
+                                                {loading ? (
+                                                    <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                                                ) : (
+                                                    <span className={`w-2 h-2 rounded-full ${dotClass} shrink-0`} />
+                                                )}
+                                                <span className="truncate whitespace-nowrap">{label}</span>
+                                            </button>
+                                            <div className="shrink-0">
+                                                <FormSwitch
+                                                    checked={ext.transfer ?? true}
+                                                    onChange={(e) => {
+                                                        const updated = { ...(config.extensions?.internal || {}) };
+                                                        updated[key] = { ...ext, transfer: e.target.checked };
+                                                        updateNestedConfig('extensions', 'internal', updated);
+                                                    }}
+                                                    className="mb-0 border-0 p-0 bg-transparent"
+                                                    label=""
+                                                    description=""
+                                                />
+                                            </div>
+                                            <div className="shrink-0">
+                                                <button
+                                                    onClick={() => {
+                                                        const updated = { ...(config.extensions?.internal || {}) };
+                                                        delete updated[key];
+                                                        deleteInternalExtRowId(key);
+                                                        updateNestedConfig('extensions', 'internal', updated);
+                                                    }}
+                                                    className="p-2 text-destructive hover:bg-destructive/10 rounded"
+                                                    title="Delete Extension"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()
+                        ))}
+                        {Object.keys(config.extensions?.internal || {}).length === 0 && (
+                            <div className="text-sm text-muted-foreground">No live agents configured.</div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Business Tools */}
@@ -1742,19 +1745,19 @@ const ToolForm = ({ config, contexts, hangupUsage, onChange, onSaveNow }: ToolFo
                             onChange={(e) => setDestinationForm({ ...destinationForm, attended_allowed: e.target.checked })}
                         />
                     )}
-	                    {destinationForm.type === 'extension' && (
-	                        <FormSwitch
-	                            label="Use As Live Agent Destination"
-	                            description={
-	                                showLiveAgentRoutingAdvanced
-	                                    ? "Marks this destination as the live-agent target fallback when no explicit live_agent_destination_key is set."
-	                                    : "Disabled. Enable 'Advanced: Route Live Agent via Destination' to use destination-based live-agent routing."
-	                            }
-	                            checked={destinationForm.live_agent ?? false}
-	                            onChange={(e) => setDestinationForm({ ...destinationForm, live_agent: e.target.checked })}
-	                            disabled={!showLiveAgentRoutingAdvanced}
-	                        />
-	                    )}
+                    {destinationForm.type === 'extension' && (
+                        <FormSwitch
+                            label="Use As Live Agent Destination"
+                            description={
+                                showLiveAgentRoutingAdvanced
+                                    ? "Marks this destination as the live-agent target fallback when no explicit live_agent_destination_key is set."
+                                    : "Disabled. Enable 'Advanced: Route Live Agent via Destination' to use destination-based live-agent routing."
+                            }
+                            checked={destinationForm.live_agent ?? false}
+                            onChange={(e) => setDestinationForm({ ...destinationForm, live_agent: e.target.checked })}
+                            disabled={!showLiveAgentRoutingAdvanced}
+                        />
+                    )}
                     <FormInput
                         label="Target Number"
                         value={destinationForm.target || ''}

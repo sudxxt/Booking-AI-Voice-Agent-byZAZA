@@ -256,8 +256,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _save_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _save_sync)
     
     async def get(self, record_id: str) -> Optional[CallRecord]:
         """
@@ -285,8 +284,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _get_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _get_sync)
     
     async def get_by_call_id(self, call_id: str) -> Optional[CallRecord]:
         """
@@ -314,8 +312,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _get_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _get_sync)
     
     async def list(
         self,
@@ -460,8 +457,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _list_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _list_sync)
     
     async def count(
         self,
@@ -533,8 +529,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _count_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _count_sync)
     
     async def delete(self, record_id: str) -> bool:
         """Delete a call record by ID."""
@@ -552,8 +547,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _delete_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _delete_sync)
     
     async def delete_before(self, before_date: datetime) -> int:
         """Delete all records before a date. Returns count deleted."""
@@ -574,8 +568,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _delete_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _delete_sync)
     
     async def get_stats(
         self,
@@ -719,8 +712,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _stats_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _stats_sync)
     
     async def cleanup_old_records(self) -> int:
         """
@@ -761,8 +753,7 @@ class CallHistoryStore:
                 finally:
                     conn.close()
         
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _get_sync)
+        return await asyncio.get_running_loop().run_in_executor(None, _get_sync)
 
 
 # Global instance (lazy initialization)

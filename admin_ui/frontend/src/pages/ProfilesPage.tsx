@@ -10,20 +10,22 @@ import { ConfigSection } from '../components/ui/ConfigSection';
 import { ConfigCard } from '../components/ui/ConfigCard';
 import { Modal } from '../components/ui/Modal';
 import { FormInput, FormSelect } from '../components/ui/FormComponents';
+import { useTranslation } from 'react-i18next';
 
 const ProfilesPage = () => {
-	const { confirm } = useConfirmDialog();
-	const [config, setConfig] = useState<any>({});
-	const [loading, setLoading] = useState(true);
+    const { t } = useTranslation();
+    const { confirm } = useConfirmDialog();
+    const [config, setConfig] = useState<any>({});
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [yamlError, setYamlError] = useState<YamlErrorInfo | null>(null);
-	const [editingProfile, setEditingProfile] = useState<string | null>(null);
-	const [profileForm, setProfileForm] = useState<any>({});
-	const [isNewProfile, setIsNewProfile] = useState(false);
-	const [newProfileName, setNewProfileName] = useState('');
-	const [pendingApply, setPendingApply] = useState(false);
-	const [applying, setApplying] = useState(false);
-	const [applyMethod, setApplyMethod] = useState<'hot_reload' | 'restart'>('restart');
+    const [editingProfile, setEditingProfile] = useState<string | null>(null);
+    const [profileForm, setProfileForm] = useState<any>({});
+    const [isNewProfile, setIsNewProfile] = useState(false);
+    const [newProfileName, setNewProfileName] = useState('');
+    const [pendingApply, setPendingApply] = useState(false);
+    const [applying, setApplying] = useState(false);
+    const [applyMethod, setApplyMethod] = useState<'hot_reload' | 'restart'>('restart');
 
     useEffect(() => {
         fetchConfig();
@@ -70,106 +72,106 @@ const ProfilesPage = () => {
         }
     };
 
-	    const applyChanges = async (force: boolean = false) => {
-	        setApplying(true);
-	        try {
-	            if (applyMethod === 'hot_reload') {
-	                const response = await axios.post('/api/system/containers/ai_engine/reload');
-	                const status = response.data?.status ?? (response.status === 200 ? 'success' : undefined);
-	                if (status === 'partial' || response.data?.restart_required) {
-	                    setApplyMethod('restart');
-	                    setPendingApply(true);
-	                    toast.warning('Hot reload applied partially', { description: 'Restart AI Engine to fully apply changes' });
-	                    return;
-	                }
-	                if (status === 'success' || response.status === 200) {
-	                    setPendingApply(false);
-	                    toast.success('AI Engine hot reloaded! Changes are now active.');
-	                    fetchConfig();
-	                    return;
-	                }
-	            }
+    const applyChanges = async (force: boolean = false) => {
+        setApplying(true);
+        try {
+            if (applyMethod === 'hot_reload') {
+                const response = await axios.post('/api/system/containers/ai_engine/reload');
+                const status = response.data?.status ?? (response.status === 200 ? 'success' : undefined);
+                if (status === 'partial' || response.data?.restart_required) {
+                    setApplyMethod('restart');
+                    setPendingApply(true);
+                    toast.warning('Hot reload applied partially', { description: 'Restart AI Engine to fully apply changes' });
+                    return;
+                }
+                if (status === 'success' || response.status === 200) {
+                    setPendingApply(false);
+                    toast.success('AI Engine hot reloaded! Changes are now active.');
+                    fetchConfig();
+                    return;
+                }
+            }
 
-	            const response = await axios.post(`/api/system/containers/ai_engine/restart?force=${force}`);
-	            const status = response.data?.status ?? (response.status === 200 ? 'success' : undefined);
-	            if (status === 'warning') {
-	                toast.warning(response.data.message, { description: 'Use force restart if needed.' });
-	                return;
-	            }
-	            if (status === 'degraded') {
-	                setPendingApply(false);
-	                toast.warning('AI Engine restarted but may not be fully healthy', { description: response.data.output || 'Please verify manually' });
-	                fetchConfig();
-	                return;
-	            }
-	            if (status === 'success' || response.status === 200) {
-	                setPendingApply(false);
-	                toast.success('AI Engine restarted! Changes are now active.');
-	                fetchConfig();
-	                return;
-	            }
-	        } catch (err: any) {
-	            const action = applyMethod === 'hot_reload' ? 'hot reload' : 'restart';
-	            toast.error(`Failed to ${action} AI Engine`, { description: err.response?.data?.detail || err.message });
-	        } finally {
-	            setApplying(false);
-	        }
-	    };
+            const response = await axios.post(`/api/system/containers/ai_engine/restart?force=${force}`);
+            const status = response.data?.status ?? (response.status === 200 ? 'success' : undefined);
+            if (status === 'warning') {
+                toast.warning(response.data.message, { description: 'Use force restart if needed.' });
+                return;
+            }
+            if (status === 'degraded') {
+                setPendingApply(false);
+                toast.warning('AI Engine restarted but may not be fully healthy', { description: response.data.output || 'Please verify manually' });
+                fetchConfig();
+                return;
+            }
+            if (status === 'success' || response.status === 200) {
+                setPendingApply(false);
+                toast.success('AI Engine restarted! Changes are now active.');
+                fetchConfig();
+                return;
+            }
+        } catch (err: any) {
+            const action = applyMethod === 'hot_reload' ? 'hot reload' : 'restart';
+            toast.error(`Failed to ${action} AI Engine`, { description: err.response?.data?.detail || err.message });
+        } finally {
+            setApplying(false);
+        }
+    };
 
-	const handleEditProfile = (name: string) => {
-		setEditingProfile(name);
-		setProfileForm({ ...config.profiles?.[name] });
-		setIsNewProfile(false);
-		setNewProfileName('');
-	};
+    const handleEditProfile = (name: string) => {
+        setEditingProfile(name);
+        setProfileForm({ ...config.profiles?.[name] });
+        setIsNewProfile(false);
+        setNewProfileName('');
+    };
 
-	const handleAddProfile = () => {
-		setEditingProfile('new_profile');
-		setProfileForm({
-			chunk_ms: 'auto',
-			idle_cutoff_ms: 600,
-			internal_rate_hz: 8000,
-			provider_pref: {
-				input_encoding: 'mulaw',
-				input_sample_rate_hz: 8000,
-				output_encoding: 'mulaw',
-				output_sample_rate_hz: 8000
-			},
-			transport_out: {
-				encoding: 'slin',
-				sample_rate_hz: 8000
-			}
-		});
-		setIsNewProfile(true);
-		setNewProfileName('');
-	};
+    const handleAddProfile = () => {
+        setEditingProfile('new_profile');
+        setProfileForm({
+            chunk_ms: 'auto',
+            idle_cutoff_ms: 600,
+            internal_rate_hz: 8000,
+            provider_pref: {
+                input_encoding: 'mulaw',
+                input_sample_rate_hz: 8000,
+                output_encoding: 'mulaw',
+                output_sample_rate_hz: 8000
+            },
+            transport_out: {
+                encoding: 'slin',
+                sample_rate_hz: 8000
+            }
+        });
+        setIsNewProfile(true);
+        setNewProfileName('');
+    };
 
-	const handleSaveProfile = async () => {
-		if (!editingProfile) return;
+    const handleSaveProfile = async () => {
+        if (!editingProfile) return;
 
-		const profileKey = isNewProfile ? newProfileName.trim() : editingProfile;
-		if (!profileKey) {
-			toast.error('Profile name is required');
-			return;
-		}
-		if (profileKey === 'default') {
-			toast.error("Profile name 'default' is reserved", { description: 'profiles.default selects the default profile' });
-			return;
-		}
-		if (isNewProfile && (config.profiles?.[profileKey] != null)) {
-			toast.error(`Profile '${profileKey}' already exists`);
-			return;
-		}
+        const profileKey = isNewProfile ? newProfileName.trim() : editingProfile;
+        if (!profileKey) {
+            toast.error('Profile name is required');
+            return;
+        }
+        if (profileKey === 'default') {
+            toast.error("Profile name 'default' is reserved", { description: 'profiles.default selects the default profile' });
+            return;
+        }
+        if (isNewProfile && (config.profiles?.[profileKey] != null)) {
+            toast.error(`Profile '${profileKey}' already exists`);
+            return;
+        }
 
-		const newConfig = { ...config };
-		if (!newConfig.profiles) newConfig.profiles = {};
-		
-		newConfig.profiles[profileKey] = profileForm;
-		await saveConfig(newConfig);
-		setEditingProfile(null);
-		setIsNewProfile(false);
-		setNewProfileName('');
-	};
+        const newConfig = { ...config };
+        if (!newConfig.profiles) newConfig.profiles = {};
+
+        newConfig.profiles[profileKey] = profileForm;
+        await saveConfig(newConfig);
+        setEditingProfile(null);
+        setIsNewProfile(false);
+        setNewProfileName('');
+    };
 
     const updateProfileField = (field: string, value: any) => {
         setProfileForm({ ...profileForm, [field]: value });
@@ -196,12 +198,12 @@ const ProfilesPage = () => {
     // Get profile description
     const getProfileDescription = (profileName: string) => {
         const descriptions: Record<string, string> = {
-            'telephony_responsive': 'Standard 8kHz μ-law for telephony with adaptive timing',
-            'telephony_ulaw_8k': '8kHz μ-law matching RTP codec directly',
-            'wideband_pcm_16k': '16kHz wideband for better audio quality',
-            'openai_realtime_24k': 'High-fidelity 24kHz for OpenAI Realtime API'
+            'telephony_responsive': t('profiles.descriptions.telephony_responsive'),
+            'telephony_ulaw_8k': t('profiles.descriptions.telephony_ulaw_8k'),
+            'wideband_pcm_16k': t('profiles.descriptions.wideband_pcm_16k'),
+            'openai_realtime_24k': t('profiles.descriptions.openai_realtime_24k')
         };
-        return descriptions[profileName] || 'Custom audio profile';
+        return descriptions[profileName] || t('profiles.descriptions.custom');
     };
 
     const handleDeleteProfile = async (profileName: string) => {
@@ -210,7 +212,7 @@ const ProfilesPage = () => {
         const currentDefaultProfile = currentProfiles.default || 'telephony_ulaw_8k';
 
         if (currentProfileKeys.length <= 1) {
-            toast.error('Cannot delete the last remaining audio profile');
+            toast.error(t('profiles.cannotDeleteLast'));
             return;
         }
 
@@ -231,9 +233,9 @@ const ProfilesPage = () => {
         lines.push('This cannot be undone.');
 
         const confirmed = await confirm({
-            title: `Delete audio profile "${profileName}"?`,
+            title: t('profiles.modal.editTitle').replace(':', '') + ` "${profileName}"?`,
             description: lines.join('\n\n'),
-            confirmText: 'Delete',
+            confirmText: t('profiles.actions.delete'),
             variant: 'destructive'
         });
         if (!confirmed) return;
@@ -282,41 +284,41 @@ const ProfilesPage = () => {
     const profileKeys = Object.keys(profiles).filter(k => k !== 'default');
     const defaultProfile = profiles.default || 'telephony_ulaw_8k';
 
-	return (
-		<div className="space-y-6">
-			{pendingApply && (
-				<div className="bg-orange-500/15 border border-orange-500/30 text-yellow-700 dark:text-yellow-400 p-4 rounded-md flex items-center justify-between">
-					<div className="flex items-center">
-						<AlertCircle className="w-5 h-5 mr-2" />
-						{applyMethod === 'hot_reload' ? 'Changes saved. Apply to make them active.' : 'Changes saved. Restart required to make them active.'}
-					</div>
-					<button
-						onClick={async () => {
-							const msg = applyMethod === 'hot_reload'
-								? 'Apply profile changes via hot reload now? Active calls should continue, new calls use updated config.'
-								: 'Restart AI Engine now? This may disconnect active calls.';
-							const confirmed = await confirm({
-								title: applyMethod === 'hot_reload' ? 'Apply Changes?' : 'Restart AI Engine?',
-								description: msg,
-								confirmText: applyMethod === 'hot_reload' ? 'Apply' : 'Restart',
-								variant: 'default'
-							});
-							if (confirmed) {
-								applyChanges(false);
-							}
-						}}
-						disabled={applying || !pendingApply}
-						className="flex items-center text-xs px-3 py-1.5 rounded transition-colors bg-orange-500 text-white hover:bg-orange-600 font-medium disabled:opacity-50"
-					>
-						{applying ? (
-							<Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-						) : (
-							<RefreshCw className="w-3 h-3 mr-1.5" />
-						)}
-						{applying ? 'Applying...' : applyMethod === 'hot_reload' ? 'Apply Changes' : 'Restart AI Engine'}
-					</button>
-				</div>
-			)}
+    return (
+        <div className="space-y-6">
+            {pendingApply && (
+                <div className="bg-orange-500/15 border border-orange-500/30 text-yellow-700 dark:text-yellow-400 p-4 rounded-md flex items-center justify-between">
+                    <div className="flex items-center">
+                        <AlertCircle className="w-5 h-5 mr-2" />
+                        {applyMethod === 'hot_reload' ? t('profiles.restart.hotReloadWarning') : t('profiles.restart.warning')}
+                    </div>
+                    <button
+                        onClick={async () => {
+                            const msg = applyMethod === 'hot_reload'
+                                ? t('profiles.restart.confirmDescHotReload')
+                                : t('profiles.restart.confirmDescRestart');
+                            const confirmed = await confirm({
+                                title: applyMethod === 'hot_reload' ? t('profiles.restart.confirmTitleHotReload') : t('profiles.restart.confirmTitleRestart'),
+                                description: msg,
+                                confirmText: applyMethod === 'hot_reload' ? t('profiles.restart.btnHotReload') : t('profiles.restart.btnReload'),
+                                variant: 'default'
+                            });
+                            if (confirmed) {
+                                applyChanges(false);
+                            }
+                        }}
+                        disabled={applying || !pendingApply}
+                        className="flex items-center text-xs px-3 py-1.5 rounded transition-colors bg-orange-500 text-white hover:bg-orange-600 font-medium disabled:opacity-50"
+                    >
+                        {applying ? (
+                            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                        ) : (
+                            <RefreshCw className="w-3 h-3 mr-1.5" />
+                        )}
+                        {applying ? t('profiles.restart.reloading') : applyMethod === 'hot_reload' ? t('profiles.restart.hotReload') : t('profiles.restart.reload')}
+                    </button>
+                </div>
+            )}
             {error && (
                 <div className="bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-400 p-4 rounded-md flex items-center justify-between">
                     <div className="flex items-center">
@@ -331,75 +333,75 @@ const ProfilesPage = () => {
                     </button>
                 </div>
             )}
-			<div className="flex justify-between items-center">
-				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Audio Profiles</h1>
-					<p className="text-muted-foreground mt-1">
-						Audio encoding and sampling configurations for different scenarios and providers.
-					</p>
-				</div>
-				<button
-					onClick={handleAddProfile}
-					className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
-				>
-					<Plus className="w-4 h-4 mr-2" />
-					Add Profile
-				</button>
-			</div>
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('profiles.title')}</h1>
+                    <p className="text-muted-foreground mt-1">
+                        {t('profiles.description')}
+                    </p>
+                </div>
+                <button
+                    onClick={handleAddProfile}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+                >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('profiles.addProfile')}
+                </button>
+            </div>
 
-	            <ConfigSection title="Audio Profiles" description="Click a profile card to edit its settings.">
-	                <div className="grid grid-cols-1 gap-4">
-	                    {profileKeys.map((profileName) => {
-	                        const profile = profiles[profileName];
-	                        const contextsUsing = getContextsUsingProfile(profileName);
-	                        const isDefault = defaultProfile === profileName;
-                            const canDelete = profileKeys.length > 1;
-	                        
-	                        return (
-	                            <div 
-	                                key={profileName}
-	                                onClick={() => handleEditProfile(profileName)}
+            <ConfigSection title={t('profiles.sectionTitle')} description={t('profiles.sectionDesc')}>
+                <div className="grid grid-cols-1 gap-4">
+                    {profileKeys.map((profileName) => {
+                        const profile = profiles[profileName];
+                        const contextsUsing = getContextsUsingProfile(profileName);
+                        const isDefault = defaultProfile === profileName;
+                        const canDelete = profileKeys.length > 1;
+
+                        return (
+                            <div
+                                key={profileName}
+                                onClick={() => handleEditProfile(profileName)}
                             >
-                            <ConfigCard 
-                                className="group relative hover:border-primary/50 transition-colors cursor-pointer"
-                            >
-                                <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="p-2 bg-secondary rounded-md">
-                                            <Radio className="w-5 h-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="font-semibold text-lg">{profileName}</h4>
-                                                {isDefault && (
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-                                                        <Star className="w-3 h-3" />
-                                                        Default
-                                                    </span>
-                                                )}
+                                <ConfigCard
+                                    className="group relative hover:border-primary/50 transition-colors cursor-pointer"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="p-2 bg-secondary rounded-md">
+                                                <Radio className="w-5 h-5 text-primary" />
                                             </div>
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                {getProfileDescription(profileName)}
-                                            </p>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="font-semibold text-lg">{profileName}</h4>
+                                                    {isDefault && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                                                            <Star className="w-3 h-3" />
+                                                            {t('profiles.default')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    {getProfileDescription(profileName)}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-	                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-	                                        <button
-	                                            onClick={(e) => {
-	                                                e.stopPropagation();
-	                                                handleEditProfile(profileName);
-	                                            }}
-	                                            className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground"
-	                                        >
-	                                            <Settings className="w-4 h-4" />
-	                                        </button>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEditProfile(profileName);
+                                                }}
+                                                className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground"
+                                            >
+                                                <Settings className="w-4 h-4" />
+                                            </button>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleDeleteProfile(profileName);
                                                 }}
                                                 disabled={!canDelete}
-                                                title={!canDelete ? 'Cannot delete the last remaining audio profile' : undefined}
+                                                title={!canDelete ? t('profiles.cannotDeleteLast') : undefined}
                                                 className={[
                                                     "p-2 rounded-md",
                                                     canDelete
@@ -409,136 +411,136 @@ const ProfilesPage = () => {
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
-	                                    </div>
-	                                </div>
-
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                    <div className="bg-secondary/30 p-2 rounded-md">
-                                        <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block">Internal Rate</span>
-                                        <p className="text-foreground font-mono">{profile.internal_rate_hz || 8000} Hz</p>
-                                    </div>
-                                    <div className="bg-secondary/30 p-2 rounded-md">
-                                        <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block">Chunk</span>
-                                        <p className="text-foreground font-mono">{profile.chunk_ms || 'auto'} ms</p>
-                                    </div>
-                                    <div className="bg-secondary/30 p-2 rounded-md">
-                                        <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block">Provider In</span>
-                                        <p className="text-foreground font-mono">{profile.provider_pref?.input_encoding || 'mulaw'}</p>
-                                    </div>
-                                    <div className="bg-secondary/30 p-2 rounded-md">
-                                        <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block">Transport Out</span>
-                                        <p className="text-foreground font-mono">{profile.transport_out?.encoding || 'slin'}</p>
-                                    </div>
-                                </div>
-
-                                {contextsUsing.length > 0 && (
-                                    <div className="mt-3">
-                                        <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block mb-2">Used By Contexts</span>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {contextsUsing.map((ctx) => (
-                                                <span key={ctx} className="px-2 py-1 rounded-md text-xs bg-accent text-accent-foreground font-medium border border-accent-foreground/10">
-                                                    {ctx}
-                                                </span>
-                                            ))}
                                         </div>
                                     </div>
-                                )}
-                            </ConfigCard>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                        <div className="bg-secondary/30 p-2 rounded-md">
+                                            <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block">{t('profiles.internalRate')}</span>
+                                            <p className="text-foreground font-mono">{profile.internal_rate_hz || 8000} Hz</p>
+                                        </div>
+                                        <div className="bg-secondary/30 p-2 rounded-md">
+                                            <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block">{t('profiles.chunk')}</span>
+                                            <p className="text-foreground font-mono">{profile.chunk_ms || 'auto'} ms</p>
+                                        </div>
+                                        <div className="bg-secondary/30 p-2 rounded-md">
+                                            <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block">{t('profiles.providerIn')}</span>
+                                            <p className="text-foreground font-mono">{profile.provider_pref?.input_encoding || 'mulaw'}</p>
+                                        </div>
+                                        <div className="bg-secondary/30 p-2 rounded-md">
+                                            <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block">{t('profiles.transportOut')}</span>
+                                            <p className="text-foreground font-mono">{profile.transport_out?.encoding || 'slin'}</p>
+                                        </div>
+                                    </div>
+
+                                    {contextsUsing.length > 0 && (
+                                        <div className="mt-3">
+                                            <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block mb-2">{t('profiles.usedByContexts')}</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {contextsUsing.map((ctx) => (
+                                                    <span key={ctx} className="px-2 py-1 rounded-md text-xs bg-accent text-accent-foreground font-medium border border-accent-foreground/10">
+                                                        {ctx}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </ConfigCard>
                             </div>
                         );
                     })}
                 </div>
             </ConfigSection>
 
-				<Modal
-					isOpen={!!editingProfile}
-					onClose={() => {
-						setEditingProfile(null);
-					setIsNewProfile(false);
-					setNewProfileName('');
-				}}
-				title={isNewProfile ? 'Add Profile' : `Edit Profile: ${editingProfile}`}
-					size="lg"
-					footer={
-						<>
-                            {!isNewProfile && (
-                                <button
-                                    onClick={() => {
-                                        if (editingProfile) {
-                                            handleDeleteProfile(editingProfile);
-                                        }
-                                    }}
-                                    disabled={!editingProfile || profileKeys.length <= 1}
-                                    title={profileKeys.length <= 1 ? 'Cannot delete the last remaining audio profile' : undefined}
-                                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-destructive/30 text-destructive hover:bg-destructive/10 h-9 px-4 py-2 mr-auto"
-                                >
-                                    Delete
-                                </button>
-                            )}
-							<button
-								onClick={() => {
-									setEditingProfile(null);
-									setIsNewProfile(false);
-								setNewProfileName('');
-							}}
-							className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
-						>
-							Cancel
-						</button>
+            <Modal
+                isOpen={!!editingProfile}
+                onClose={() => {
+                    setEditingProfile(null);
+                    setIsNewProfile(false);
+                    setNewProfileName('');
+                }}
+                title={isNewProfile ? t('profiles.modal.addTitle') : `${t('profiles.modal.editTitle')} ${editingProfile}`}
+                size="lg"
+                footer={
+                    <>
+                        {!isNewProfile && (
+                            <button
+                                onClick={() => {
+                                    if (editingProfile) {
+                                        handleDeleteProfile(editingProfile);
+                                    }
+                                }}
+                                disabled={!editingProfile || profileKeys.length <= 1}
+                                title={profileKeys.length <= 1 ? t('profiles.cannotDeleteLast') : undefined}
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-destructive/30 text-destructive hover:bg-destructive/10 h-9 px-4 py-2 mr-auto"
+                            >
+                                {t('profiles.actions.delete')}
+                            </button>
+                        )}
+                        <button
+                            onClick={() => {
+                                setEditingProfile(null);
+                                setIsNewProfile(false);
+                                setNewProfileName('');
+                            }}
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
+                        >
+                            {t('profiles.actions.cancel')}
+                        </button>
                         <button
                             onClick={handleSaveProfile}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                         >
-                            Save Changes
+                            {t('profiles.actions.save')}
                         </button>
-					</>
-				}
-			>
-				{isNewProfile && (
-					<div className="pb-4 border-b border-border mb-4">
-						<FormInput
-							label="Profile Name"
-							value={newProfileName}
-							onChange={(e) => setNewProfileName(e.target.value)}
-							placeholder="e.g., telephony_pcm_16k"
-							tooltip="Key under profiles.<name>. Use lowercase letters, numbers, and underscores."
-						/>
-					</div>
-				)}
-				<div className="space-y-6">
-					{/* Core Settings */}
-					<div>
-						<h4 className="font-semibold mb-3">Core Settings</h4>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    </>
+                }
+            >
+                {isNewProfile && (
+                    <div className="pb-4 border-b border-border mb-4">
+                        <FormInput
+                            label={t('profiles.modal.profileName')}
+                            value={newProfileName}
+                            onChange={(e) => setNewProfileName(e.target.value)}
+                            placeholder={t('profiles.modal.placeholderName')}
+                            tooltip={t('profiles.modal.profileNameTooltip')}
+                        />
+                    </div>
+                )}
+                <div className="space-y-6">
+                    {/* Core Settings */}
+                    <div>
+                        <h4 className="font-semibold mb-3">{t('profiles.modal.coreSettings')}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormInput
-                                label="Chunk Duration (ms)"
+                                label={t('profiles.modal.chunkDuration')}
                                 value={profileForm.chunk_ms || 'auto'}
                                 onChange={(e) => updateProfileField('chunk_ms', e.target.value)}
-                                tooltip="Audio packet size. Use 'auto' for adaptive."
+                                tooltip={t('profiles.modal.chunkDurationTooltip')}
                             />
                             <FormInput
-                                label="Idle Cutoff (ms)"
+                                label={t('profiles.modal.idleCutoff')}
                                 type="number"
                                 value={profileForm.idle_cutoff_ms || 0}
                                 onChange={(e) => updateProfileField('idle_cutoff_ms', parseInt(e.target.value))}
-                                tooltip="Silence before input considered finished."
+                                tooltip={t('profiles.modal.idleCutoffTooltip')}
                             />
                             <FormInput
-                                label="Internal Sample Rate (Hz)"
+                                label={t('profiles.modal.internalSampleRate')}
                                 type="number"
                                 value={profileForm.internal_rate_hz || 8000}
                                 onChange={(e) => updateProfileField('internal_rate_hz', parseInt(e.target.value))}
-                                tooltip="Processing sample rate (8000, 16000, 24000)."
+                                tooltip={t('profiles.modal.internalSampleRateTooltip')}
                             />
                         </div>
                     </div>
 
                     {/* Provider Preferences */}
                     <div>
-                        <h4 className="font-semibold mb-3">Provider Preferences</h4>
+                        <h4 className="font-semibold mb-3">{t('profiles.modal.providerPreferences')}</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormSelect
-                                label="Input Encoding"
+                                label={t('profiles.modal.inputEncoding')}
                                 value={profileForm.provider_pref?.input_encoding || 'mulaw'}
                                 onChange={(e) => updateNestedField('provider_pref', 'input_encoding', e.target.value)}
                                 options={[
@@ -548,13 +550,13 @@ const ProfilesPage = () => {
                                 ]}
                             />
                             <FormInput
-                                label="Input Sample Rate (Hz)"
+                                label={t('profiles.modal.inputSampleRate')}
                                 type="number"
                                 value={profileForm.provider_pref?.input_sample_rate_hz || 8000}
                                 onChange={(e) => updateNestedField('provider_pref', 'input_sample_rate_hz', parseInt(e.target.value))}
                             />
                             <FormSelect
-                                label="Output Encoding"
+                                label={t('profiles.modal.outputEncoding')}
                                 value={profileForm.provider_pref?.output_encoding || 'mulaw'}
                                 onChange={(e) => updateNestedField('provider_pref', 'output_encoding', e.target.value)}
                                 options={[
@@ -564,7 +566,7 @@ const ProfilesPage = () => {
                                 ]}
                             />
                             <FormInput
-                                label="Output Sample Rate (Hz)"
+                                label={t('profiles.modal.outputSampleRate')}
                                 type="number"
                                 value={profileForm.provider_pref?.output_sample_rate_hz || 8000}
                                 onChange={(e) => updateNestedField('provider_pref', 'output_sample_rate_hz', parseInt(e.target.value))}
@@ -574,10 +576,10 @@ const ProfilesPage = () => {
 
                     {/* Transport Output */}
                     <div>
-                        <h4 className="font-semibold mb-3">Transport Output</h4>
+                        <h4 className="font-semibold mb-3">{t('profiles.modal.transportOutput')}</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormSelect
-                                label="Encoding"
+                                label={t('profiles.modal.encoding')}
                                 value={profileForm.transport_out?.encoding || 'slin'}
                                 onChange={(e) => updateNestedField('transport_out', 'encoding', e.target.value)}
                                 options={[
@@ -587,7 +589,7 @@ const ProfilesPage = () => {
                                 ]}
                             />
                             <FormInput
-                                label="Sample Rate (Hz)"
+                                label={t('profiles.modal.sampleRate')}
                                 type="number"
                                 value={profileForm.transport_out?.sample_rate_hz || 8000}
                                 onChange={(e) => updateNestedField('transport_out', 'sample_rate_hz', parseInt(e.target.value))}

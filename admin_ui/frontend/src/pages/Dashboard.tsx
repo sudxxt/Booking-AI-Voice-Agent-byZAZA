@@ -5,6 +5,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { SystemTopology } from '../components/SystemTopology';
 import { ApiErrorInfo, buildDockerAccessHints, describeApiError } from '../utils/apiErrors';
+import { useTranslation } from 'react-i18next';
 
 interface Container {
     id: string;
@@ -78,6 +79,7 @@ const CompactMetric = ({ title, value, subValue, icon: Icon, color }: CompactMet
 );
 
 const Dashboard = () => {
+    const { t } = useTranslation();
     const [, setContainers] = useState<Container[]>([]);
     const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
     const [directoryHealth, setDirectoryHealth] = useState<DirectoryHealth | null>(null);
@@ -196,7 +198,7 @@ const Dashboard = () => {
     return (
         <div className="space-y-8">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.dashboardTitle')}</h1>
                 <button
                     onClick={() => { setRefreshing(true); fetchData(); }}
                     className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -210,9 +212,9 @@ const Dashboard = () => {
                 <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <div className="text-sm font-semibold text-destructive">Some system data could not be loaded</div>
+                            <div className="text-sm font-semibold text-destructive">{t('dashboard.systemDataErrorTitle')}</div>
                             <div className="mt-1 text-sm text-muted-foreground">
-                                This usually means the Admin UI backend cannot access the Docker daemon (docker socket mount/GID mismatch), or the backend is still starting.
+                                {t('dashboard.systemDataErrorDesc')}
                             </div>
                         </div>
                         <button
@@ -220,7 +222,7 @@ const Dashboard = () => {
                             className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm"
                             disabled={refreshing}
                         >
-                            Retry
+                            {t('dashboard.retry')}
                         </button>
                     </div>
 
@@ -247,7 +249,7 @@ const Dashboard = () => {
 
                     <details className="mt-3">
                         <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                            Troubleshooting steps (copy/paste)
+                            {t('dashboard.troubleshootingSteps')}
                         </summary>
                         <div className="mt-2 space-y-2 text-sm">
                             <ul className="list-disc pl-5 space-y-1">
@@ -283,77 +285,76 @@ const Dashboard = () => {
                             ) : (
                                 <XCircle className="w-4 h-4 text-red-500" />
                             )}
-                            <span className={`text-sm font-medium ${
-                                platformLoadFailed
+                            <span className={`text-sm font-medium ${platformLoadFailed
                                     ? 'text-red-500'
                                     : platformData == null
                                         ? 'text-muted-foreground'
-                                    : platformData.summary?.ready
-                                        ? 'text-green-500'
-                                        : 'text-red-500'
-                            }`}>
-                                {platformLoadFailed
-                                    ? 'Platform info unavailable'
-                                    : platformData == null
-                                        ? 'Loading...'
                                         : platformData.summary?.ready
-                                            ? 'System Ready'
-                                            : 'Action Required'}
+                                            ? 'text-green-500'
+                                            : 'text-red-500'
+                                }`}>
+                                {platformLoadFailed
+                                    ? t('dashboard.platformInfoUnavailable')
+                                    : platformData == null
+                                        ? t('dashboard.loading')
+                                        : platformData.summary?.ready
+                                            ? t('dashboard.systemReady')
+                                            : t('dashboard.actionRequired')}
                             </span>
                             {platformData?.summary?.passed != null && (
                                 <span className="text-xs text-muted-foreground">
-                                    {platformData.summary.passed} passed
+                                    {platformData.summary.passed} {t('dashboard.passed')}
                                 </span>
                             )}
                         </div>
-                        
+
                         {/* Divider */}
                         <div className="h-4 w-px bg-border hidden sm:block" />
-                        
+
                         {/* Platform Info */}
                         <div className="flex flex-wrap items-center gap-4 text-xs">
                             <div className="flex items-center gap-1.5">
                                 <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span className="text-muted-foreground">OS:</span>
+                                <span className="text-muted-foreground">{t('dashboard.os')}</span>
                                 <span className="font-medium">{platformData?.platform?.os ? `${platformData.platform.os.id} ${platformData.platform.os.version}` : '--'}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span className="text-muted-foreground">AAVA:</span>
+                                <span className="text-muted-foreground">{t('dashboard.aava')}</span>
                                 <span className="font-medium">{platformData?.platform?.project?.version || '--'}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <Box className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span className="text-muted-foreground">Docker:</span>
+                                <span className="text-muted-foreground">{t('dashboard.docker')}</span>
                                 <span className="font-medium">{platformData?.platform?.docker?.version || '--'}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <HardDrive className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span className="text-muted-foreground">Compose:</span>
+                                <span className="text-muted-foreground">{t('dashboard.compose')}</span>
                                 <span className="font-medium">{platformData?.platform?.compose?.version || '--'}</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 {/* Row 2: Resource Metrics */}
                 <div className="grid grid-cols-5 divide-x divide-border">
                     <CompactMetric
-                        title="CPU"
+                        title={t('dashboard.cpu')}
                         value={metrics?.cpu?.percent != null ? `${metrics.cpu.percent.toFixed(1)}%` : '--'}
                         subValue={metrics?.cpu?.count != null ? `${metrics.cpu.count} Cores` : undefined}
                         icon={Cpu}
                         color="text-blue-500"
                     />
                     <CompactMetric
-                        title="Memory"
+                        title={t('dashboard.memory')}
                         value={metrics?.memory?.percent != null ? `${metrics.memory.percent.toFixed(1)}%` : '--'}
                         subValue={metrics?.memory ? `${formatBytes(metrics.memory.used)} / ${formatBytes(metrics.memory.total)}` : undefined}
                         icon={Activity}
                         color="text-green-500"
                     />
                     <CompactMetric
-                        title="Disk"
+                        title={t('dashboard.disk')}
                         value={metrics?.disk?.percent != null ? `${metrics.disk.percent.toFixed(1)}%` : '--'}
                         subValue={metrics?.disk ? `${formatBytes(metrics.disk.free)} Free` : undefined}
                         icon={HardDrive}
@@ -365,33 +366,29 @@ const Dashboard = () => {
                         onClick={() => navigate('/asterisk')}
                         title="View Asterisk Setup"
                     >
-                        <Phone className={`w-5 h-5 flex-shrink-0 ${
-                            ariConnected === true ? 'text-green-500' :
-                            ariConnected === false ? 'text-red-500' : 'text-muted-foreground'
-                        }`} />
-                        <div className="min-w-0">
-                            <div className="text-xs text-muted-foreground">Asterisk</div>
-                            <div className={`text-sm font-semibold ${
-                                ariConnected === true ? 'text-green-500' :
+                        <Phone className={`w-5 h-5 flex-shrink-0 ${ariConnected === true ? 'text-green-500' :
                                 ariConnected === false ? 'text-red-500' : 'text-muted-foreground'
-                            }`}>
-                                {ariConnected === true ? 'Connected' : ariConnected === false ? 'Disconnected' : 'Loading...'}
+                            }`} />
+                        <div className="min-w-0">
+                            <div className="text-xs text-muted-foreground">{t('dashboard.asterisk')}</div>
+                            <div className={`text-sm font-semibold ${ariConnected === true ? 'text-green-500' :
+                                    ariConnected === false ? 'text-red-500' : 'text-muted-foreground'
+                                }`}>
+                                {ariConnected === true ? t('dashboard.connected') : ariConnected === false ? t('dashboard.disconnected') : t('dashboard.loading')}
                             </div>
                         </div>
                     </div>
                     {/* Compact Directory Health */}
                     <div className="flex items-center gap-3 px-4 py-3">
-                        <FolderCheck className={`w-4 h-4 flex-shrink-0 ${
-                            directoryHealth?.overall === 'healthy' ? 'text-green-500' : 
-                            directoryHealth?.overall === 'warning' ? 'text-yellow-500' : 'text-red-500'
-                        }`} />
-                        <div className="min-w-0">
-                            <div className="text-xs text-muted-foreground">Audio Dirs</div>
-                            <div className={`text-sm font-semibold capitalize ${
-                                directoryHealth?.overall === 'healthy' ? 'text-green-500' : 
+                        <FolderCheck className={`w-4 h-4 flex-shrink-0 ${directoryHealth?.overall === 'healthy' ? 'text-green-500' :
                                 directoryHealth?.overall === 'warning' ? 'text-yellow-500' : 'text-red-500'
-                            }`}>
-                                {directoryHealth?.overall || 'Loading...'}
+                            }`} />
+                        <div className="min-w-0">
+                            <div className="text-xs text-muted-foreground">{t('dashboard.audioDirs')}</div>
+                            <div className={`text-sm font-semibold capitalize ${directoryHealth?.overall === 'healthy' ? 'text-green-500' :
+                                    directoryHealth?.overall === 'warning' ? 'text-yellow-500' : 'text-red-500'
+                                }`}>
+                                {directoryHealth?.overall ? t(`dashboard.${directoryHealth.overall}`) : t('dashboard.loading')}
                             </div>
                         </div>
                         {directoryHealth?.overall !== 'healthy' && directoryHealth && (

@@ -10,6 +10,7 @@ import { ConfigCard } from '../components/ui/ConfigCard';
 import { Modal } from '../components/ui/Modal';
 import { FormInput, FormLabel } from '../components/ui/FormComponents';
 import { sanitizeConfigForSave } from '../utils/configSanitizers';
+import { useTranslation } from 'react-i18next';
 
 type MCPStatus = {
     enabled: boolean;
@@ -54,6 +55,7 @@ const _parseArgLine = (raw: string): string[] => {
 };
 
 const MCPPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
@@ -117,19 +119,19 @@ const MCPPage = () => {
                 setReloadingEngine(true);
                 const res = await axios.post('/api/system/containers/ai_engine/reload');
                 if (res.data?.restart_required) {
-                    toast.warning('MCP configuration saved, but a full AI Engine restart is required for some changes.');
+                    toast.warning(t('mcpPage.toasts.saveSuccessRestartReq'));
                 } else {
-                    toast.success('MCP configuration saved and AI Engine reloaded.');
+                    toast.success(t('mcpPage.toasts.saveSuccess'));
                 }
             } catch (err: any) {
-                toast.warning('MCP configuration saved', { description: `AI Engine reload failed: ${err.response?.data?.detail || err.message}` });
+                toast.warning(t('mcpPage.toasts.saveSuccess'), { description: `${t('mcpPage.toasts.aiReloadFailed')}: ${err.response?.data?.detail || err.message}` });
             } finally {
                 setReloadingEngine(false);
                 await fetchStatus();
             }
         } catch (err) {
             console.error('Failed to save config', err);
-            toast.error('Failed to save configuration');
+            toast.error(t('mcpPage.toasts.saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -193,16 +195,16 @@ const MCPPage = () => {
         if (!serverForm) return;
         const id = (serverForm.id || '').trim();
         if (!id) {
-            toast.error('Server ID is required');
+            toast.error(t('mcpPage.toasts.idRequired'));
             return;
         }
         if (!/^[a-zA-Z0-9_]+$/.test(id)) {
-            toast.error('Server ID must be provider-safe (letters, numbers, underscores)');
+            toast.error(t('mcpPage.toasts.idSafe'));
             return;
         }
         const cmd = [serverForm.commandExec.trim(), ..._parseArgLine(serverForm.commandArgs)].filter(Boolean);
         if (cmd.length === 0) {
-            toast.error('Command is required');
+            toast.error(t('mcpPage.toasts.cmdRequired'));
             return;
         }
 
@@ -222,26 +224,26 @@ const MCPPage = () => {
         if (unsafeEnv.length > 0) {
             const names = unsafeEnv.map(([k]) => k).join(', ');
             const confirmed = await confirm({
-                title: 'Potential Security Risk',
-                description: `Some env values are not placeholders like \${VAR} (keys: ${names}). This may expose secrets in YAML/UI. Continue?`,
-                confirmText: 'Continue Anyway',
+                title: t('mcpPage.toasts.securityRiskTitle'),
+                description: t('mcpPage.toasts.securityRiskDesc', { names }),
+                confirmText: t('mcpPage.toasts.confirmAnyway'),
                 variant: 'destructive'
             });
             if (!confirmed) return;
         }
 
         const toolList = (serverForm.tools || [])
-            .map((t) => ({ ...t, name: String(t.name || '').trim(), expose_as: t.expose_as ? String(t.expose_as).trim() : undefined }))
-            .filter((t) => !!t.name);
+            .map((tLoc) => ({ ...tLoc, name: String(tLoc.name || '').trim(), expose_as: tLoc.expose_as ? String(tLoc.expose_as).trim() : undefined }))
+            .filter((tLoc) => !!tLoc.name);
         const seenToolNames = new Set<string>();
-        for (const t of toolList) {
-            if (seenToolNames.has(t.name)) {
-                toast.error(`Duplicate tool override name: ${t.name}`);
+        for (const tLoc of toolList) {
+            if (seenToolNames.has(tLoc.name)) {
+                toast.error(t('mcpPage.toasts.dupToolName', { name: tLoc.name }));
                 return;
             }
-            seenToolNames.add(t.name);
-            if (t.expose_as && !/^[a-zA-Z0-9_]+$/.test(t.expose_as)) {
-                toast.error(`Invalid expose_as '${t.expose_as}' (letters, numbers, underscores)`);
+            seenToolNames.add(tLoc.name);
+            if (tLoc.expose_as && !/^[a-zA-Z0-9_]+$/.test(tLoc.expose_as)) {
+                toast.error(t('mcpPage.toasts.invalidExposeAs', { name: tLoc.expose_as }));
                 return;
             }
         }
@@ -265,9 +267,9 @@ const MCPPage = () => {
 
     const deleteServer = async (id: string) => {
         const confirmed = await confirm({
-            title: 'Delete MCP Server?',
-            description: `Delete MCP server '${id}' from config?`,
-            confirmText: 'Delete',
+            title: t('mcpPage.toasts.deleteMcpTitle'),
+            description: t('mcpPage.toasts.deleteMcpDesc', { id }),
+            confirmText: t('mcpPage.toasts.deleteObjBtn'),
             variant: 'destructive'
         });
         if (!confirmed) return;
@@ -281,12 +283,12 @@ const MCPPage = () => {
         try {
             const res = await axios.post(`/api/mcp/servers/${id}/test`);
             if (res.data.ok) {
-                toast.success(`MCP server '${id}' OK`, { description: `Tools: ${(res.data.tools || []).join(', ')}` });
+                toast.success(t('mcpPage.toasts.testOk', { id }), { description: t('mcpPage.toasts.testOkTools', { tools: (res.data.tools || []).join(', ') }) });
             } else {
-                toast.error(`MCP server '${id}' failed`, { description: res.data.error || 'unknown error' });
+                toast.error(t('mcpPage.toasts.testFailedTitle', { id }), { description: res.data.error || t('mcpPage.toasts.testFailedUnknown') });
             }
         } catch (err: any) {
-            toast.error('MCP test failed', { description: err.response?.data?.detail || err.message });
+            toast.error(t('mcpPage.toasts.testFailedOverall'), { description: err.response?.data?.detail || err.message });
         } finally {
             setTestRunning(prev => ({ ...prev, [id]: false }));
             await fetchStatus();
@@ -295,7 +297,7 @@ const MCPPage = () => {
 
     const serverEntries = useMemo(() => Object.entries(servers || {}), [servers]);
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading configuration...</div>;
+    if (loading) return <div className="p-8 text-center text-muted-foreground">{t('mcpPage.loading')}</div>;
     if (yamlError) {
         return (
             <div className="space-y-4 p-6">
@@ -303,13 +305,13 @@ const MCPPage = () => {
                 <div className="flex items-center justify-between rounded-md border border-red-500/30 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
                     <div className="flex items-center">
                         <AlertCircle className="mr-2 h-5 w-5" />
-                        MCP editing is disabled while `config/ai-agent.yaml` has YAML errors. Fix the YAML and reload.
+                        {t('mcpPage.yamlErrorDesc')}
                     </div>
                     <button
                         onClick={() => window.location.reload()}
                         className="flex items-center text-xs px-3 py-1.5 rounded transition-colors bg-red-500 text-white hover:bg-red-600 font-medium"
                     >
-                        Reload
+                        {t('mcpPage.reload')}
                     </button>
                 </div>
             </div>
@@ -320,9 +322,9 @@ const MCPPage = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">MCP Servers</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('mcpPage.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Configure MCP-backed tools (Model Context Protocol). Changes require an AI Engine reload.
+                        {t('mcpPage.description')}
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -332,7 +334,7 @@ const MCPPage = () => {
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                     >
                         <RefreshCw className={`w-4 h-4 mr-2 ${statusLoading ? 'animate-spin' : ''}`} />
-                        Refresh Status
+                        {t('mcpPage.refreshStatus')}
                     </button>
                     <button
                         onClick={handleSave}
@@ -340,7 +342,7 @@ const MCPPage = () => {
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                     >
                         <Save className="w-4 h-4 mr-2" />
-                        {saving ? 'Saving...' : (reloadingEngine ? 'Reloading...' : 'Save & Reload')}
+                        {saving ? t('mcpPage.saving') : (reloadingEngine ? t('mcpPage.reloading') : t('mcpPage.saveReload'))}
                     </button>
                 </div>
             </div>
@@ -348,16 +350,16 @@ const MCPPage = () => {
             <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between">
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    AI Engine reload applies MCP config changes when there are no active calls. “Test” runs in the AI Engine container context.
+                    {t('mcpPage.alertReload')}
                 </div>
             </div>
 
-            <ConfigSection title="Global MCP Settings" description="Enable or disable MCP tooling globally.">
+            <ConfigSection title={t('mcpPage.globalSettingsTitle')} description={t('mcpPage.globalSettingsDesc')}>
                 <ConfigCard>
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="font-medium">Enable MCP</p>
-                            <p className="text-sm text-muted-foreground">When enabled, MCP servers can register tools into the agent tool registry.</p>
+                            <p className="font-medium">{t('mcpPage.enableMcp')}</p>
+                            <p className="text-sm text-muted-foreground">{t('mcpPage.enableMcpDesc')}</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -373,8 +375,8 @@ const MCPPage = () => {
             </ConfigSection>
 
             <ConfigSection
-                title="Configured MCP Servers"
-                description="Servers defined in YAML. Add servers and tool overrides; use Contexts to enable MCP tools per context."
+                title={t('mcpPage.configuredServersTitle')}
+                description={t('mcpPage.configuredServersDesc')}
             >
                 <div className="flex justify-end">
                     <button
@@ -382,7 +384,7 @@ const MCPPage = () => {
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                     >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Server
+                        {t('mcpPage.addServer')}
                     </button>
                 </div>
 
@@ -401,16 +403,16 @@ const MCPPage = () => {
                                             <div className={`w-2.5 h-2.5 rounded-full ${up ? 'bg-green-500' : 'bg-gray-400'}`} />
                                             <h3 className="font-semibold text-lg">{id}</h3>
                                             {s.enabled === false && (
-                                                <span className="text-xs px-2 py-0.5 rounded border text-muted-foreground">disabled</span>
+                                                <span className="text-xs px-2 py-0.5 rounded border text-muted-foreground">{t('mcpPage.disabled')}</span>
                                             )}
                                         </div>
                                         <p className="text-sm text-muted-foreground mt-1 break-all">
-                                            Command: <span className="font-mono text-xs">{cmd || '(not set)'}</span>
+                                            {t('mcpPage.commandPrefix')} <span className="font-mono text-xs">{cmd || t('mcpPage.notSet')}</span>
                                         </p>
                                         <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-                                            <span>Discovered: {discoveredCount}</span>
-                                            <span>Registered: {registeredCount}</span>
-                                            {st?.last_error && <span className="text-destructive">Error: {String(st.last_error)}</span>}
+                                            <span>{t('mcpPage.discovered')}: {discoveredCount}</span>
+                                            <span>{t('mcpPage.registered')}: {registeredCount}</span>
+                                            {st?.last_error && <span className="text-destructive">{t('mcpPage.error')}: {String(st.last_error)}</span>}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -418,22 +420,22 @@ const MCPPage = () => {
                                             onClick={() => testServer(id)}
                                             disabled={!!testRunning[id]}
                                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3 py-2"
-                                            title="Test (runs in AI Engine container)"
+                                            title={t('mcpPage.testTooltip')}
                                         >
                                             <Play className="w-4 h-4 mr-2" />
-                                            {testRunning[id] ? 'Testing...' : 'Test'}
+                                            {testRunning[id] ? t('mcpPage.testingBtn') : t('mcpPage.testBtn')}
                                         </button>
                                         <button
                                             onClick={() => openEditServer(id)}
                                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3 py-2"
                                         >
                                             <Settings2 className="w-4 h-4 mr-2" />
-                                            Edit
+                                            {t('mcpPage.editBtn')}
                                         </button>
                                         <button
                                             onClick={() => deleteServer(id)}
                                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-destructive/10 hover:text-destructive h-9 px-3 py-2"
-                                            title="Delete server from config"
+                                            title={t('mcpPage.deleteTooltip')}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -444,7 +446,7 @@ const MCPPage = () => {
                     })}
                     {serverEntries.length === 0 && (
                         <div className="p-8 border border-dashed rounded-lg text-center text-muted-foreground">
-                            No MCP servers configured. Click “Add Server” to create one.
+                            {t('mcpPage.noServers')}
                         </div>
                     )}
                 </div>
@@ -453,7 +455,7 @@ const MCPPage = () => {
             <Modal
                 isOpen={editing}
                 onClose={() => { setEditing(false); setServerForm(null); }}
-                title={serverForm?.id ? `Edit MCP Server: ${serverForm.id}` : 'Add MCP Server'}
+                title={serverForm?.id ? t('mcpPage.modal.editTitle', { id: serverForm.id }) : t('mcpPage.modal.addTitle')}
                 size="lg"
                 footer={
                     <>
@@ -461,13 +463,13 @@ const MCPPage = () => {
                             onClick={() => { setEditing(false); setServerForm(null); }}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                         >
-                            Cancel
+                            {t('mcpPage.modal.cancel')}
                         </button>
                         <button
                             onClick={saveServerForm}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                         >
-                            Save Server
+                            {t('mcpPage.modal.save')}
                         </button>
                     </>
                 }
@@ -476,8 +478,8 @@ const MCPPage = () => {
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="font-medium">Enabled</p>
-                                <p className="text-sm text-muted-foreground">Disabled servers are ignored by the AI Engine.</p>
+                                <p className="font-medium">{t('mcpPage.modal.enabled')}</p>
+                                <p className="text-sm text-muted-foreground">{t('mcpPage.modal.enabledDesc')}</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input
@@ -491,56 +493,56 @@ const MCPPage = () => {
                         </div>
 
                         <FormInput
-                            label="Server ID"
+                            label={t('mcpPage.modal.serverId')}
                             value={serverForm.id}
                             onChange={(e) => setServerForm({ ...serverForm, id: e.target.value })}
-                            placeholder="e.g., weather"
-                            tooltip="Provider-safe identifier (letters, numbers, underscores)."
+                            placeholder={t('mcpPage.modal.serverIdPlaceholder')}
+                            tooltip={t('mcpPage.modal.serverIdTooltip')}
                         />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Command Executable"
+                                label={t('mcpPage.modal.commandExec')}
                                 value={serverForm.commandExec}
                                 onChange={(e) => setServerForm({ ...serverForm, commandExec: e.target.value })}
-                                placeholder="python3"
-                                tooltip="First argv element (executable)."
+                                placeholder={t('mcpPage.modal.commandExecPlaceholder')}
+                                tooltip={t('mcpPage.modal.commandExecTooltip')}
                             />
                             <FormInput
-                                label="Command Arguments"
+                                label={t('mcpPage.modal.commandArgs')}
                                 value={serverForm.commandArgs}
                                 onChange={(e) => setServerForm({ ...serverForm, commandArgs: e.target.value })}
-                                placeholder="-m my_mcp_server"
-                                tooltip="Space-separated argv (basic split). Prefer simple args; complex quoting should be avoided."
+                                placeholder={t('mcpPage.modal.commandArgsPlaceholder')}
+                                tooltip={t('mcpPage.modal.commandArgsTooltip')}
                             />
                         </div>
 
                         <FormInput
-                            label="Working Directory (optional)"
+                            label={t('mcpPage.modal.cwd')}
                             value={serverForm.cwd || ''}
                             onChange={(e) => setServerForm({ ...serverForm, cwd: e.target.value })}
-                            placeholder="/app/mcp_servers/weather"
+                            placeholder={t('mcpPage.modal.cwdPlaceholder')}
                         />
 
                         <div className="space-y-3">
-                            <FormLabel tooltip="Default execution behavior for tools on this server.">
-                                Defaults
+                            <FormLabel tooltip={t('mcpPage.modal.defaultsTooltip')}>
+                                {t('mcpPage.modal.defaults')}
                             </FormLabel>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <FormInput
-                                    label="Timeout (ms)"
+                                    label={t('mcpPage.modal.timeoutMs')}
                                     value={String(serverForm.defaults.timeout_ms)}
                                     onChange={(e) => setServerForm({ ...serverForm, defaults: { ...serverForm.defaults, timeout_ms: Number(e.target.value || 0) } })}
                                     placeholder="10000"
                                 />
                                 <FormInput
-                                    label="Slow Threshold (ms)"
+                                    label={t('mcpPage.modal.slowThresholdMs')}
                                     value={String(serverForm.defaults.slow_response_threshold_ms)}
                                     onChange={(e) => setServerForm({ ...serverForm, defaults: { ...serverForm.defaults, slow_response_threshold_ms: Number(e.target.value || 0) } })}
                                     placeholder="0"
                                 />
                                 <FormInput
-                                    label="Slow Message"
+                                    label={t('mcpPage.modal.slowMessage')}
                                     value={serverForm.defaults.slow_response_message}
                                     onChange={(e) => setServerForm({ ...serverForm, defaults: { ...serverForm.defaults, slow_response_message: e.target.value } })}
                                     placeholder="Let me look that up for you, one moment..."
@@ -549,14 +551,14 @@ const MCPPage = () => {
                         </div>
 
                         <div className="space-y-3">
-                            <FormLabel tooltip="Auto-restart behavior if the MCP server process exits.">
-                                Restart Policy
+                            <FormLabel tooltip={t('mcpPage.modal.restartPolicyTooltip')}>
+                                {t('mcpPage.modal.restartPolicy')}
                             </FormLabel>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="flex items-center justify-between p-3 rounded-md border border-border bg-card/50">
                                     <div>
-                                        <p className="text-sm font-medium">Enabled</p>
-                                        <p className="text-xs text-muted-foreground">Auto-restart on crash</p>
+                                        <p className="text-sm font-medium">{t('mcpPage.modal.restartEnabled')}</p>
+                                        <p className="text-xs text-muted-foreground">{t('mcpPage.modal.restartEnabledDesc')}</p>
                                     </div>
                                     <input
                                         type="checkbox"
@@ -566,13 +568,13 @@ const MCPPage = () => {
                                     />
                                 </div>
                                 <FormInput
-                                    label="Max Restarts"
+                                    label={t('mcpPage.modal.maxRestarts')}
                                     value={String(serverForm.restart.max_restarts)}
                                     onChange={(e) => setServerForm({ ...serverForm, restart: { ...serverForm.restart, max_restarts: Number(e.target.value || 0) } })}
                                     placeholder="5"
                                 />
                                 <FormInput
-                                    label="Backoff (ms)"
+                                    label={t('mcpPage.modal.backoffMs')}
                                     value={String(serverForm.restart.backoff_ms)}
                                     onChange={(e) => setServerForm({ ...serverForm, restart: { ...serverForm.restart, backoff_ms: Number(e.target.value || 0) } })}
                                     placeholder="1000"
@@ -581,8 +583,8 @@ const MCPPage = () => {
                         </div>
 
                         <div className="space-y-3">
-                            <FormLabel tooltip="Environment variables passed to the MCP server process. Prefer placeholders like ${VAR}. Non-placeholder values are redacted when editing.">
-                                Environment (optional)
+                            <FormLabel tooltip={t('mcpPage.modal.envTooltip')}>
+                                {t('mcpPage.modal.env')}
                             </FormLabel>
                             <div className="space-y-2">
                                 {serverForm.env.map((row, idx) => (
@@ -624,71 +626,71 @@ const MCPPage = () => {
                                     onClick={() => setServerForm({ ...serverForm, env: [...serverForm.env, { key: '', value: '' }] })}
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
-                                    Add Env Var
+                                    {t('mcpPage.modal.addEnvVar')}
                                 </button>
                             </div>
                         </div>
 
                         <div className="space-y-3">
-                            <FormLabel tooltip="Optional allowlist and overrides. If empty, all discovered tools are registered automatically.">
-                                Tool Overrides (optional)
+                            <FormLabel tooltip={t('mcpPage.modal.toolOverridesTooltip')}>
+                                {t('mcpPage.modal.toolOverrides')}
                             </FormLabel>
                             <div className="space-y-2">
-                                {serverForm.tools.map((t, idx) => (
+                                {serverForm.tools.map((tLoc, idx) => (
                                     <div key={idx} className="p-3 rounded-md border border-border bg-card/50 space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-sm font-medium">Tool #{idx + 1}</p>
+                                            <p className="text-sm font-medium">{t('mcpPage.modal.toolNum', { num: idx + 1 })}</p>
                                             <button
                                                 className="p-2 rounded-md border border-input hover:bg-destructive/10 hover:text-destructive"
                                                 onClick={() => {
                                                     const next = serverForm.tools.filter((_, i) => i !== idx);
                                                     setServerForm({ ...serverForm, tools: next });
                                                 }}
-                                                title="Remove tool override"
+                                                title={t('mcpPage.modal.removeToolTooltip')}
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <FormInput
-                                                label="Tool Name"
-                                                value={t.name || ''}
+                                                label={t('mcpPage.modal.toolName')}
+                                                value={tLoc.name || ''}
                                                 onChange={(e) => {
                                                     const next = [...serverForm.tools];
-                                                    next[idx] = { ...t, name: e.target.value };
+                                                    next[idx] = { ...tLoc, name: e.target.value };
                                                     setServerForm({ ...serverForm, tools: next });
                                                 }}
                                                 placeholder="get_weather_by_city"
                                             />
                                             <FormInput
-                                                label="Expose As (optional)"
-                                                value={t.expose_as || ''}
+                                                label={t('mcpPage.modal.exposeAs')}
+                                                value={tLoc.expose_as || ''}
                                                 onChange={(e) => {
                                                     const next = [...serverForm.tools];
-                                                    next[idx] = { ...t, expose_as: e.target.value };
+                                                    next[idx] = { ...tLoc, expose_as: e.target.value };
                                                     setServerForm({ ...serverForm, tools: next });
                                                 }}
                                                 placeholder="mcp_weather_get_city"
-                                                tooltip="Provider-safe name; if omitted, AI Engine auto-generates one."
+                                                tooltip={t('mcpPage.modal.exposeAsTooltip')}
                                             />
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <FormInput
-                                                label="Speech Field (optional)"
-                                                value={t.speech_field || ''}
+                                                label={t('mcpPage.modal.speechField')}
+                                                value={tLoc.speech_field || ''}
                                                 onChange={(e) => {
                                                     const next = [...serverForm.tools];
-                                                    next[idx] = { ...t, speech_field: e.target.value };
+                                                    next[idx] = { ...tLoc, speech_field: e.target.value };
                                                     setServerForm({ ...serverForm, tools: next });
                                                 }}
                                                 placeholder="atis_text"
                                             />
                                             <FormInput
-                                                label="Speech Template (optional)"
-                                                value={t.speech_template || ''}
+                                                label={t('mcpPage.modal.speechTemplate')}
+                                                value={tLoc.speech_template || ''}
                                                 onChange={(e) => {
                                                     const next = [...serverForm.tools];
-                                                    next[idx] = { ...t, speech_template: e.target.value };
+                                                    next[idx] = { ...tLoc, speech_template: e.target.value };
                                                     setServerForm({ ...serverForm, tools: next });
                                                 }}
                                                 placeholder="The ATIS for {icao} is {atis_text}"
@@ -701,7 +703,7 @@ const MCPPage = () => {
                                     onClick={() => setServerForm({ ...serverForm, tools: [...serverForm.tools, { name: '' }] })}
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
-                                    Add Tool Override
+                                    {t('mcpPage.modal.addToolOverride')}
                                 </button>
                             </div>
                         </div>

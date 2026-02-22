@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
-  RefreshCw, 
-  Copy, 
+import {
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  RefreshCw,
+  Copy,
   ExternalLink,
   Server,
   HardDrive,
@@ -17,6 +17,7 @@ import {
 import { ConfigCard } from './ui/ConfigCard';
 import axios from 'axios';
 import { describeApiError } from '../utils/apiErrors';
+import { useTranslation } from 'react-i18next';
 
 // Types
 interface PlatformCheck {
@@ -142,8 +143,8 @@ const CopyButton = ({ text }: { text: string }) => {
 const CheckRow = ({ check, isRootless }: { check: PlatformCheck; isRootless: boolean }) => {
   const [expanded, setExpanded] = useState(false);
 
-  const actionValue = isRootless && check.action?.rootless_value 
-    ? check.action.rootless_value 
+  const actionValue = isRootless && check.action?.rootless_value
+    ? check.action.rootless_value
     : check.action?.value;
 
   const docsUrl = check.action?.docs_url;
@@ -151,7 +152,7 @@ const CheckRow = ({ check, isRootless }: { check: PlatformCheck; isRootless: boo
 
   return (
     <div className={`border-b border-border last:border-0 ${check.blocking ? 'bg-destructive/10' : ''}`}>
-      <div 
+      <div
         className="flex items-center justify-between p-3 cursor-pointer hover:bg-accent/50"
         onClick={() => check.action && setExpanded(!expanded)}
       >
@@ -172,7 +173,7 @@ const CheckRow = ({ check, isRootless }: { check: PlatformCheck; isRootless: boo
           </span>
         )}
       </div>
-      
+
       {expanded && check.action && (
         <div className="px-3 pb-3 bg-muted/30">
           {check.action.type === 'command' && (
@@ -233,6 +234,7 @@ const getUpdateStatusFromCache = (): UpdateStatusCache | null => {
 
 // Main component
 export const SystemStatus = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<PlatformResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -289,7 +291,7 @@ export const SystemStatus = () => {
 
   if (loading) {
     return (
-      <ConfigCard title="System Status" icon={<Server className="w-5 h-5" />}>
+      <ConfigCard title={t('dashboard.title')} icon={<Server className="w-5 h-5" />}>
         <div className="flex items-center justify-center p-8">
           <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
         </div>
@@ -299,11 +301,11 @@ export const SystemStatus = () => {
 
   if (error) {
     return (
-      <ConfigCard title="System Status" icon={<Server className="w-5 h-5" />}>
+      <ConfigCard title={t('dashboard.title')} icon={<Server className="w-5 h-5" />}>
         <div className="p-4 text-center text-red-400">
           {error}
           {errorDetails && <div className="mt-1 text-xs text-muted-foreground break-words">{errorDetails}</div>}
-          <button 
+          <button
             onClick={handleRefresh}
             className="ml-2 text-blue-400 hover:text-blue-300"
           >
@@ -319,8 +321,8 @@ export const SystemStatus = () => {
   const { platform, checks, summary } = data;
 
   return (
-    <ConfigCard 
-      title="System Status" 
+    <ConfigCard
+      title={t('dashboard.title')}
       icon={<Server className="w-5 h-5" />}
       action={
         <div className="flex items-center gap-2">

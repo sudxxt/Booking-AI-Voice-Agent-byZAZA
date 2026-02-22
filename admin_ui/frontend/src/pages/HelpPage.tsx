@@ -4,6 +4,7 @@ import { ConfigCard } from '../components/ui/ConfigCard';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 interface DocInfo {
     file: string;
@@ -29,6 +30,7 @@ interface DocContent {
 }
 
 const HelpPage = () => {
+    const { t } = useTranslation();
     const [categories, setCategories] = useState<Category[]>([]);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [selectedDoc, setSelectedDoc] = useState<DocContent | null>(null);
@@ -128,9 +130,9 @@ const HelpPage = () => {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Help & Documentation</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{t('helpPage.title')}</h1>
                 <p className="text-muted-foreground mt-1">
-                    Browse documentation organized by category
+                    {t('helpPage.description')}
                 </p>
             </div>
 
@@ -139,7 +141,7 @@ const HelpPage = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                     type="text"
-                    placeholder="Search documentation..."
+                    placeholder={t('helpPage.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -152,7 +154,7 @@ const HelpPage = () => {
             {/* Search Results */}
             {searchQuery.length >= 2 && searchResults.length > 0 && (
                 <ConfigCard>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">Search Results</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('helpPage.searchResults')}</h3>
                     <div className="space-y-2">
                         {searchResults.map((result) => (
                             <button
@@ -193,7 +195,7 @@ const HelpPage = () => {
                                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
                             )}
                         </button>
-                        
+
                         {expandedCategories.has(category.id) && (
                             <div className="px-6 pb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {category.docs.map((doc) => (
@@ -230,7 +232,7 @@ const HelpPage = () => {
                             <div className="flex items-center gap-3">
                                 <Book className="w-5 h-5 text-primary" />
                                 <h2 className="text-xl font-bold">
-                                    {isLoading ? 'Loading...' : selectedDoc?.title}
+                                    {isLoading ? t('helpPage.loading') : selectedDoc?.title}
                                 </h2>
                             </div>
                             <div className="flex items-center gap-2">
@@ -242,7 +244,7 @@ const HelpPage = () => {
                                         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                                     >
                                         <ExternalLink className="w-4 h-4" />
-                                        GitHub
+                                        {t('helpPage.github')}
                                     </a>
                                 )}
                                 <button

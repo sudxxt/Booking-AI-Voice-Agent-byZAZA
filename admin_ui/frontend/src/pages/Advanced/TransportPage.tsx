@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
@@ -11,6 +12,7 @@ import { FormInput, FormSelect, FormSwitch } from '../../components/ui/FormCompo
 import { sanitizeConfigForSave } from '../../utils/configSanitizers';
 
 const TransportPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
@@ -52,16 +54,16 @@ const TransportPage = () => {
             const method = response.data?.recommended_apply_method || 'restart';
             setApplyMethod(method);
             setPendingRestart(true);
-            
+
             // Show appropriate message based on recommended apply method
             if (method === 'hot_reload') {
-                toast.success('Configuration saved. Changes can be applied via hot-reload.');
+                toast.success(t('advanced.transport.saveSuccessHotReload'));
             } else {
-                toast.success('Transport configuration saved. Restart AI Engine to apply changes.');
+                toast.success(t('advanced.transport.saveSuccessRestart'));
             }
         } catch (err) {
             console.error('Failed to save config', err);
-            toast.error('Failed to save configuration');
+            toast.error(t('advanced.transport.saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -76,17 +78,17 @@ const TransportPage = () => {
                 if (response.data?.restart_required) {
                     setApplyMethod('restart');
                     setPendingRestart(true);
-                    toast.warning('Hot reload applied partially', { description: response.data.message || 'Restart AI Engine to fully apply changes' });
+                    toast.warning(t('advanced.transport.hotReloadPartial'), { description: response.data.message || t('advanced.transport.hotReloadPartialDesc') });
                     return;
                 }
 
                 if (response.data?.status === 'success') {
                     setPendingRestart(false);
-                    toast.success('AI Engine hot reloaded! Changes are now active.');
+                    toast.success(t('advanced.transport.hotReloadSuccess'));
                     return;
                 }
 
-                toast.info(`Hot reload response: ${response.data?.message || 'unknown status'}`);
+                toast.info(`${t('advanced.transport.hotReloadResponse')}: ${response.data?.message || t('common.unknownStatus')}`);
                 return;
             }
 
@@ -94,9 +96,9 @@ const TransportPage = () => {
 
             if (response.data.status === 'warning') {
                 const confirmForce = await confirm({
-                    title: 'Force Restart?',
-                    description: `${response.data.message}\n\nDo you want to force restart anyway? This may disconnect active calls.`,
-                    confirmText: 'Force Restart',
+                    title: t('modals.forceRestart'),
+                    description: `${response.data.message}\n\n${t('modals.forceRestartDesc')}`,
+                    confirmText: t('modals.forceRestart'),
                     variant: 'destructive'
                 });
                 if (confirmForce) {
@@ -107,18 +109,18 @@ const TransportPage = () => {
             }
 
             if (response.data.status === 'degraded') {
-                toast.warning('AI Engine restarted but may not be fully healthy', { description: response.data.output || 'Please verify manually' });
+                toast.warning(t('advanced.transport.restartDegraded'), { description: response.data.output || t('advanced.transport.verifyManually') });
                 return;
             }
 
             if (response.data.status === 'success') {
                 setPendingRestart(false);
-                toast.success('AI Engine restarted! Changes are now active.');
+                toast.success(t('advanced.transport.restartSuccess'));
                 return;
             }
         } catch (error: any) {
-            const actionLabel = applyMethod === 'hot_reload' ? 'hot reload' : 'restart';
-            toast.error(`Failed to ${actionLabel} AI Engine`, { description: error.response?.data?.detail || error.message });
+            const actionLabel = applyMethod === 'hot_reload' ? t('advanced.transport.hotReloadAction') : t('advanced.transport.restartAction');
+            toast.error(t('advanced.transport.actionFailed', { action: actionLabel }), { description: error.response?.data?.detail || error.message });
         } finally {
             setRestartingEngine(false);
         }
@@ -144,7 +146,7 @@ const TransportPage = () => {
         }
     }, [config?.external_media?.lock_remote_endpoint]);
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading configuration...</div>;
+    if (loading) return <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>;
 
     if (yamlError) return (
         <div className="space-y-6">
@@ -158,10 +160,10 @@ const TransportPage = () => {
 
     // Determine banner message based on apply method
     const bannerMessage = applyMethod === 'hot_reload'
-        ? 'Changes saved. Apply Changes to hot reload AI Engine without a restart.'
-        : 'Changes to transport configurations require an AI Engine restart to take effect.';
-    
-    const buttonLabel = applyMethod === 'hot_reload' ? 'Apply Changes' : 'Restart AI Engine';
+        ? t('advanced.transport.hotReloadBanner')
+        : t('advanced.transport.restartBanner');
+
+    const buttonLabel = applyMethod === 'hot_reload' ? t('advanced.transport.applyChangesBtn') : t('advanced.transport.restartBtn');
 
     return (
         <div className="space-y-6">
@@ -173,26 +175,25 @@ const TransportPage = () => {
                 <button
                     onClick={() => handleApplyAIEngine(false)}
                     disabled={restartingEngine}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium' 
-                            : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                        ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
+                        : 'bg-yellow-500/20 hover:bg-yellow-500/30'
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Applying...' : buttonLabel}
+                    {restartingEngine ? t('advanced.transport.applying') : buttonLabel}
                 </button>
             </div>
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Audio Transport</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('advanced.transport.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Configure how audio is transported between Asterisk and the AI Agent.
+                        {t('advanced.transport.desc')}
                     </p>
                 </div>
                 <button
@@ -201,66 +202,66 @@ const TransportPage = () => {
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 >
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? t('advanced.transport.saving') : t('advanced.transport.saveChanges')}
                 </button>
             </div>
 
-            <ConfigSection title="Asterisk Configuration" description="Core Asterisk integration settings.">
+            <ConfigSection title={t('advanced.transport.asteriskTitle')} description={t('advanced.transport.asteriskDesc')}>
                 <ConfigCard>
                     <FormInput
-                        label="Stasis Application Name"
+                        label={t('advanced.transport.stasisAppName')}
                         value={config.asterisk?.app_name || 'asterisk-ai-voice-agent'}
                         onChange={(e) => updateSectionConfig('asterisk', 'app_name', e.target.value)}
-                        tooltip="Name of the Stasis application in your dialplan. Must match the app name in your Asterisk configuration."
+                        tooltip={t('advanced.transport.stasisAppTooltip')}
                     />
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection title="Transport Type" description="Select the audio transport method.">
+            <ConfigSection title={t('advanced.transport.typeTitle')} description={t('advanced.transport.typeDesc')}>
                 <ConfigCard>
                     <FormSelect
-                        label="Transport Method"
+                        label={t('advanced.transport.methodLabel')}
                         value={transportType}
                         onChange={(e) => updateConfig('audio_transport', e.target.value)}
                         options={[
-                            { value: 'audiosocket', label: 'AudioSocket (Default)' },
-                            { value: 'externalmedia', label: 'External Media (RTP)' }
+                            { value: 'audiosocket', label: t('advanced.transport.methodAudioSocket') },
+                            { value: 'externalmedia', label: t('advanced.transport.methodRTP') }
                         ]}
-                        description="Choose 'AudioSocket' for standard deployments or 'External Media' for RTP-based integration."
+                        tooltip={t('advanced.transport.methodTooltip')}
                     />
                 </ConfigCard>
             </ConfigSection>
 
             {transportType === 'audiosocket' && (
-                <ConfigSection title="AudioSocket Settings" description="Configuration for the AudioSocket server.">
+                <ConfigSection title={t('advanced.transport.asTitle')} description={t('advanced.transport.asDesc')}>
                     <ConfigCard>
                         <div className="space-y-6">
-                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Network Configuration</h4>
+                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t('advanced.transport.netConfig')}</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormInput
-                                    label="Bind Host"
+                                    label={t('advanced.transport.bindHost')}
                                     value={audiosocketConfig.host || '127.0.0.1'}
                                     onChange={(e) => updateSectionConfig('audiosocket', 'host', e.target.value)}
-                                    tooltip="IP address the AudioSocket server listens on. Use 0.0.0.0 to listen on all interfaces."
+                                    tooltip={t('advanced.transport.bindHostTooltip')}
                                 />
                                 <FormInput
-                                    label="Advertise Host"
+                                    label={t('advanced.transport.advertiseHost')}
                                     value={audiosocketConfig.advertise_host || audiosocketConfig.host || '127.0.0.1'}
                                     onChange={(e) => updateSectionConfig('audiosocket', 'advertise_host', e.target.value)}
-                                    tooltip="IP address Asterisk connects to. For NAT/VPN deployments, set this to your routable IP (VPN IP, public IP, or LAN IP). Leave as Bind Host for same-host deployments."
+                                    tooltip={t('advanced.transport.advertiseHostTooltip')}
                                 />
                                 <FormInput
-                                    label="Port"
+                                    label={t('advanced.transport.port')}
                                     type="number"
                                     value={audiosocketConfig.port || 8090}
                                     onChange={(e) => updateSectionConfig('audiosocket', 'port', parseInt(e.target.value))}
-                                    tooltip="TCP port for AudioSocket connections (default: 8090)."
+                                    tooltip={t('advanced.transport.portTooltip')}
                                 />
                                 <FormInput
-                                    label="Format"
+                                    label={t('advanced.transport.format')}
                                     value={audiosocketConfig.format || 'slin'}
                                     onChange={(e) => updateSectionConfig('audiosocket', 'format', e.target.value)}
-                                    tooltip="Audio format (e.g., slin, ulaw)"
+                                    tooltip={t('advanced.transport.formatTooltip')}
                                 />
                             </div>
                         </div>
@@ -269,58 +270,58 @@ const TransportPage = () => {
             )}
 
             {transportType === 'externalmedia' && (
-                <ConfigSection title="External Media (RTP) Settings" description="Configuration for RTP-based audio transport.">
+                <ConfigSection title={t('advanced.transport.rtpTitle')} description={t('advanced.transport.rtpDesc')}>
                     <ConfigCard>
                         <div className="space-y-6">
-                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Network Configuration</h4>
+                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t('advanced.transport.netConfig')}</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormInput
-                                    label="RTP Bind Host"
+                                    label={t('advanced.transport.rtpBindHost')}
                                     value={externalMediaConfig.rtp_host || '127.0.0.1'}
                                     onChange={(e) => updateSectionConfig('external_media', 'rtp_host', e.target.value)}
-                                    tooltip="IP address the RTP server listens on. Use 0.0.0.0 to listen on all interfaces."
+                                    tooltip={t('advanced.transport.rtpBindHostTooltip')}
                                 />
                                 <FormInput
-                                    label="Advertise Host"
+                                    label={t('advanced.transport.advertiseHost')}
                                     value={externalMediaConfig.advertise_host || externalMediaConfig.rtp_host || '127.0.0.1'}
                                     onChange={(e) => updateSectionConfig('external_media', 'advertise_host', e.target.value)}
-                                    tooltip="IP address Asterisk sends RTP to. For NAT/VPN deployments, set this to your routable IP (VPN IP, public IP, or LAN IP). Leave as Bind Host for same-host deployments."
+                                    tooltip={t('advanced.transport.rtpAdvertiseHostTooltip')}
                                 />
                                 <FormInput
-                                    label="RTP Port"
+                                    label={t('advanced.transport.rtpPort')}
                                     type="number"
                                     value={externalMediaConfig.rtp_port || 18080}
                                     onChange={(e) => updateSectionConfig('external_media', 'rtp_port', parseInt(e.target.value))}
-                                    tooltip="Base UDP port for RTP streams (default: 18080)."
+                                    tooltip={t('advanced.transport.rtpPortTooltip')}
                                 />
                                 <FormInput
-                                    label="Port Range"
+                                    label={t('advanced.transport.portRange')}
                                     value={externalMediaConfig.port_range || '18080:18099'}
                                     onChange={(e) => updateSectionConfig('external_media', 'port_range', e.target.value)}
                                     placeholder="18080:18099"
-                                    tooltip="Range of UDP ports for concurrent calls (format: start:end, e.g., 18080:18099)."
+                                    tooltip={t('advanced.transport.portRangeTooltip')}
                                 />
                                 <FormInput
-                                    label="Allowed Remote Hosts"
-                                    value={Array.isArray(externalMediaConfig.allowed_remote_hosts) 
-                                        ? externalMediaConfig.allowed_remote_hosts.join(', ') 
+                                    label={t('advanced.transport.allowedHosts')}
+                                    value={Array.isArray(externalMediaConfig.allowed_remote_hosts)
+                                        ? externalMediaConfig.allowed_remote_hosts.join(', ')
                                         : (externalMediaConfig.allowed_remote_hosts || '')}
                                     onChange={(e) => {
                                         const value = e.target.value.trim();
                                         const hosts = value ? value.split(',').map(h => h.trim()).filter(h => h) : [];
                                         updateSectionConfig('external_media', 'allowed_remote_hosts', hosts.length > 0 ? hosts : null);
                                     }}
-                                    placeholder="e.g., 192.168.1.100, 10.0.0.5"
-                                    tooltip="IP addresses allowed to send RTP packets. Required when ASTERISK_HOST is a hostname. Comma-separated for multiple IPs."
+                                    placeholder={t('advanced.transport.allowedHostsPlaceholder')}
+                                    tooltip={t('advanced.transport.allowedHostsTooltip')}
                                 />
                             </div>
 
                             <div className="border-t border-border my-4"></div>
 
-                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Asterisk-side Configuration</h4>
+                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t('advanced.transport.asteriskSideConfig')}</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormSelect
-                                    label="Codec"
+                                    label={t('advanced.transport.codec')}
                                     value={externalMediaConfig.codec || 'ulaw'}
                                     onChange={(e) => updateSectionConfig('external_media', 'codec', e.target.value)}
                                     options={[
@@ -329,26 +330,26 @@ const TransportPage = () => {
                                         { value: 'slin', label: 'SLIN (8kHz)' },
                                         { value: 'slin16', label: 'SLIN16 (16kHz)' }
                                     ]}
-                                    description="Codec Asterisk sends/receives."
+                                    tooltip={t('advanced.transport.codecDesc')}
                                 />
                                 <FormSelect
-                                    label="Direction"
+                                    label={t('advanced.transport.direction')}
                                     value={externalMediaConfig.direction || 'both'}
                                     onChange={(e) => updateSectionConfig('external_media', 'direction', e.target.value)}
                                     options={[
-                                        { value: 'both', label: 'Both' },
-                                        { value: 'sendonly', label: 'Send Only' },
-                                        { value: 'recvonly', label: 'Receive Only' }
+                                        { value: 'both', label: t('advanced.transport.dirBoth') },
+                                        { value: 'sendonly', label: t('advanced.transport.dirSend') },
+                                        { value: 'recvonly', label: t('advanced.transport.dirRecv') }
                                     ]}
                                 />
                             </div>
 
                             <div className="border-t border-border my-4"></div>
 
-                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Engine-side Configuration</h4>
+                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t('advanced.transport.engineSideConfig')}</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormSelect
-                                    label="Internal Format"
+                                    label={t('advanced.transport.internalFormat')}
                                     value={externalMediaConfig.format || 'slin16'}
                                     onChange={(e) => updateSectionConfig('external_media', 'format', e.target.value)}
                                     options={[
@@ -356,40 +357,40 @@ const TransportPage = () => {
                                         { value: 'slin16', label: 'SLIN16 (16kHz)' },
                                         { value: 'ulaw', label: 'μ-law (8kHz)' }
                                     ]}
-                                    description="Engine internal format. Pipelines typically expect 16kHz PCM16 (slin16)."
+                                    tooltip={t('advanced.transport.internalFormatDesc')}
                                 />
                                 <FormInput
-                                    label="Sample Rate (Hz)"
+                                    label={t('advanced.transport.sampleRate')}
                                     type="number"
                                     value={externalMediaConfig.sample_rate || 16000}
                                     onChange={(e) => updateSectionConfig('external_media', 'sample_rate', parseInt(e.target.value))}
-                                    tooltip="Auto-inferred from format if not set."
+                                    tooltip={t('advanced.transport.sampleRateTooltip')}
                                 />
                             </div>
 
                             <div className="border border-amber-300/40 rounded-lg p-4 bg-amber-500/5">
                                 <FormSwitch
-                                    label="External Media Expert Settings"
-                                    description="Expose RTP source endpoint hardening controls."
+                                    label={t('advanced.transport.expertSettings')}
+                                    description={t('advanced.transport.expertDesc')}
                                     checked={showExternalMediaExpert}
                                     onChange={(e) => setShowExternalMediaExpert(e.target.checked)}
                                     className="mb-0 border-0 p-0 bg-transparent"
                                 />
                                 <p className={`text-xs mt-2 ${showExternalMediaExpert ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
                                     {showExternalMediaExpert
-                                        ? 'Warning: incorrect settings can drop RTP packets or break media connectivity.'
-                                        : 'Expert values are visible and read-only until enabled.'}
+                                        ? t('advanced.transport.expertWarning')
+                                        : t('advanced.transport.expertInfo')}
                                 </p>
                                 <div className="mt-3">
                                     <FormSwitch
-                                        label="Lock Remote Endpoint"
-                                        description="Drop RTP packets if source host/port changes mid-call."
+                                        label={t('advanced.transport.lockEndpoint')}
+                                        description={t('advanced.transport.lockEndpointDesc')}
                                         checked={externalMediaConfig.lock_remote_endpoint ?? true}
                                         onChange={(e) => updateSectionConfig('external_media', 'lock_remote_endpoint', e.target.checked)}
                                         disabled={!showExternalMediaExpert}
                                     />
                                     <p className="text-xs text-muted-foreground mt-2">
-                                        Security hardening: keep enabled unless your network path legitimately rewrites RTP source mid-call.
+                                        {t('advanced.transport.lockEndpointSec')}
                                     </p>
                                 </div>
                             </div>

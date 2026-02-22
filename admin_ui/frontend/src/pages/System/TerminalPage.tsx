@@ -1,15 +1,37 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Terminal as TerminalIcon, Send } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, ChevronRight, Command, AlertCircle, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
-const TerminalPage = () => {
-    const [history, setHistory] = useState<string[]>(['Welcome to Asterisk AI Admin Terminal', 'Type "help" for available commands.']);
+interface TerminalLine {
+    type: 'input' | 'output' | 'error' | 'system';
+    content: string;
+    timestamp: Date;
+}
+
+const TerminalPage: React.FC = () => {
+    const { t } = useTranslation();
+    const [history, setHistory] = useState<TerminalLine[]>([
+        {
+            type: 'system',
+            content: t('terminal.welcome'),
+            timestamp: new Date()
+        },
+        {
+            type: 'system',
+            content: t('terminal.welcomeSub'),
+            timestamp: new Date()
+        }
+    ]);
     const [input, setInput] = useState('');
-    const [loading, setLoading] = useState(false);
-    const endRef = useRef<HTMLDivElement>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        endRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
     }, [history]);
 
     const executeCommand = async (cmd: string) => {
@@ -21,114 +43,185 @@ const TerminalPage = () => {
             switch (command) {
                 case 'help':
                     return [
-                        'Available commands:',
-                        '  status       - Check system health',
-                        '  restart      - Restart services (usage: restart <service>)',
-                        '  logs         - View recent logs (usage: logs <container> <lines>)',
-                        '  version      - Show system version',
-                        '  clear        - Clear terminal output'
+                        t('terminal.help.title'),
+                        `  status       - ${t('terminal.help.status')}`,
+                        `  restart      - ${t('terminal.help.restart')}`,
+                        `  logs         - ${t('terminal.help.logs')}`,
+                        `  version      - ${t('terminal.help.version')}`,
+                        `  clear        - ${t('terminal.help.clear')}`
                     ];
 
+                case 'clear':
+                    setHistory([]);
+                    return null;
+
                 case 'status':
-                    const health = await axios.get('/api/system/health');
+                    const health = await axios.get('/api/health');
                     return [
-                        'System Health Status:',
+                        t('terminal.status.title'),
                         JSON.stringify(health.data, null, 2)
                     ];
 
                 case 'restart':
-                    if (args.length === 0) return ['Usage: restart <service> (e.g., ai_engine, all)'];
-                    if (args[0] === 'all') {
-                        await axios.post('/api/system/containers/restart-all');
-                    } else {
-                        await axios.post(`/api/system/containers/${args[0]}/restart`);
+                    if (!args[0]) {
+                        return [t('terminal.restart.usage')];
                     }
-                    return [`Command sent: Restarting ${args[0]}...`];
+                    await axios.post(`/api/system/restart/${args[0]}`);
+                    return [t('terminal.restart.sent', { service: args[0] })];
 
                 case 'logs':
-                    const container = args[0] || 'ai_engine';
-                    const lines = args[1] || '20';
-                    const logRes = await axios.get(`/api/logs/${container}?tail=${lines}`);
-                    return [
-                        `--- Logs for ${container} (last ${lines} lines) ---`,
-                        logRes.data.logs || 'No logs found.'
-                    ];
+                    if (!args[0]) {
+                        return [t('terminal.help.logs')];
+                    }
+                    const logRes = await axios.get(`/api/system/logs/${args[0]}?lines=${args[1] || 50}`);
+                    if (logRes.data && logRes.data.logs) {
+                        return [
+                            t('terminal.logs.header', { container: args[0], lines: args[1] || '50' }),
+                            ...(Array.isArray(logRes.data.logs) ? logRes.data.logs : [logRes.data.logs])
+                        ];
+                    }
+                    return [t('terminal.logs.notFound')];
 
                 case 'version':
-                    return ['Asterisk AI Agent v1.0.0 (Admin UI)'];
-
-                case 'clear':
-                    setHistory([]);
-                    return [];
+                    return [t('terminal.version.info')];
 
                 default:
-                    return [`Command not found: ${command}. Type "help" for list.`];
+                    return [t('terminal.errors.notFound', { command })];
             }
         } catch (err: any) {
-            return [`Error executing command: ${err.message || String(err)}`];
+            return [t('terminal.errors.execution', { message: err.message || String(err) })];
         }
     };
 
-    const handleCommand = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || loading) return;
+        if (!input.trim() || isProcessing) return;
 
         const cmd = input.trim();
-        setHistory(prev => [...prev, `$ ${cmd}`]);
         setInput('');
-        setLoading(true);
+        setHistory(prev => [...prev, { type: 'input', content: cmd, timestamp: new Date() }]);
 
-        // Process locally
-        if (cmd === 'clear') {
-            setHistory([]);
-            setLoading(false);
-            return;
-        }
-
+        setIsProcessing(true);
         const output = await executeCommand(cmd);
-        if (output && output.length > 0) {
-            setHistory(prev => [...prev, ...output]);
+        setIsProcessing(false);
+
+        if (output) {
+            setHistory(prev => [
+                ...prev,
+                ...output.map(line => ({
+                    type: (line.toLowerCase().includes('error') || line.toLowerCase().includes('failed')) ? 'error' : 'output' as const,
+                    content: line,
+                    timestamp: new Date()
+                }))
+            ]);
         }
-        setLoading(false);
+    };
+
+    const clearTerminal = () => {
+        setHistory([]);
     };
 
     return (
-        <div className="h-[calc(100vh-140px)] flex flex-col space-y-4">
-            <div className="flex justify-between items-center">
+        <div className="p-6 max-w-6xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Web Terminal</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Direct command-line access to the AI engine APIs.
+                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                        <TerminalIcon className="text-blue-500" />
+                        {t('terminal.title')}
+                    </h1>
+                    <p className="text-muted-foreground">
+                        {t('terminal.description')}
                     </p>
                 </div>
+                <button
+                    onClick={clearTerminal}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50 transition-colors"
+                >
+                    <Trash2 size={16} />
+                    {t('terminal.help.clear')}
+                </button>
             </div>
 
-            <div className="flex-1 bg-[#09090b] border border-border rounded-lg shadow-inner flex flex-col overflow-hidden font-mono text-sm">
-                <div className="flex-1 p-4 overflow-auto space-y-1">
-                    {history.map((line, i) => (
-                        <div key={i} className={`${line.startsWith('$') ? 'text-blue-400 font-bold' : 'text-gray-300'} whitespace-pre-wrap`}>
-                            {line}
-                        </div>
-                    ))}
-                    {loading && <div className="text-yellow-500 animate-pulse">Processing...</div>}
-                    <div ref={endRef} />
+            <div className="bg-slate-900 rounded-lg shadow-xl overflow-hidden border border-slate-800 flex flex-col h-[600px]">
+                {/* Terminal Header */}
+                <div className="bg-slate-800/50 px-4 py-2 border-b border-slate-700 flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-500/50" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+                        <div className="w-3 h-3 rounded-full bg-green-500/50" />
+                    </div>
+                    <span className="text-xs text-slate-400 font-mono ml-2">ai-agent-terminal -- bash</span>
                 </div>
 
-                <form onSubmit={handleCommand} className="p-2 bg-secondary/10 border-t border-border flex items-center gap-2">
-                    <TerminalIcon className="w-4 h-4 text-muted-foreground" />
+                {/* Console Area */}
+                <div
+                    ref={scrollRef}
+                    className="flex-1 overflow-y-auto p-4 font-mono text-sm space-y-1"
+                >
+                    {history.map((line, i) => (
+                        <div key={i} className="flex gap-2">
+                            <span className="text-slate-500 shrink-0">
+                                [{line.timestamp.toLocaleTimeString([], { hour12: false })}]
+                            </span>
+                            {line.type === 'input' && (
+                                <span className="text-blue-400 font-bold shrink-0">$</span>
+                            )}
+                            {line.type === 'error' && (
+                                <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={14} />
+                            )}
+                            <span className={`
+                ${line.type === 'input' ? 'text-white' : ''}
+                ${line.type === 'output' ? 'text-slate-300' : ''}
+                ${line.type === 'error' ? 'text-red-400' : ''}
+                ${line.type === 'system' ? 'text-green-400/80 italic' : ''}
+                break-all whitespace-pre-wrap
+              `}>
+                                {line.content}
+                            </span>
+                        </div>
+                    ))}
+                    {isProcessing && (
+                        <div className="flex gap-2 animate-pulse text-slate-500 italic">
+                            <span className="shrink-0">$</span>
+                            <span>{t('terminal.processing')}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Input Area */}
+                <form
+                    onSubmit={handleSubmit}
+                    className="p-4 bg-slate-800/30 border-t border-slate-800 flex items-center gap-3"
+                >
+                    <ChevronRight className="text-blue-500 shrink-0" size={20} />
                     <input
+                        ref={inputRef}
                         type="text"
-                        className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder:text-gray-500"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Enter command (e.g., help, status, logs ai_engine)..."
+                        placeholder={t('terminal.placeholder')}
+                        className="flex-1 bg-transparent border-none outline-none text-slate-100 placeholder:text-slate-600 font-mono"
                         autoFocus
-                        disabled={loading}
                     />
-                    <button type="submit" disabled={loading || !input} className="p-1 hover:text-primary transition-colors">
-                        <Send className="w-4 h-4" />
+                    <button
+                        type="submit"
+                        disabled={!input.trim() || isProcessing}
+                        className="text-slate-400 hover:text-blue-400 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                    >
+                        <Send size={18} />
                     </button>
                 </form>
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50/50 border border-blue-100 rounded-lg flex gap-3">
+                <Command className="text-blue-500 shrink-0" size={20} />
+                <div className="text-sm text-blue-800">
+                    <p className="font-semibold mb-1">Pro Tip:</p>
+                    <p>
+                        You can use the terminal to quickly check agent status or restart the AI engine without
+                        navigating to the system configuration pages.
+                    </p>
+                </div>
             </div>
         </div>
     );

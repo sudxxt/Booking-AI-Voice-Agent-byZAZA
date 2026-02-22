@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { RefreshCw, Download, Pause, Play, Search } from 'lucide-react';
+import { RefreshCw, Pause, Play, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Logs = () => {
+    const { t } = useTranslation();
     const [logs, setLogs] = useState('');
     const [loading, setLoading] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -39,7 +41,7 @@ const Logs = () => {
     }, [logs, autoRefresh]);
 
     const getColoredLogs = () => {
-        if (!logs) return <div className="text-muted-foreground italic">No logs available...</div>;
+        if (!logs) return <div className="text-muted-foreground italic">{t('logs.noLogs')}</div>;
 
         return logs.split('\n').map((line, i) => {
             if (filter && !line.toLowerCase().includes(filter.toLowerCase())) return null;
@@ -63,12 +65,12 @@ const Logs = () => {
         <div className="h-full flex flex-col space-y-4">
             <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-4">
-                    <h1 className="text-2xl font-bold">System Logs</h1>
+                    <h1 className="text-2xl font-bold">{t('logs.title')}</h1>
                     <div className="relative">
                         <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Filter logs..."
+                            placeholder={t('logs.filterPlaceholder')}
                             className="pl-8 pr-4 py-1 text-sm rounded-md border border-input bg-background w-64"
                             value={filter}
                             onChange={e => setFilter(e.target.value)}
@@ -81,15 +83,15 @@ const Logs = () => {
                         value={container}
                         onChange={e => setContainer(e.target.value)}
                     >
-                        <option value="ai_engine">AI Engine</option>
-                        <option value="local_ai_server">Local AI Server</option>
-                        <option value="admin_ui">Admin UI</option>
+                        <option value="ai_engine">{t('logs.containers.ai_engine')}</option>
+                        <option value="local_ai_server">{t('logs.containers.local_ai_server')}</option>
+                        <option value="admin_ui">{t('logs.containers.admin_ui')}</option>
                     </select>
 
                     <button
                         onClick={() => setAutoRefresh(!autoRefresh)}
                         className={`p-2 rounded border ${autoRefresh ? 'bg-primary text-primary-foreground border-primary' : 'border-input hover:bg-accent'}`}
-                        title={autoRefresh ? "Pause Auto-refresh" : "Resume Auto-refresh"}
+                        title={autoRefresh ? t('logs.pauseAutoRefresh') : t('logs.resumeAutoRefresh')}
                     >
                         {autoRefresh ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                     </button>
@@ -97,7 +99,7 @@ const Logs = () => {
                     <button
                         onClick={fetchLogs}
                         className="p-2 rounded border border-input hover:bg-accent"
-                        title="Refresh Now"
+                        title={t('logs.refreshNow')}
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>

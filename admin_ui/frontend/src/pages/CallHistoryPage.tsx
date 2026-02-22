@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-    Phone, Filter, Download, Trash2, 
-    ChevronLeft, ChevronRight, RefreshCw, X, MessageSquare,
+    Phone, Filter, Download, Trash2,
+    ChevronLeft, ChevronRight, RefreshCw, X,
     Wrench, AlertCircle, CheckCircle, ArrowRightLeft, PhoneOff,
-    BarChart3, Users, Timer, Activity, TrendingUp, Zap, PieChart
+    BarChart3, Timer, Activity, TrendingUp, PieChart
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface CallRecordSummary {
     id: string;
@@ -96,6 +97,7 @@ const OutcomeIcon = ({ outcome }: { outcome: string }) => {
 };
 
 const CallHistoryPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const location = useLocation();
     const [calls, setCalls] = useState<CallRecordSummary[]>([]);
@@ -107,13 +109,13 @@ const CallHistoryPage = () => {
     const [selectedCall, setSelectedCall] = useState<CallRecordDetail | null>(null);
     const [selectedCallLoading, setSelectedCallLoading] = useState(false);
     const [showStats, setShowStats] = useState(true);
-    
+
     // Pagination
     const [page, setPage] = useState(1);
     const [pageSize] = useState(20);
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
-    
+
     // Filters
     const [filters, setFilters] = useState({
         caller_number: '',
@@ -131,17 +133,17 @@ const CallHistoryPage = () => {
         try {
             setLoading(true);
             setError(null);
-            
+
             const params: Record<string, any> = {
                 page,
                 page_size: pageSize,
             };
-            
+
             // Add filters
             Object.entries(filters).forEach(([key, value]) => {
                 if (value) params[key] = value;
             });
-            
+
             const res = await axios.get('/api/calls', { params });
             setCalls(res.data.calls);
             setTotal(res.data.total);
@@ -159,7 +161,7 @@ const CallHistoryPage = () => {
             const params: Record<string, any> = {};
             if (filters.start_date) params.start_date = filters.start_date;
             if (filters.end_date) params.end_date = filters.end_date;
-            
+
             const res = await axios.get('/api/calls/stats', { params });
             setStats(res.data);
         } catch (err) {
@@ -227,12 +229,12 @@ const CallHistoryPage = () => {
             Object.entries(filters).forEach(([key, value]) => {
                 if (value) params[key] = value;
             });
-            
-            const res = await axios.get(`/api/calls/export/${format}`, { 
+
+            const res = await axios.get(`/api/calls/export/${format}`, {
                 params,
                 responseType: 'blob'
             });
-            
+
             const url = window.URL.createObjectURL(res.data);
             const a = document.createElement('a');
             a.href = url;
@@ -315,19 +317,19 @@ const CallHistoryPage = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold">Call History</h1>
+                <h1 className="text-3xl font-bold">{t('callHistory.title')}</h1>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowStats(!showStats)}
                         className={`p-2 rounded-lg border transition-colors ${showStats ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                        title="Toggle Stats"
+                        title={t('callHistory.toggleStats')}
                     >
                         <BarChart3 className="w-5 h-5" />
                     </button>
                     <button
                         onClick={() => { fetchCalls(); fetchStats(); }}
                         className="p-2 rounded-lg border hover:bg-muted"
-                        title="Refresh"
+                        title={t('callHistory.refresh')}
                     >
                         <RefreshCw className="w-5 h-5" />
                     </button>
@@ -335,7 +337,7 @@ const CallHistoryPage = () => {
                         <button
                             onClick={() => setShowFilters(!showFilters)}
                             className={`p-2 rounded-lg border transition-colors ${showFilters || hasActiveFilters ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                            title="Filters"
+                            title={t('callHistory.filters')}
                         >
                             <Filter className="w-5 h-5" />
                         </button>
@@ -349,14 +351,14 @@ const CallHistoryPage = () => {
                         className="flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm"
                     >
                         <Download className="w-4 h-4" />
-                        CSV
+                        {t('callHistory.csv')}
                     </button>
                     <button
                         onClick={() => handleExport('json')}
                         className="flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm"
                     >
                         <Download className="w-4 h-4" />
-                        JSON
+                        {t('callHistory.json')}
                     </button>
                 </div>
             </div>
@@ -369,7 +371,7 @@ const CallHistoryPage = () => {
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                         title="Open Logs filtered to this call"
                     >
-                        Troubleshoot
+                        {t('callHistory.troubleshoot')}
                     </button>
                 </div>
             )}
@@ -380,42 +382,42 @@ const CallHistoryPage = () => {
                     <div className="bg-card border rounded-lg p-4">
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                             <Phone className="w-4 h-4" />
-                            Total Calls
+                            {t('callHistory.totalCalls')}
                         </div>
                         <div className="text-2xl font-bold mt-1">{stats.total_calls}</div>
                     </div>
                     <div className="bg-card border rounded-lg p-4">
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                             <PieChart className="w-4 h-4" />
-                            Success / Failed
+                            {t('callHistory.successFailed')}
                         </div>
                         <div className="text-2xl font-bold mt-1">
                             {stats.outcomes?.completed || 0} / {stats.outcomes?.error || 0}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                            {stats.total_calls > 0 
-                                ? Math.round(((stats.outcomes?.completed || 0) / stats.total_calls) * 100) 
-                                : 0}% success rate
+                            {stats.total_calls > 0
+                                ? Math.round(((stats.outcomes?.completed || 0) / stats.total_calls) * 100)
+                                : 0}% {t('callHistory.successRate')}
                         </div>
                     </div>
                     <div className="bg-card border rounded-lg p-4">
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                             <Activity className="w-4 h-4" />
-                            Active Calls
+                            {t('callHistory.activeCalls')}
                         </div>
                         <div className="text-2xl font-bold mt-1">{stats.active_calls || 0}</div>
                     </div>
                     <div className="bg-card border rounded-lg p-4">
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                             <Timer className="w-4 h-4" />
-                            Avg Duration
+                            {t('callHistory.avgDuration')}
                         </div>
                         <div className="text-2xl font-bold mt-1">{formatDuration(stats.avg_duration_seconds)}</div>
                     </div>
                     <div className="bg-card border rounded-lg p-4">
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                             <TrendingUp className="w-4 h-4" />
-                            Top Provider
+                            {t('callHistory.topProvider')}
                         </div>
                         <div className="text-lg font-bold mt-1 truncate">
                             {Object.entries(stats.providers || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'}
@@ -424,12 +426,12 @@ const CallHistoryPage = () => {
                     <div className="bg-card border rounded-lg p-4">
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                             <Wrench className="w-4 h-4" />
-                            Top Tool
+                            {t('callHistory.topTool')}
                         </div>
                         <div className="text-lg font-bold mt-1 truncate">
                             {Object.entries(stats.top_tools || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'}
                         </div>
-                        <div className="text-xs text-muted-foreground">{stats.calls_with_tools} calls used tools</div>
+                        <div className="text-xs text-muted-foreground">{stats.calls_with_tools} {t('callHistory.callsUsedTools')}</div>
                     </div>
                 </div>
             )}
@@ -438,88 +440,88 @@ const CallHistoryPage = () => {
             {showFilters && (
                 <div className="bg-card border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold">Filters</h3>
+                        <h3 className="font-semibold">{t('callHistory.filters')}</h3>
                         {hasActiveFilters && (
                             <button onClick={clearFilters} className="text-sm text-primary hover:underline">
-                                Clear all
+                                {t('callHistory.clearAll')}
                             </button>
                         )}
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                         <div>
-                            <label className="text-sm text-muted-foreground">Caller Number</label>
+                            <label className="text-sm text-muted-foreground">{t('callHistory.callerNumber')}</label>
                             <input
                                 type="text"
                                 value={filters.caller_number}
                                 onChange={(e) => setFilters({ ...filters, caller_number: e.target.value })}
-                                placeholder="Phone number"
+                                placeholder="#"
                                 className="w-full mt-1 px-3 py-2 bg-background border rounded-lg text-sm"
                             />
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground">Caller Name</label>
+                            <label className="text-sm text-muted-foreground">{t('callHistory.callerName')}</label>
                             <input
                                 type="text"
                                 value={filters.caller_name}
                                 onChange={(e) => setFilters({ ...filters, caller_name: e.target.value })}
-                                placeholder="Name"
+                                placeholder="A-Z"
                                 className="w-full mt-1 px-3 py-2 bg-background border rounded-lg text-sm"
                             />
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground">Provider</label>
+                            <label className="text-sm text-muted-foreground">{t('callHistory.provider')}</label>
                             <select
                                 value={filters.provider_name}
                                 onChange={(e) => setFilters({ ...filters, provider_name: e.target.value })}
                                 className="w-full mt-1 px-3 py-2 bg-background border rounded-lg text-sm"
                             >
-                                <option value="">All</option>
+                                <option value="">{t('callHistory.all')}</option>
                                 {filterOptions?.providers.map(p => (
                                     <option key={p} value={p}>{p}</option>
                                 ))}
                             </select>
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground">Pipeline</label>
+                            <label className="text-sm text-muted-foreground">{t('callHistory.pipeline')}</label>
                             <select
                                 value={filters.pipeline_name}
                                 onChange={(e) => setFilters({ ...filters, pipeline_name: e.target.value })}
                                 className="w-full mt-1 px-3 py-2 bg-background border rounded-lg text-sm"
                             >
-                                <option value="">All</option>
+                                <option value="">{t('callHistory.all')}</option>
                                 {filterOptions?.pipelines.map(p => (
                                     <option key={p} value={p}>{p}</option>
                                 ))}
                             </select>
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground">Context</label>
+                            <label className="text-sm text-muted-foreground">{t('callHistory.context')}</label>
                             <select
                                 value={filters.context_name}
                                 onChange={(e) => setFilters({ ...filters, context_name: e.target.value })}
                                 className="w-full mt-1 px-3 py-2 bg-background border rounded-lg text-sm"
                             >
-                                <option value="">All</option>
+                                <option value="">{t('callHistory.all')}</option>
                                 {filterOptions?.contexts.map(c => (
                                     <option key={c} value={c}>{c}</option>
                                 ))}
                             </select>
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground">Outcome</label>
+                            <label className="text-sm text-muted-foreground">{t('callHistory.outcome')}</label>
                             <select
                                 value={filters.outcome}
                                 onChange={(e) => setFilters({ ...filters, outcome: e.target.value })}
                                 className="w-full mt-1 px-3 py-2 bg-background border rounded-lg text-sm"
                             >
-                                <option value="">All</option>
+                                <option value="">{t('callHistory.all')}</option>
                                 {filterOptions?.outcomes.map(o => (
                                     <option key={o} value={o}>{o}</option>
                                 ))}
                             </select>
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground">From Date</label>
+                            <label className="text-sm text-muted-foreground">{t('callHistory.fromDate')}</label>
                             <input
                                 type="date"
                                 value={filters.start_date}
@@ -528,7 +530,7 @@ const CallHistoryPage = () => {
                             />
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground">To Date</label>
+                            <label className="text-sm text-muted-foreground">{t('callHistory.toDate')}</label>
                             <input
                                 type="date"
                                 value={filters.end_date}
@@ -562,7 +564,7 @@ const CallHistoryPage = () => {
                     </div>
                     <h2 className="text-xl font-semibold mb-2">No Calls Found</h2>
                     <p className="text-muted-foreground">
-                        {hasActiveFilters 
+                        {hasActiveFilters
                             ? 'No calls match your filters. Try adjusting your search criteria.'
                             : 'Call history will appear here once calls are made.'}
                     </p>
@@ -576,27 +578,27 @@ const CallHistoryPage = () => {
                         <table className="w-full min-w-[1000px]">
                             <thead className="bg-muted/50">
                                 <tr>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Caller</th>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Time</th>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Duration</th>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Provider / Pipeline</th>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Context</th>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Outcome</th>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Turns</th>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Latency</th>
-                                    <th className="text-left px-4 py-3 text-sm font-medium">Barge-ins</th>
-                                    <th className="text-center px-4 py-3 text-sm font-medium w-20">Actions</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.caller')}</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.time')}</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.duration')}</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.providerPipeline')}</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.context')}</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.outcome')}</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.turns')}</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.latency')}</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium">{t('callHistory.table.bargeIns')}</th>
+                                    <th className="text-center px-4 py-3 text-sm font-medium w-20">{t('callHistory.table.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {calls.map((call) => (
-	                                    <tr 
-	                                        key={call.id} 
-	                                        className="hover:bg-muted/30 cursor-pointer"
-	                                        onClick={() => openCallDetails(call)}
-	                                    >
+                                    <tr
+                                        key={call.id}
+                                        className="hover:bg-muted/30 cursor-pointer"
+                                        onClick={() => openCallDetails(call)}
+                                    >
                                         <td className="px-4 py-3">
-                                            <div className="font-medium">{call.caller_number || 'Unknown'}</div>
+                                            <div className="font-medium">{call.caller_number || t('callHistory.table.unknown')}</div>
                                             {call.caller_name && (
                                                 <div className="text-sm text-muted-foreground">{call.caller_name}</div>
                                             )}
@@ -632,7 +634,7 @@ const CallHistoryPage = () => {
                     {/* Pagination */}
                     <div className="flex items-center justify-between">
                         <div className="text-sm text-muted-foreground">
-                            Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} calls
+                            {t('callHistory.pagination.showing')} {((page - 1) * pageSize) + 1} {t('callHistory.pagination.to')} {Math.min(page * pageSize, total)} {t('callHistory.pagination.of')} {total} {t('callHistory.pagination.calls')}
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -643,7 +645,7 @@ const CallHistoryPage = () => {
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
                             <span className="text-sm">
-                                Page {page} of {totalPages}
+                                {t('callHistory.pagination.page')} {page} {t('callHistory.pagination.of')} {totalPages}
                             </span>
                             <button
                                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
@@ -664,7 +666,7 @@ const CallHistoryPage = () => {
                         {/* Modal Header */}
                         <div className="flex items-center justify-between p-4 border-b">
                             <div>
-                                <h2 className="text-xl font-bold">Call Details</h2>
+                                <h2 className="text-xl font-bold">{t('callHistory.details.title')}</h2>
                                 <p className="text-sm text-muted-foreground">{modalCall.call_id}</p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -678,7 +680,7 @@ const CallHistoryPage = () => {
                                 <button
                                     onClick={() => handleDelete(modalCall.id)}
                                     className="p-2 hover:bg-destructive/10 rounded-lg text-destructive"
-                                    title="Delete this call"
+                                    title="Delete"
                                 >
                                     <Trash2 className="w-5 h-5" />
                                 </button>
@@ -696,50 +698,50 @@ const CallHistoryPage = () => {
                             {selectedCallLoading && (
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <RefreshCw className="w-4 h-4 animate-spin" />
-                                    Loading full call details…
+                                    {t('callHistory.details.loading')}
                                 </div>
                             )}
                             {/* Overview */}
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Caller</div>
-                                    <div className="font-medium">{modalCall.caller_number || 'Unknown'}</div>
+                                    <div className="text-sm text-muted-foreground">{t('callHistory.details.overview.caller')}</div>
+                                    <div className="font-medium">{modalCall.caller_number || t('callHistory.table.unknown')}</div>
                                     {modalCall.caller_name && (
                                         <div className="text-sm">{modalCall.caller_name}</div>
                                     )}
                                 </div>
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Duration</div>
+                                    <div className="text-sm text-muted-foreground">{t('callHistory.details.overview.duration')}</div>
                                     <div className="font-medium">{formatDuration(modalCall.duration_seconds)}</div>
                                 </div>
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Outcome</div>
+                                    <div className="text-sm text-muted-foreground">{t('callHistory.details.overview.outcome')}</div>
                                     <div className="flex items-center gap-2">
                                         <OutcomeIcon outcome={modalCall.outcome} />
                                         <span className="font-medium capitalize">{modalCall.outcome}</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Turns</div>
+                                    <div className="text-sm text-muted-foreground">{t('callHistory.details.overview.turns')}</div>
                                     <div className="font-medium">{modalCall.total_turns}</div>
                                 </div>
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Avg Latency</div>
+                                    <div className="text-sm text-muted-foreground">{t('callHistory.details.overview.avgLatency')}</div>
                                     <div className="font-medium">{(modalCall.avg_turn_latency_ms / 1000).toFixed(2)}s</div>
                                 </div>
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Barge-ins</div>
+                                    <div className="text-sm text-muted-foreground">{t('callHistory.details.overview.bargeIns')}</div>
                                     <div className="font-medium">{modalCall.barge_in_count}</div>
                                 </div>
                             </div>
 
                             {/* Tool Calls Summary */}
                             <div>
-                                <h3 className="font-semibold mb-2">Tool Executions ({selectedCall?.tool_calls.length || 0})</h3>
+                                <h3 className="font-semibold mb-2">{t('callHistory.details.toolExecutions')} ({selectedCall?.tool_calls.length || 0})</h3>
                                 {!selectedCall ? (
-                                    <p className="text-muted-foreground text-sm">Load the call to view tool details</p>
+                                    <p className="text-muted-foreground text-sm">{t('callHistory.details.loadToViewTools')}</p>
                                 ) : selectedCall.tool_calls.length === 0 ? (
-                                    <p className="text-muted-foreground text-sm">No tools were called during this call</p>
+                                    <p className="text-muted-foreground text-sm">{t('callHistory.details.noTools')}</p>
                                 ) : (
                                     <div className="flex flex-wrap gap-2">
                                         {selectedCall.tool_calls.map((tool, i) => (
@@ -758,22 +760,22 @@ const CallHistoryPage = () => {
 
                             {/* Configuration */}
                             <div>
-                                <h3 className="font-semibold mb-2">Configuration</h3>
+                                <h3 className="font-semibold mb-2">{t('callHistory.details.configuration')}</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                     <div>
-                                        <span className="text-muted-foreground">Provider:</span>{' '}
+                                        <span className="text-muted-foreground">{t('callHistory.details.provider')}:</span>{' '}
                                         <span className="font-medium">{modalCall.provider_name}</span>
                                     </div>
                                     <div>
-                                        <span className="text-muted-foreground">Pipeline:</span>{' '}
+                                        <span className="text-muted-foreground">{t('callHistory.details.pipeline')}:</span>{' '}
                                         <span className="font-medium">{modalCall.pipeline_name || '-'}</span>
                                     </div>
                                     <div>
-                                        <span className="text-muted-foreground">Context:</span>{' '}
+                                        <span className="text-muted-foreground">{t('callHistory.details.context')}:</span>{' '}
                                         <span className="font-medium">{modalCall.context_name || '-'}</span>
                                     </div>
                                     <div>
-                                        <span className="text-muted-foreground">Audio:</span>{' '}
+                                        <span className="text-muted-foreground">{t('callHistory.details.audio')}:</span>{' '}
                                         <span className="font-medium">{selectedCall?.caller_audio_format || '-'}</span>
                                     </div>
                                 </div>
@@ -781,23 +783,22 @@ const CallHistoryPage = () => {
 
                             {/* Transcript */}
                             <div>
-                                <h3 className="font-semibold mb-2">Conversation ({selectedCall?.conversation_history.length || 0} messages)</h3>
+                                <h3 className="font-semibold mb-2">{t('callHistory.details.conversation')} ({selectedCall?.conversation_history.length || 0} {t('callHistory.details.messages')})</h3>
                                 {!selectedCall ? (
                                     <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-                                        Load the call to view the transcript
+                                        {t('callHistory.details.loadToViewTranscript')}
                                     </div>
                                 ) : (
                                     <div className="bg-muted/30 rounded-lg p-4 max-h-64 overflow-y-auto space-y-3">
                                         {selectedCall.conversation_history.length === 0 ? (
-                                            <p className="text-muted-foreground text-sm">No conversation recorded</p>
+                                            <p className="text-muted-foreground text-sm">{t('callHistory.details.noConversation')}</p>
                                         ) : (
                                             selectedCall.conversation_history.map((msg, i) => (
                                                 <div key={i} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
-                                                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                                                        msg.role === 'assistant' 
-                                                            ? 'bg-primary/10 text-foreground' 
-                                                            : 'bg-muted text-foreground'
-                                                    }`}>
+                                                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${msg.role === 'assistant'
+                                                        ? 'bg-primary/10 text-foreground'
+                                                        : 'bg-muted text-foreground'
+                                                        }`}>
                                                         <div className="text-xs text-muted-foreground mb-1 capitalize">{msg.role}</div>
                                                         <div className="text-sm">{msg.content}</div>
                                                         {msg.timestamp && (
@@ -816,7 +817,7 @@ const CallHistoryPage = () => {
                             {/* Tool Call Details */}
                             {selectedCall && selectedCall.tool_calls.length > 0 && (
                                 <div>
-                                    <h3 className="font-semibold mb-2">Tool Call Details</h3>
+                                    <h3 className="font-semibold mb-2">{t('callHistory.details.toolCallDetails')}</h3>
                                     <div className="space-y-2">
                                         {selectedCall.tool_calls.map((tool, i) => (
                                             <div key={i} className="bg-muted/30 rounded-lg p-3 text-sm">
@@ -846,7 +847,7 @@ const CallHistoryPage = () => {
                             {/* Error Message */}
                             {modalCall.error_message && (
                                 <div>
-                                    <h3 className="font-semibold mb-2 text-destructive">Error</h3>
+                                    <h3 className="font-semibold mb-2 text-destructive">{t('callHistory.details.error')}</h3>
                                     <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm">
                                         {modalCall.error_message}
                                     </div>

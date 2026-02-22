@@ -1,8 +1,9 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { RefreshCw, Pause, Play, Terminal } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { parseAnsi } from '../../utils/ansi';
 import { describeApiError } from '../../utils/apiErrors';
 
@@ -107,6 +108,7 @@ const mapLegacyPresetToView = (preset: string | null): TroubleshootView => {
 };
 
 const LogsPage = () => {
+    const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const [logs, setLogs] = useState('');
     const [events, setEvents] = useState<LogEvent[]>([]);
@@ -193,12 +195,12 @@ const LogsPage = () => {
             const info = describeApiError(err, `/api/logs/${container}`);
             console.error("Failed to fetch logs", info);
             setLogs(
-                `Failed to fetch logs for ${container}.\n` +
-                `${info.status ? `HTTP ${info.status}` : info.kind}${info.detail ? ` - ${info.detail}` : ''}\n\n` +
-                `Troubleshooting:\n` +
-                `- Check: docker compose -p asterisk-ai-voice-agent logs --tail=200 admin_ui\n` +
-                `- Check Docker socket access: ls -ln /var/run/docker.sock\n` +
-                `- If you changed .env or ran preflight, recreate admin_ui: docker compose -p asterisk-ai-voice-agent up -d --force-recreate admin_ui\n`
+                t('system.env.sections.aiEngine.logs.raw.fetchFailed', {
+                    container,
+                    status: info.status ? `HTTP ${info.status}` : info.kind,
+                    kind: '',
+                    detail: info.detail ? ` - ${info.detail}` : ''
+                })
             );
         } finally {
             setLoading(false);
@@ -244,8 +246,12 @@ const LogsPage = () => {
             setEvents([]);
             setEventsMeta(null);
             setLogs(
-                `Failed to fetch log events for ${container}.\n` +
-                `${info.status ? `HTTP ${info.status}` : info.kind}${info.detail ? ` - ${info.detail}` : ''}\n`
+                t('system.env.sections.aiEngine.logs.troubleshoot.fetchFailed', {
+                    container,
+                    status: info.status ? `HTTP ${info.status}` : info.kind,
+                    kind: '',
+                    detail: info.detail ? ` - ${info.detail}` : ''
+                })
             );
         } finally {
             setLoading(false);
@@ -420,9 +426,9 @@ const LogsPage = () => {
     const levelBadge = (lvl: LogLevel) => {
         const cls =
             lvl === 'error' ? 'bg-red-600/20 text-red-300 border-red-800' :
-            lvl === 'warning' ? 'bg-yellow-600/20 text-yellow-200 border-yellow-800' :
-            lvl === 'info' ? 'bg-blue-600/20 text-blue-200 border-blue-800' :
-            'bg-gray-600/20 text-gray-200 border-gray-700';
+                lvl === 'warning' ? 'bg-yellow-600/20 text-yellow-200 border-yellow-800' :
+                    lvl === 'info' ? 'bg-blue-600/20 text-blue-200 border-blue-800' :
+                        'bg-gray-600/20 text-gray-200 border-gray-700';
         return <span className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] ${cls}`}>{lvl.toUpperCase()}</span>;
     };
 
@@ -430,9 +436,9 @@ const LogsPage = () => {
         <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col">
             <div className="flex justify-between items-center flex-shrink-0">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">System Logs</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('system.env.sections.aiEngine.logs.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Raw container logs (quick level filter) and a call-centric Troubleshoot view.
+                        {t('system.env.sections.aiEngine.logs.desc')}
                     </p>
                 </div>
                 <div className="flex space-x-2 items-center">
@@ -453,9 +459,9 @@ const LogsPage = () => {
                             }
                         }}
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
-                        title="Export Logs & Config for Debugging"
+                        title={t('system.env.sections.aiEngine.logs.exportTooltip')}
                     >
-                        <span className="mr-2">Export</span>
+                        <span className="mr-2">{t('system.env.sections.aiEngine.logs.export')}</span>
                         <Terminal className="w-4 h-4" />
                     </button>
 
@@ -467,9 +473,9 @@ const LogsPage = () => {
                             updateUrlParams({ container: e.target.value });
                         }}
                     >
-                        <option value="ai_engine">AI Engine</option>
-                        <option value="local_ai_server">Local AI Server</option>
-                        <option value="admin_ui">Admin UI</option>
+                        <option value="ai_engine">{t('system.env.sections.aiEngine.logs.container.ai_engine')}</option>
+                        <option value="local_ai_server">{t('system.env.sections.aiEngine.logs.container.local_ai_server')}</option>
+                        <option value="admin_ui">{t('system.env.sections.aiEngine.logs.container.admin_ui')}</option>
                     </select>
 
                     <select
@@ -480,10 +486,10 @@ const LogsPage = () => {
                             setMode(nextMode);
                             updateUrlParams({ mode: nextMode });
                         }}
-                        title="Logs View"
+                        title={t('system.env.sections.aiEngine.logs.mode.raw')} // Using raw as a generic label for mode title
                     >
-                        <option value="troubleshoot">Troubleshoot</option>
-                        <option value="raw">Raw</option>
+                        <option value="troubleshoot">{t('system.env.sections.aiEngine.logs.mode.troubleshoot')}</option>
+                        <option value="raw">{t('system.env.sections.aiEngine.logs.mode.raw')}</option>
                     </select>
 
                     <button
@@ -492,10 +498,10 @@ const LogsPage = () => {
                             ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                             : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
                             }`}
-                        title={autoRefresh ? "Pause Auto-refresh" : "Resume Auto-refresh"}
+                        title={autoRefresh ? t('system.env.sections.aiEngine.logs.pauseTooltip') : t('system.env.sections.aiEngine.logs.resumeTooltip')}
                     >
                         {autoRefresh ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-                        {autoRefresh ? 'Live' : 'Paused'}
+                        {autoRefresh ? t('system.env.sections.aiEngine.logs.live') : t('system.env.sections.aiEngine.logs.paused')}
                     </button>
 
                     <button
@@ -508,7 +514,7 @@ const LogsPage = () => {
                             }
                         }}
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
-                        title="Refresh Now"
+                        title={t('system.env.sections.aiEngine.logs.refresh')}
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -518,7 +524,7 @@ const LogsPage = () => {
             {mode === 'raw' && (
                 <div className="flex flex-wrap items-center gap-3 border rounded-lg p-3 bg-background">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Levels</span>
+                        <span className="text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.raw.levels')}</span>
                         {(['error', 'warning', 'info', 'debug'] as LogLevel[]).map(lvl => (
                             <label key={lvl} className="flex items-center gap-1 text-xs">
                                 <input
@@ -537,10 +543,10 @@ const LogsPage = () => {
                         ))}
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Search</span>
+                        <span className="text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.raw.search')}</span>
                         <input
                             className="h-8 w-[280px] rounded-md border border-input bg-background px-2 py-1 text-xs"
-                            placeholder="text match…"
+                            placeholder={t('system.env.sections.aiEngine.logs.raw.searchPlaceholder')}
                             value={q}
                             onChange={e => {
                                 setQ(e.target.value);
@@ -554,74 +560,74 @@ const LogsPage = () => {
             {mode === 'troubleshoot' && showCallFinder && (
                 <div className="border rounded-lg p-4 bg-background space-y-3">
                     <div className="flex items-center justify-between">
-                        <div className="font-semibold">Find a Call</div>
-                        <div className="text-xs text-muted-foreground">Uses Call History (fast and reliable)</div>
+                        <div className="font-semibold">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.title')}</div>
+                        <div className="text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.desc')}</div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Caller Number</div>
+                            <div className="text-xs text-muted-foreground mb-1">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.callerNumber')}</div>
                             <input
                                 className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
-                                placeholder="Phone number"
+                                placeholder={t('system.env.sections.aiEngine.logs.troubleshoot.findCall.callerNumberPlaceholder')}
                                 value={callFilters.caller_number}
                                 onChange={e => { setCallPage(1); setCallFilters(f => ({ ...f, caller_number: e.target.value })); }}
                             />
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Caller Name</div>
+                            <div className="text-xs text-muted-foreground mb-1">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.callerName')}</div>
                             <input
                                 className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
-                                placeholder="Name"
+                                placeholder={t('system.env.sections.aiEngine.logs.troubleshoot.findCall.callerNamePlaceholder')}
                                 value={callFilters.caller_name}
                                 onChange={e => { setCallPage(1); setCallFilters(f => ({ ...f, caller_name: e.target.value })); }}
                             />
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Provider</div>
+                            <div className="text-xs text-muted-foreground mb-1">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.provider')}</div>
                             <select
                                 className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                                 value={callFilters.provider_name}
                                 onChange={e => { setCallPage(1); setCallFilters(f => ({ ...f, provider_name: e.target.value })); }}
                             >
-                                <option value="">All</option>
+                                <option value="">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.all')}</option>
                                 {(callFilterOptions?.providers || []).map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Pipeline</div>
+                            <div className="text-xs text-muted-foreground mb-1">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.pipeline')}</div>
                             <select
                                 className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                                 value={callFilters.pipeline_name}
                                 onChange={e => { setCallPage(1); setCallFilters(f => ({ ...f, pipeline_name: e.target.value })); }}
                             >
-                                <option value="">All</option>
+                                <option value="">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.all')}</option>
                                 {(callFilterOptions?.pipelines || []).map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Context</div>
+                            <div className="text-xs text-muted-foreground mb-1">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.context')}</div>
                             <select
                                 className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                                 value={callFilters.context_name}
                                 onChange={e => { setCallPage(1); setCallFilters(f => ({ ...f, context_name: e.target.value })); }}
                             >
-                                <option value="">All</option>
+                                <option value="">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.all')}</option>
                                 {(callFilterOptions?.contexts || []).map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Outcome</div>
+                            <div className="text-xs text-muted-foreground mb-1">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.outcome')}</div>
                             <select
                                 className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                                 value={callFilters.outcome}
                                 onChange={e => { setCallPage(1); setCallFilters(f => ({ ...f, outcome: e.target.value })); }}
                             >
-                                <option value="">All</option>
+                                <option value="">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.all')}</option>
                                 {(callFilterOptions?.outcomes || []).map(o => <option key={o} value={o}>{o}</option>)}
                             </select>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">From Date</div>
+                            <div className="text-xs text-muted-foreground mb-1">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.fromDate')}</div>
                             <input
                                 type="date"
                                 className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
@@ -630,7 +636,7 @@ const LogsPage = () => {
                             />
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">To Date</div>
+                            <div className="text-xs text-muted-foreground mb-1">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.toDate')}</div>
                             <input
                                 type="date"
                                 className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
@@ -644,29 +650,29 @@ const LogsPage = () => {
                             onClick={fetchCalls}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                         >
-                            Search
+                            {t('system.env.sections.aiEngine.logs.troubleshoot.findCall.search')}
                         </button>
                         <button
                             onClick={() => { setCallPage(1); setCallFilters({ caller_number: '', caller_name: '', provider_name: '', pipeline_name: '', context_name: '', outcome: '', start_date: '', end_date: '' }); }}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                         >
-                            Clear
+                            {t('system.env.sections.aiEngine.logs.troubleshoot.findCall.clear')}
                         </button>
-                        <div className="text-xs text-muted-foreground">{callLoading ? 'Loading…' : `${callResults.length} results`}</div>
+                        <div className="text-xs text-muted-foreground">{callLoading ? t('system.env.sections.aiEngine.logs.troubleshoot.findCall.loading') : t('system.env.sections.aiEngine.logs.troubleshoot.findCall.results', { count: callResults.length })}</div>
                     </div>
 
                     <div className="border rounded-lg overflow-hidden">
                         <div className="grid grid-cols-6 gap-2 px-3 py-2 text-xs bg-muted/40 text-muted-foreground">
-                            <div>Caller</div>
-                            <div>Time</div>
-                            <div>Duration</div>
-                            <div>Provider</div>
-                            <div>Context</div>
-                            <div>Actions</div>
+                            <div>{t('system.env.sections.aiEngine.logs.troubleshoot.table.caller')}</div>
+                            <div>{t('system.env.sections.aiEngine.logs.troubleshoot.table.time')}</div>
+                            <div>{t('system.env.sections.aiEngine.logs.troubleshoot.table.duration')}</div>
+                            <div>{t('system.env.sections.aiEngine.logs.troubleshoot.table.provider')}</div>
+                            <div>{t('system.env.sections.aiEngine.logs.troubleshoot.table.context')}</div>
+                            <div>{t('system.env.sections.aiEngine.logs.troubleshoot.table.actions')}</div>
                         </div>
                         {callResults.map(r => (
                             <div key={r.id} className="grid grid-cols-6 gap-2 px-3 py-2 text-xs border-t">
-                                <div className="truncate">{r.caller_number || 'Unknown'}{r.caller_name ? ` (${r.caller_name})` : ''}</div>
+                                <div className="truncate">{r.caller_number || t('system.env.sections.aiEngine.logs.troubleshoot.table.unknown')}{r.caller_name ? ` (${r.caller_name})` : ''}</div>
                                 <div className="truncate">{r.start_time ? new Date(r.start_time).toLocaleString() : '-'}</div>
                                 <div>{Math.round(r.duration_seconds)}s</div>
                                 <div className="truncate">{r.provider_name}</div>
@@ -683,13 +689,13 @@ const LogsPage = () => {
                                         }}
                                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-2"
                                     >
-                                        Troubleshoot
+                                        {t('system.env.sections.aiEngine.logs.troubleshoot.table.troubleshootBtn')}
                                     </button>
                                 </div>
                             </div>
                         ))}
                         {!callResults.length && !callLoading && (
-                            <div className="px-3 py-4 text-xs text-muted-foreground">No calls match the current filters.</div>
+                            <div className="px-3 py-4 text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.findCall.noResults')}</div>
                         )}
                     </div>
 
@@ -699,15 +705,15 @@ const LogsPage = () => {
                             onClick={() => setCallPage(p => Math.max(1, p - 1))}
                             className="rounded-md border px-2 py-1 disabled:opacity-50"
                         >
-                            Prev
+                            {t('system.env.sections.aiEngine.logs.troubleshoot.pagination.prev')}
                         </button>
-                        <span className="text-muted-foreground">Page {callPage} / {callTotalPages}</span>
+                        <span className="text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.pagination.page', { current: callPage, total: callTotalPages })}</span>
                         <button
                             disabled={callPage >= callTotalPages}
                             onClick={() => setCallPage(p => Math.min(callTotalPages, p + 1))}
                             className="rounded-md border px-2 py-1 disabled:opacity-50"
                         >
-                            Next
+                            {t('system.env.sections.aiEngine.logs.troubleshoot.pagination.next')}
                         </button>
                     </div>
                 </div>
@@ -716,7 +722,7 @@ const LogsPage = () => {
             {mode === 'troubleshoot' && !showCallFinder && (
                 <div className="flex flex-wrap items-center gap-2 border rounded-lg p-3 bg-background">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">View</span>
+                        <span className="text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.view')}</span>
                         <select
                             className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
                             value={view}
@@ -726,21 +732,21 @@ const LogsPage = () => {
                                 updateUrlParams({ view: nextView });
                             }}
                         >
-                            <option value="overview">Overview</option>
-                            <option value="issues">Issues</option>
-                            <option value="provider">Provider</option>
-                            <option value="media">Media</option>
-                            <option value="vad">Barge-in / VAD</option>
-                            <option value="tools">Tools</option>
-                            <option value="all">All</option>
+                            <option value="overview">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.viewOptions.overview')}</option>
+                            <option value="issues">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.viewOptions.issues')}</option>
+                            <option value="provider">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.viewOptions.provider')}</option>
+                            <option value="media">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.viewOptions.media')}</option>
+                            <option value="vad">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.viewOptions.vad')}</option>
+                            <option value="tools">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.viewOptions.tools')}</option>
+                            <option value="all">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.viewOptions.all')}</option>
                         </select>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Call</span>
+                        <span className="text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.call')}</span>
                         <input
                             className="h-8 w-[280px] rounded-md border border-input bg-background px-2 py-1 text-xs"
-                            placeholder="Call ID"
+                            placeholder={t('system.env.sections.aiEngine.logs.troubleshoot.filters.callPlaceholder')}
                             value={callId}
                             onChange={e => {
                                 setCallId(e.target.value);
@@ -756,17 +762,17 @@ const LogsPage = () => {
                                 updateUrlParams({ call_id: '', since: '', until: '' });
                             }}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-2"
-                            title="Pick a different call"
+                            title={t('system.env.sections.aiEngine.logs.troubleshoot.filters.findCallTooltip')}
                         >
-                            Find Call
+                            {t('system.env.sections.aiEngine.logs.troubleshoot.filters.findCallBtn')}
                         </button>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Search</span>
+                        <span className="text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.search')}</span>
                         <input
                             className="h-8 w-[240px] rounded-md border border-input bg-background px-2 py-1 text-xs"
-                            placeholder="text match…"
+                            placeholder={t('system.env.sections.aiEngine.logs.troubleshoot.filters.searchPlaceholder')}
                             value={q}
                             onChange={e => {
                                 setQ(e.target.value);
@@ -776,10 +782,10 @@ const LogsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Since</span>
+                        <span className="text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.since')}</span>
                         <input
                             className="h-8 w-[240px] rounded-md border border-input bg-background px-2 py-1 text-xs"
-                            placeholder="ISO8601 (optional)"
+                            placeholder={t('system.env.sections.aiEngine.logs.troubleshoot.filters.sincePlaceholder')}
                             value={since}
                             onChange={e => {
                                 setSince(e.target.value);
@@ -789,10 +795,10 @@ const LogsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Until</span>
+                        <span className="text-xs text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.filters.until')}</span>
                         <input
                             className="h-8 w-[240px] rounded-md border border-input bg-background px-2 py-1 text-xs"
-                            placeholder="ISO8601 (optional)"
+                            placeholder={t('system.env.sections.aiEngine.logs.troubleshoot.filters.untilPlaceholder')}
                             value={until}
                             onChange={e => {
                                 setUntil(e.target.value);
@@ -810,7 +816,7 @@ const LogsPage = () => {
                                 updateUrlParams({ hide_payloads: e.target.checked ? 'true' : 'false' });
                             }}
                         />
-                        Hide transcripts / payloads
+                        {t('system.env.sections.aiEngine.logs.troubleshoot.filters.hidePayloads')}
                     </label>
 
                     <label className="flex items-center gap-2 text-xs">
@@ -822,7 +828,7 @@ const LogsPage = () => {
                                 updateUrlParams({ include_debug: e.target.checked ? 'true' : 'false' });
                             }}
                         />
-                        Include debug
+                        {t('system.env.sections.aiEngine.logs.troubleshoot.filters.includeDebug')}
                     </label>
 
                     <label className="flex items-center gap-2 text-xs">
@@ -834,7 +840,7 @@ const LogsPage = () => {
                                 updateUrlParams({ hide_repeats: e.target.checked ? 'true' : 'false' });
                             }}
                         />
-                        Hide repeats
+                        {t('system.env.sections.aiEngine.logs.troubleshoot.filters.hideRepeats')}
                     </label>
                 </div>
             )}
@@ -843,22 +849,26 @@ const LogsPage = () => {
                 <div className="border rounded-lg p-3 bg-background text-xs">
                     {eventsMeta?.call && (
                         <div className="flex flex-wrap gap-x-4 gap-y-1">
-                            <div><span className="text-muted-foreground">Caller</span> {eventsMeta.call.caller_number || 'unknown'}{eventsMeta.call.caller_name ? ` (${eventsMeta.call.caller_name})` : ''}</div>
-                            <div><span className="text-muted-foreground">Provider</span> {eventsMeta.call.provider_name}</div>
-                            <div><span className="text-muted-foreground">Pipeline</span> {eventsMeta.call.pipeline_name || 'default'}</div>
-                            <div><span className="text-muted-foreground">Context</span> {eventsMeta.call.context_name || 'unknown'}</div>
-                            <div><span className="text-muted-foreground">Outcome</span> {eventsMeta.call.outcome}</div>
-                            {eventsMeta.call.error_message && <div className="text-red-600"><span className="text-muted-foreground">Error</span> {eventsMeta.call.error_message}</div>}
+                            <div><span className="text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.meta.caller')}</span> {eventsMeta.call.caller_number || t('system.env.sections.aiEngine.logs.troubleshoot.table.unknown')}{eventsMeta.call.caller_name ? ` (${eventsMeta.call.caller_name})` : ''}</div>
+                            <div><span className="text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.meta.provider')}</span> {eventsMeta.call.provider_name}</div>
+                            <div><span className="text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.meta.pipeline')}</span> {eventsMeta.call.pipeline_name || 'default'}</div>
+                            <div><span className="text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.meta.context')}</span> {eventsMeta.call.context_name || t('system.env.sections.aiEngine.logs.troubleshoot.table.unknown')}</div>
+                            <div><span className="text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.meta.outcome')}</span> {eventsMeta.call.outcome}</div>
+                            {eventsMeta.call.error_message && <div className="text-red-600"><span className="text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.meta.error')}</span> {eventsMeta.call.error_message}</div>}
                         </div>
                     )}
                     {eventsMeta?.window && (
                         <div className="mt-2 text-muted-foreground">
-                            Window: {eventsMeta.window.source}{eventsMeta.window.since ? ` since=${eventsMeta.window.since}` : ''}{eventsMeta.window.until ? ` until=${eventsMeta.window.until}` : ''}
+                            {t('system.env.sections.aiEngine.logs.troubleshoot.meta.window', {
+                                source: eventsMeta.window.source
+                            })}
+                            {eventsMeta.window.since ? t('system.env.sections.aiEngine.logs.troubleshoot.meta.windowSince', { since: eventsMeta.window.since }) : ''}
+                            {eventsMeta.window.until ? t('system.env.sections.aiEngine.logs.troubleshoot.meta.windowUntil', { until: eventsMeta.window.until }) : ''}
                         </div>
                     )}
                     {eventsMeta?.related_ids && eventsMeta.related_ids.length > 1 && (
                         <div className="mt-2">
-                            <span className="text-muted-foreground">Related IDs</span>{' '}
+                            <span className="text-muted-foreground">{t('system.env.sections.aiEngine.logs.troubleshoot.meta.relatedIds')}</span>{' '}
                             <span className="font-mono">{eventsMeta.related_ids.join(', ')}</span>
                         </div>
                     )}
@@ -877,14 +887,14 @@ const LogsPage = () => {
                     <button
                         onClick={() => logsEndRef.current?.scrollIntoView({ behavior: "smooth" })}
                         className="absolute bottom-3 right-3 z-10 inline-flex items-center justify-center rounded-md border border-gray-700 bg-black/60 px-3 py-1 text-[10px] text-gray-200 hover:bg-black/80"
-                        title="Jump to latest"
+                        title={t('system.env.sections.aiEngine.logs.troubleshoot.events.jumpToLatest')}
                     >
-                        Jump to latest
+                        {t('system.env.sections.aiEngine.logs.troubleshoot.events.jumpToLatest')}
                     </button>
                 )}
                 {mode === 'troubleshoot' ? (
                     <div className="space-y-1">
-                        {(displayEvents.length ? displayEvents : []).map((e, idx) => (
+                        {(displayEvents.length ? displayEvents : []).map((e: any, idx: number) => (
                             <div key={idx} className="flex gap-2 items-start hover:bg-white/5 px-2 py-1 rounded">
                                 <div className="w-[90px] text-gray-500 shrink-0">
                                     {e.ts ? new Date(e.ts).toLocaleTimeString() : '--:--:--'}
@@ -898,7 +908,7 @@ const LogsPage = () => {
                                 {e.milestone && (
                                     <div className="shrink-0">
                                         <span className="inline-flex items-center rounded border border-emerald-800 px-2 py-0.5 text-[10px] text-emerald-200 bg-emerald-600/10">
-                                            milestone
+                                            {t('system.env.sections.aiEngine.logs.troubleshoot.events.milestone')}
                                         </span>
                                     </div>
                                 )}
@@ -922,7 +932,7 @@ const LogsPage = () => {
                             </div>
                         ))}
                         {!displayEvents.length && (
-                            <div className="text-gray-400">{showCallFinder ? 'Pick a call to troubleshoot.' : 'No events match the current filters.'}</div>
+                            <div className="text-gray-400">{showCallFinder ? t('system.env.sections.aiEngine.logs.troubleshoot.events.pickCall') : t('system.env.sections.aiEngine.logs.troubleshoot.events.noEvents')}</div>
                         )}
                     </div>
                 ) : (
@@ -930,21 +940,13 @@ const LogsPage = () => {
                         {logs ? parseAnsi(logs) : (
                             rawLevels.length === 1 && rawLevels[0] === 'debug' ? (
                                 <span className="text-gray-400">
-                                    No debug logs found.{'\n\n'}
-                                    <span className="text-gray-500">
-                                        Debug logging may be disabled. To enable:{'\n'}
-                                        1. Set <span className="text-blue-400">LOG_LEVEL=DEBUG</span> in your .env file{'\n'}
-                                        2. Restart the container: <span className="text-blue-400">docker compose up -d --force-recreate {container}</span>
-                                    </span>
+                                    {t('system.env.sections.aiEngine.logs.raw.noDebugFound', { container })}
                                 </span>
                             ) : rawLevels.length > 0 && !rawLevels.includes('info') && !rawLevels.includes('warning') && !rawLevels.includes('error') ? (
                                 <span className="text-gray-400">
-                                    No logs found for selected level(s): {rawLevels.join(', ')}{'\n\n'}
-                                    <span className="text-gray-500">
-                                        Try selecting additional levels like 'info' or 'warning'.
-                                    </span>
+                                    {t('system.env.sections.aiEngine.logs.raw.noLogsForLevels', { levels: rawLevels.join(', ') })}
                                 </span>
-                            ) : "No logs available..."
+                            ) : t('system.env.sections.aiEngine.logs.raw.noLogsAvailable')
                         )}
                     </pre>
                 )}

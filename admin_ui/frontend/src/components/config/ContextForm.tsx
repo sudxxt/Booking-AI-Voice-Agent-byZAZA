@@ -3,6 +3,7 @@ import { isFullAgentProvider } from '../../utils/providerNaming';
 import { ChevronDown, ChevronRight, Search, Phone, Webhook, Lock } from 'lucide-react';
 import { useState } from 'react';
 import HelpTooltip from '../ui/HelpTooltip';
+import { useTranslation } from 'react-i18next';
 
 interface ContextFormProps {
     config: any;
@@ -19,6 +20,7 @@ interface ContextFormProps {
 }
 
 const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabledMap, toolCatalogByName, availableProfiles, defaultProfileName, httpTools, onChange, isNew }: ContextFormProps) => {
+    const { t } = useTranslation();
     const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({
         pre_call: false,
         in_call: true,
@@ -61,9 +63,9 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
     };
 
     const isGlobalToolDisabled = (phase: 'pre_call' | 'post_call' | 'in_call', toolName: string) => {
-        const key = phase === 'pre_call' ? 'disable_global_pre_call_tools' 
+        const key = phase === 'pre_call' ? 'disable_global_pre_call_tools'
             : phase === 'post_call' ? 'disable_global_post_call_tools'
-            : 'disable_global_in_call_tools';
+                : 'disable_global_in_call_tools';
         return (config[key] || []).includes(toolName);
     };
 
@@ -89,7 +91,7 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
         'wideband_pcm_16k'
     ];
     const profileOptions = (availableProfiles && availableProfiles.length > 0) ? availableProfiles : fallbackProfiles;
-    const defaultProfileLabel = defaultProfileName ? `Default (${defaultProfileName})` : 'Default (from profiles.default)';
+    const defaultProfileLabel = defaultProfileName ? t('contexts.modal.defaultProfileNamed', { name: defaultProfileName }) : t('contexts.modal.defaultProfileSelected');
 
     const handleToolToggle = (tool: string) => {
         if (toolEnabledMap && toolEnabledMap[tool] === false) return;
@@ -150,35 +152,35 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
     return (
         <div className="space-y-6">
             <FormInput
-                label="Context Name"
+                label={t('contexts.modal.contextName')}
                 value={config.name || ''}
                 onChange={(e) => updateConfig('name', e.target.value)}
                 disabled={!isNew}
-                placeholder="e.g., demo_support"
+                placeholder={t('contexts.modal.contextNamePlaceholder')}
             />
 
             <FormInput
-                label="Greeting"
+                label={t('contexts.modal.greetingTitle')}
                 value={config.greeting || ''}
                 onChange={(e) => updateConfig('greeting', e.target.value)}
-                placeholder="Hi {caller_name}, how can I help you?"
-                tooltip="Use {caller_name} as a placeholder for the caller's name"
+                placeholder={t('contexts.modal.greetingPlaceholder')}
+                tooltip={t('contexts.modal.greetingTooltip')}
             />
 
             <div className="space-y-2">
-                <FormLabel tooltip="The main instruction prompt for the AI agent">System Prompt</FormLabel>
+                <FormLabel tooltip={t('contexts.modal.systemPromptTooltip')}>{t('contexts.modal.systemPrompt')}</FormLabel>
                 <textarea
                     className="w-full p-3 rounded-md border border-input bg-transparent text-sm min-h-[200px] focus:outline-none focus:ring-1 focus:ring-ring"
                     value={config.prompt || ''}
                     onChange={(e) => updateConfig('prompt', e.target.value)}
-                    placeholder="You are a helpful voice assistant..."
+                    placeholder={t('contexts.modal.systemPromptPlaceholder')}
                 />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormSelect
-                    label="Audio Profile"
-                    tooltip="Optional. If not set, the default profile from profiles.default is used."
+                    label={t('contexts.modal.audioProfile')}
+                    tooltip={t('contexts.modal.audioProfileTooltip')}
                     options={[
                         { value: '', label: defaultProfileLabel },
                         ...profileOptions.map(p => ({ value: p, label: p }))
@@ -188,10 +190,10 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                 />
 
                 <FormSelect
-                    label="Provider/Pipeline Override (Optional)"
-                    tooltip="Choose either a monolithic provider or a modular pipeline. Pipeline overrides provider when set."
+                    label={t('contexts.modal.overrideHeader')}
+                    tooltip={t('contexts.modal.overrideTooltip')}
                     options={[
-                        { value: '', label: 'Default (None)' },
+                        { value: '', label: t('contexts.modal.overrideDefault') },
                         ...pipelineOptions,
                         ...providerOptions,
                     ]}
@@ -202,8 +204,8 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
 
             {/* Phase-Based Tool Configuration */}
             <div className="space-y-3">
-                <FormLabel>Tools by Phase</FormLabel>
-                
+                <FormLabel>{t('contexts.modal.toolsByPhase')}</FormLabel>
+
                 {/* Pre-Call Tools */}
                 <div className="border border-border rounded-lg overflow-hidden">
                     <button
@@ -213,23 +215,22 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                     >
                         <div className="flex items-center gap-2">
                             <Search className="w-4 h-4 text-blue-500" />
-                            <span className="font-medium text-sm">Pre-Call Tools</span>
-                            <span className="text-xs text-muted-foreground">(CRM lookups, enrichment)</span>
+                            <span className="font-medium text-sm">{t('contexts.modal.preCallTools')}</span>
+                            <span className="text-xs text-muted-foreground">{t('contexts.modal.preCallDesc')}</span>
                         </div>
                         {expandedPhases.pre_call ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
                     {expandedPhases.pre_call && (
                         <div className="p-3 border-t border-border bg-background/50">
                             {getHttpToolsByPhase('pre_call').length === 0 ? (
-                                <p className="text-xs text-muted-foreground">No pre-call tools configured. Add them in the Tools page.</p>
+                                <p className="text-xs text-muted-foreground">{t('contexts.modal.noPreCallTools')}</p>
                             ) : (
                                 <div className="grid grid-cols-2 gap-2">
                                     {getHttpToolsByPhase('pre_call').map(tool => (
-                                        <label 
-                                            key={tool.name} 
-                                            className={`flex items-center justify-between p-2 rounded border border-border bg-card/30 ${
-                                                tool.is_global && isGlobalToolDisabled('pre_call', tool.name) ? 'opacity-50' : 'hover:bg-accent'
-                                            } cursor-pointer`}
+                                        <label
+                                            key={tool.name}
+                                            className={`flex items-center justify-between p-2 rounded border border-border bg-card/30 ${tool.is_global && isGlobalToolDisabled('pre_call', tool.name) ? 'opacity-50' : 'hover:bg-accent'
+                                                } cursor-pointer`}
                                         >
                                             <div className="flex items-center space-x-2">
                                                 {!tool.is_global && (
@@ -244,7 +245,7 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                                                 {(toolCatalogByName?.[tool.name]?.description || tool.description) ? (
                                                     <HelpTooltip content={(toolCatalogByName?.[tool.name]?.description || tool.description || '').toString()} />
                                                 ) : null}
-                                                {tool.is_global && <span title="Global tool (runs for all contexts)"><Lock className="w-3 h-3 text-blue-500" /></span>}
+                                                {tool.is_global && <span title={t('contexts.modal.globalToolTooltip')}><Lock className="w-3 h-3 text-blue-500" /></span>}
                                             </div>
                                             {tool.is_global && (
                                                 <button
@@ -253,14 +254,13 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                                                         e.preventDefault();
                                                         handleGlobalToolDisable('disable_global_pre_call_tools', tool.name);
                                                     }}
-                                                    className={`text-xs px-2 py-0.5 rounded ${
-                                                        isGlobalToolDisabled('pre_call', tool.name)
+                                                    className={`text-xs px-2 py-0.5 rounded ${isGlobalToolDisabled('pre_call', tool.name)
                                                             ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                                                             : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                                                    }`}
-                                                    title={isGlobalToolDisabled('pre_call', tool.name) ? 'Click to enable for this context' : 'Click to disable for this context'}
+                                                        }`}
+                                                    title={isGlobalToolDisabled('pre_call', tool.name) ? t('contexts.modal.clickToEnable') : t('contexts.modal.clickToDisable')}
                                                 >
-                                                    {isGlobalToolDisabled('pre_call', tool.name) ? 'Disabled' : 'Enabled'}
+                                                    {isGlobalToolDisabled('pre_call', tool.name) ? t('contexts.modal.disabled') : t('contexts.modal.enabled')}
                                                 </button>
                                             )}
                                         </label>
@@ -280,8 +280,8 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                     >
                         <div className="flex items-center gap-2">
                             <Phone className="w-4 h-4 text-green-500" />
-                            <span className="font-medium text-sm">In-Call Tools</span>
-                            <span className="text-xs text-muted-foreground">(transfer, hangup, email)</span>
+                            <span className="font-medium text-sm">{t('contexts.modal.inCallTools')}</span>
+                            <span className="text-xs text-muted-foreground">{t('contexts.modal.inCallDesc')}</span>
                         </div>
                         {expandedPhases.in_call ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
@@ -292,7 +292,7 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                                 {toolOptions.map(tool => (
                                     <label
                                         key={tool}
-                                        title={isToolDisabled(tool) ? 'Disabled globally in Tools settings' : undefined}
+                                        title={isToolDisabled(tool) ? t('contexts.modal.disabledGlobally') : undefined}
                                         className={[
                                             "flex items-center space-x-2 p-2 rounded border border-border bg-card/30 transition-colors",
                                             isToolDisabled(tool) ? "opacity-50 cursor-not-allowed" : "hover:bg-accent cursor-pointer"
@@ -313,11 +313,10 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                                 ))}
                                 {/* HTTP tools with phase=in_call */}
                                 {getHttpToolsByPhase('in_call').map(tool => (
-                                    <label 
-                                        key={`http-${tool.name}`} 
-                                        className={`flex items-center justify-between p-2 rounded border border-border bg-card/30 ${
-                                            tool.is_global && isGlobalToolDisabled('in_call', tool.name) ? 'opacity-50' : 'hover:bg-accent'
-                                        } cursor-pointer`}
+                                    <label
+                                        key={`http-${tool.name}`}
+                                        className={`flex items-center justify-between p-2 rounded border border-border bg-card/30 ${tool.is_global && isGlobalToolDisabled('in_call', tool.name) ? 'opacity-50' : 'hover:bg-accent'
+                                            } cursor-pointer`}
                                     >
                                         <div className="flex items-center space-x-2">
                                             {!tool.is_global && (
@@ -332,7 +331,7 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                                             {(toolCatalogByName?.[tool.name]?.description || tool.description) ? (
                                                 <HelpTooltip content={(toolCatalogByName?.[tool.name]?.description || tool.description || '').toString()} />
                                             ) : null}
-                                            {tool.is_global && <span title="Global tool (runs for all contexts)"><Lock className="w-3 h-3 text-blue-500" /></span>}
+                                            {tool.is_global && <span title={t('contexts.modal.globalToolTooltip')}><Lock className="w-3 h-3 text-blue-500" /></span>}
                                         </div>
                                         {tool.is_global && (
                                             <button
@@ -341,14 +340,13 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                                                     e.preventDefault();
                                                     handleGlobalToolDisable('disable_global_in_call_tools', tool.name);
                                                 }}
-                                                className={`text-xs px-2 py-0.5 rounded ${
-                                                    isGlobalToolDisabled('in_call', tool.name)
+                                                className={`text-xs px-2 py-0.5 rounded ${isGlobalToolDisabled('in_call', tool.name)
                                                         ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                                                         : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                                                }`}
-                                                title={isGlobalToolDisabled('in_call', tool.name) ? 'Click to enable for this context' : 'Click to disable for this context'}
+                                                    }`}
+                                                title={isGlobalToolDisabled('in_call', tool.name) ? t('contexts.modal.clickToEnable') : t('contexts.modal.clickToDisable')}
                                             >
-                                                {isGlobalToolDisabled('in_call', tool.name) ? 'Disabled' : 'Enabled'}
+                                                {isGlobalToolDisabled('in_call', tool.name) ? t('contexts.modal.disabled') : t('contexts.modal.enabled')}
                                             </button>
                                         )}
                                     </label>
@@ -367,23 +365,22 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                     >
                         <div className="flex items-center gap-2">
                             <Webhook className="w-4 h-4 text-orange-500" />
-                            <span className="font-medium text-sm">Post-Call Tools</span>
-                            <span className="text-xs text-muted-foreground">(webhooks, CRM updates)</span>
+                            <span className="font-medium text-sm">{t('contexts.modal.postCallTools')}</span>
+                            <span className="text-xs text-muted-foreground">{t('contexts.modal.postCallDesc')}</span>
                         </div>
                         {expandedPhases.post_call ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
                     {expandedPhases.post_call && (
                         <div className="p-3 border-t border-border bg-background/50">
                             {getHttpToolsByPhase('post_call').length === 0 ? (
-                                <p className="text-xs text-muted-foreground">No post-call tools configured. Add them in the Tools page.</p>
+                                <p className="text-xs text-muted-foreground">{t('contexts.modal.noPostCallTools')}</p>
                             ) : (
                                 <div className="grid grid-cols-2 gap-2">
                                     {getHttpToolsByPhase('post_call').map(tool => (
-                                        <label 
-                                            key={tool.name} 
-                                            className={`flex items-center justify-between p-2 rounded border border-border bg-card/30 ${
-                                                tool.is_global && isGlobalToolDisabled('post_call', tool.name) ? 'opacity-50' : 'hover:bg-accent'
-                                            } cursor-pointer`}
+                                        <label
+                                            key={tool.name}
+                                            className={`flex items-center justify-between p-2 rounded border border-border bg-card/30 ${tool.is_global && isGlobalToolDisabled('post_call', tool.name) ? 'opacity-50' : 'hover:bg-accent'
+                                                } cursor-pointer`}
                                         >
                                             <div className="flex items-center space-x-2">
                                                 {!tool.is_global && (
@@ -398,7 +395,7 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                                                 {(toolCatalogByName?.[tool.name]?.description || tool.description) ? (
                                                     <HelpTooltip content={(toolCatalogByName?.[tool.name]?.description || tool.description || '').toString()} />
                                                 ) : null}
-                                                {tool.is_global && <span title="Global tool (runs for all contexts)"><Lock className="w-3 h-3 text-blue-500" /></span>}
+                                                {tool.is_global && <span title={t('contexts.modal.globalToolTooltip')}><Lock className="w-3 h-3 text-blue-500" /></span>}
                                             </div>
                                             {tool.is_global && (
                                                 <button
@@ -407,14 +404,13 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                                                         e.preventDefault();
                                                         handleGlobalToolDisable('disable_global_post_call_tools', tool.name);
                                                     }}
-                                                    className={`text-xs px-2 py-0.5 rounded ${
-                                                        isGlobalToolDisabled('post_call', tool.name)
+                                                    className={`text-xs px-2 py-0.5 rounded ${isGlobalToolDisabled('post_call', tool.name)
                                                             ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                                                             : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                                                    }`}
-                                                    title={isGlobalToolDisabled('post_call', tool.name) ? 'Click to enable for this context' : 'Click to disable for this context'}
+                                                        }`}
+                                                    title={isGlobalToolDisabled('post_call', tool.name) ? t('contexts.modal.clickToEnable') : t('contexts.modal.clickToDisable')}
                                                 >
-                                                    {isGlobalToolDisabled('post_call', tool.name) ? 'Disabled' : 'Enabled'}
+                                                    {isGlobalToolDisabled('post_call', tool.name) ? t('contexts.modal.disabled') : t('contexts.modal.enabled')}
                                                 </button>
                                             )}
                                         </label>
@@ -429,8 +425,8 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
             {/* Background Music Configuration */}
             <div className="space-y-4 p-4 rounded-lg border border-border bg-card/30">
                 <div className="flex items-center justify-between">
-                    <FormLabel tooltip="Play background music during calls. Music will be heard by the caller while talking to the AI agent.">
-                        Background Music
+                    <FormLabel tooltip={t('contexts.modal.bgMusicTooltip')}>
+                        {t('contexts.modal.bgMusic')}
                     </FormLabel>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -452,22 +448,22 @@ const ContextForm = ({ config, providers, pipelines, availableTools, toolEnabled
                 {config.background_music && (
                     <div className="space-y-3">
                         <FormInput
-                            label="MOH Class Name"
+                            label={t('contexts.modal.mohClass')}
                             value={config.background_music || 'default'}
                             onChange={(e) => updateConfig('background_music', e.target.value || 'default')}
                             placeholder="default"
-                            tooltip="Music On Hold class name from Asterisk's musiconhold.conf"
+                            tooltip={t('contexts.modal.mohClassTooltip')}
                         />
                         <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md space-y-2">
-                            <p className="font-medium text-foreground">📁 How to configure Music On Hold:</p>
+                            <p className="font-medium text-foreground">{t('contexts.modal.mohHowTo')}</p>
                             <ol className="list-decimal list-inside space-y-1 ml-1">
-                                <li>Place audio files in <code className="bg-muted px-1 rounded">/var/lib/asterisk/moh/{'<class-name>'}/</code></li>
-                                <li>For FreePBX: Go to <strong>Settings → Music On Hold</strong> to create categories</li>
-                                <li>Supported formats: WAV, ulaw, alaw, sln, mp3</li>
-                                <li>💡 <strong>Tip:</strong> Reduce music volume to ~15-20% to avoid interfering with conversation</li>
+                                <li>{t('contexts.modal.mohStep1')}</li>
+                                <li>{t('contexts.modal.mohStep2')}</li>
+                                <li>{t('contexts.modal.mohStep3')}</li>
+                                <li>{t('contexts.modal.mohTip')}</li>
                             </ol>
                             <p className="mt-2 text-yellow-500/80">
-                                ⚠️ Music will be heard by the AI (for VAD). Use low-volume ambient music for best results.
+                                {t('contexts.modal.mohWarning')}
                             </p>
                         </div>
                     </div>

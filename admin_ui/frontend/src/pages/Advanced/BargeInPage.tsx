@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import yaml from 'js-yaml';
 import { Save, Zap, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { YamlErrorBanner, YamlErrorInfo } from '../../components/ui/YamlErrorBanner';
 import { ConfigSection } from '../../components/ui/ConfigSection';
 import { ConfigCard } from '../../components/ui/ConfigCard';
@@ -10,6 +12,8 @@ import { FormInput, FormSwitch } from '../../components/ui/FormComponents';
 import { sanitizeConfigForSave } from '../../utils/configSanitizers';
 
 const BargeInPage = () => {
+    const { t } = useTranslation();
+    const { confirm } = useConfirmDialog();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
     const [yamlError, setYamlError] = useState<YamlErrorInfo | null>(null);
@@ -46,10 +50,10 @@ const BargeInPage = () => {
             const sanitized = sanitizeConfigForSave(config);
             await axios.post('/api/config/yaml', { content: yaml.dump(sanitized) });
             setPendingRestart(true);
-            toast.success('Barge-in configuration saved');
+            toast.success(t('advanced.bargeIn.saveSuccess'));
         } catch (err) {
             console.error('Failed to save config', err);
-            toast.error('Failed to save configuration');
+            toast.error(t('advanced.bargeIn.saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -62,30 +66,29 @@ const BargeInPage = () => {
             const response = await axios.post(`/api/system/containers/ai_engine/restart?force=${force}`);
 
             if (response.data.status === 'warning') {
-                if (!force) {
-                    const confirmForce = window.confirm(
-                        `${response.data.message}\n\nDo you want to force restart anyway? This may disconnect active calls.`
-                    );
-                    if (confirmForce) {
-                        await handleReloadAIEngine(true);
-                    }
-                    return;
+                const confirmForce = await confirm({
+                    title: t('advanced.bargeIn.forceRestartTitle'),
+                    description: `${response.data.message}\n\n${t('advanced.bargeIn.forceRestartDesc')}`,
+                    confirmText: t('advanced.bargeIn.forceRestartConfirm'),
+                    variant: 'destructive'
+                });
+                if (confirmForce) {
+                    await handleReloadAIEngine(true);
                 }
-                toast.warning(response.data.message, { description: 'Force restart is still blocked.' });
                 return;
             }
 
             if (response.data.status === 'degraded') {
-                toast.warning('AI Engine restarted but may not be fully healthy', { description: response.data.output || 'Please verify manually' });
+                toast.warning(t('advanced.bargeIn.restartedDegradedWarn'), { description: response.data.output || t('advanced.bargeIn.restartedDegradedDesc') });
                 return;
             }
 
             if (response.data.status === 'success') {
                 setPendingRestart(false);
-                toast.success('AI Engine restarted! Changes are now active.');
+                toast.success(t('advanced.bargeIn.restartSuccess'));
             }
         } catch (error: any) {
-            toast.error('Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
+            toast.error(t('modals.restartFailed') || 'Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
         } finally {
             setRestartingEngine(false);
         }
@@ -101,7 +104,7 @@ const BargeInPage = () => {
         });
     };
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading configuration...</div>;
+    if (loading) return <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>;
 
     if (yamlError) return (
         <div className="space-y-6">
@@ -120,31 +123,30 @@ const BargeInPage = () => {
             <div className={`${pendingRestart ? 'bg-orange-500/15 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/20'} border text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between`}>
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    Changes to barge-in configurations require an AI Engine restart to take effect.
+                    {t('advanced.bargeIn.restartWarning')}
                 </div>
                 <button
                     onClick={() => handleReloadAIEngine(false)}
                     disabled={restartingEngine}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium' 
-                            : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                        ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
+                        : 'bg-yellow-500/20 hover:bg-yellow-500/30'
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Restarting...' : 'Reload AI Engine'}
+                    {restartingEngine ? t('advanced.bargeIn.restarting') : t('advanced.bargeIn.reloadAIEngine')}
                 </button>
             </div>
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Barge-in Settings</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('advanced.bargeIn.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Configure how callers can interrupt the AI agent during responses.
+                        {t('advanced.bargeIn.desc')}
                     </p>
                 </div>
                 <button
@@ -153,59 +155,59 @@ const BargeInPage = () => {
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 >
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? t('advanced.bargeIn.saving') : t('advanced.bargeIn.saveChanges')}
                 </button>
             </div>
 
-            <ConfigSection 
-                title="Barge-in Control" 
-                description="Allow callers to interrupt the AI while it's speaking."
+            <ConfigSection
+                title={t('advanced.bargeIn.controlTitle')}
+                description={t('advanced.bargeIn.controlDesc')}
             >
                 <ConfigCard>
                     <div className="space-y-6">
                         <FormSwitch
-                            label="Enable Barge-in"
-                            description="Allow users to interrupt the AI agent during TTS playback."
-                            tooltip="When enabled, the engine immediately flushes/stops local agent audio when it detects caller speech during an agent response."
+                            label={t('advanced.bargeIn.enableLabel')}
+                            description={t('advanced.bargeIn.enableDesc')}
+                            tooltip={t('advanced.bargeIn.enableTooltip')}
                             checked={bargeInConfig.enabled ?? true}
                             onChange={(e) => updateBargeInConfig('enabled', e.target.checked)}
                         />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormInput
-                                label="Energy Threshold"
+                                label={t('advanced.bargeIn.energyThresholdLabel')}
                                 type="number"
                                 value={bargeInConfig.energy_threshold ?? 1000}
                                 onChange={(e) => updateBargeInConfig('energy_threshold', parseInt(e.target.value))}
-                                tooltip="Caller energy threshold (RMS over PCM16) for provider-owned mode. Higher = less sensitive (fewer false barge-ins), lower = more sensitive (better for quiet callers). For pipelines, see 'Pipeline Energy Threshold' in Advanced settings below."
+                                tooltip={t('advanced.bargeIn.energyThresholdTooltip')}
                             />
                             <FormInput
-                                label="Minimum Duration (ms)"
+                                label={t('advanced.bargeIn.minDurationLabel')}
                                 type="number"
                                 value={bargeInConfig.min_ms ?? 250}
                                 onChange={(e) => updateBargeInConfig('min_ms', parseInt(e.target.value))}
-                                tooltip="Minimum sustained caller speech time required before triggering barge-in. Higher reduces false triggers but feels less responsive."
+                                tooltip={t('advanced.bargeIn.minDurationTooltip')}
                             />
                             <FormInput
-                                label="Cooldown (ms)"
+                                label={t('advanced.bargeIn.cooldownLabel')}
                                 type="number"
                                 value={bargeInConfig.cooldown_ms ?? 500}
                                 onChange={(e) => updateBargeInConfig('cooldown_ms', parseInt(e.target.value))}
-                                tooltip="Minimum time between barge-in triggers. Prevents repeated triggers from echo/noise after an interruption."
+                                tooltip={t('advanced.bargeIn.cooldownTooltip')}
                             />
                             <FormInput
-                                label="Post-TTS Protection (ms)"
+                                label={t('advanced.bargeIn.postTTSLabel')}
                                 type="number"
                                 value={bargeInConfig.post_tts_end_protection_ms ?? 250}
                                 onChange={(e) => updateBargeInConfig('post_tts_end_protection_ms', parseInt(e.target.value))}
-                                tooltip="Guard window after agent audio ends. Helps avoid self-echo or tail audio being mistaken as caller speech."
+                                tooltip={t('advanced.bargeIn.postTTSTooltip')}
                             />
                             <FormInput
-                                label="Provider Output Suppress (ms)"
+                                label={t('advanced.bargeIn.outputSuppressLabel')}
                                 type="number"
                                 value={bargeInConfig.provider_output_suppress_ms ?? 1200}
                                 onChange={(e) => updateBargeInConfig('provider_output_suppress_ms', parseInt(e.target.value))}
-                                tooltip="After a barge-in, locally suppress provider audio briefly so previously generated speech doesn’t “resume” mid-sentence."
+                                tooltip={t('advanced.bargeIn.outputSuppressTooltip')}
                             />
                         </div>
 
@@ -213,11 +215,11 @@ const BargeInPage = () => {
                             <div className="flex items-start">
                                 <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
                                 <div className="text-sm text-blue-700 dark:text-blue-300">
-                                    <p className="font-medium mb-1">Tuning Tips</p>
+                                    <p className="font-medium mb-1">{t('advanced.bargeIn.tuningTipsTitle')}</p>
                                     <ul className="list-disc list-inside space-y-1">
-                                        <li><strong>Energy Threshold:</strong> Increase if barge-in is too sensitive (500-1200 typical)</li>
-                                        <li><strong>Provider Output Suppress:</strong> Increase if provider resumes speaking pre-barge audio (800-1600ms typical)</li>
-                                        <li><strong>Post-TTS Protection:</strong> Increase if you see immediate re-triggers after TTS ends (200-600ms typical)</li>
+                                        <li><strong>{t('advanced.bargeIn.energyThresholdLabel')}:</strong> {t('advanced.bargeIn.tuningTip1')}</li>
+                                        <li><strong>{t('advanced.bargeIn.outputSuppressLabel')}:</strong> {t('advanced.bargeIn.tuningTip2')}</li>
+                                        <li><strong>{t('advanced.bargeIn.postTTSLabel')}:</strong> {t('advanced.bargeIn.tuningTip3')}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -226,46 +228,46 @@ const BargeInPage = () => {
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection 
-                title="Advanced"
-                description="Additional knobs for provider-owned vs pipeline modes."
+            <ConfigSection
+                title={t('advanced.bargeIn.advancedTitle')}
+                description={t('advanced.bargeIn.advancedDesc')}
             >
                 <ConfigCard>
                     <details className="space-y-4">
-                        <summary className="cursor-pointer text-sm font-medium">Show advanced settings</summary>
+                        <summary className="cursor-pointer text-sm font-medium">{t('advanced.bargeIn.showAdvanced')}</summary>
                         <div className="space-y-8 pt-4">
                             <div className="space-y-4">
-                                <div className="text-sm font-medium">Protection windows</div>
+                                <div className="text-sm font-medium">{t('advanced.bargeIn.protectionWindows')}</div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormInput
-                                        label="Initial Protection (ms)"
+                                        label={t('advanced.bargeIn.initProtectLabel')}
                                         type="number"
                                         value={bargeInConfig.initial_protection_ms ?? 200}
                                         onChange={(e) => updateBargeInConfig('initial_protection_ms', parseInt(e.target.value))}
-                                        tooltip="Short guard window at the start of agent output to avoid triggering on initial burst/codec artifacts."
+                                        tooltip={t('advanced.bargeIn.initProtectTooltip')}
                                     />
                                     <FormInput
-                                        label="Greeting Protection (ms)"
+                                        label={t('advanced.bargeIn.greetProtectLabel')}
                                         type="number"
                                         value={bargeInConfig.greeting_protection_ms ?? 0}
                                         onChange={(e) => updateBargeInConfig('greeting_protection_ms', parseInt(e.target.value))}
-                                        tooltip="Extra guard window during the initial greeting turn (useful if greetings are short and prone to false triggers)."
+                                        tooltip={t('advanced.bargeIn.greetProtectTooltip')}
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <div className="text-sm font-medium">Provider-owned mode</div>
+                                <div className="text-sm font-medium">{t('advanced.bargeIn.providerOwnedMode')}</div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormSwitch
-                                        label="Provider Fallback Enabled"
-                                        description="Use local VAD fallback only for providers that don’t emit explicit interruption events."
-                                        tooltip="If enabled, the engine can trigger barge-in using local VAD only after media is confirmed and only for the providers listed below."
+                                        label={t('advanced.bargeIn.providerFallbackLabel')}
+                                        description={t('advanced.bargeIn.providerFallbackDesc')}
+                                        tooltip={t('advanced.bargeIn.providerFallbackTooltip')}
                                         checked={bargeInConfig.provider_fallback_enabled ?? true}
                                         onChange={(e) => updateBargeInConfig('provider_fallback_enabled', e.target.checked)}
                                     />
                                     <FormInput
-                                        label="Provider Fallback Providers"
+                                        label={t('advanced.bargeIn.providerFallbackProvidersLabel')}
                                         type="text"
                                         value={providerFallbackProvidersStr}
                                         onChange={(e) =>
@@ -277,62 +279,62 @@ const BargeInPage = () => {
                                                     .filter(Boolean)
                                             )
                                         }
-                                        tooltip="Comma-separated provider names where local fallback may apply (e.g., google_live, deepgram)."
+                                        tooltip={t('advanced.bargeIn.providerFallbackProvidersTooltip')}
                                     />
                                     <FormInput
-                                        label="Suppress Extend (ms)"
+                                        label={t('advanced.bargeIn.suppressExtendLabel')}
                                         type="number"
                                         value={bargeInConfig.provider_output_suppress_extend_ms ?? 600}
                                         onChange={(e) => updateBargeInConfig('provider_output_suppress_extend_ms', parseInt(e.target.value))}
-                                        tooltip="While caller keeps speaking after a barge-in, extend suppression so agent doesn’t resume too early."
+                                        tooltip={t('advanced.bargeIn.suppressExtendTooltip')}
                                     />
                                     <FormInput
-                                        label="Chunk Extend (ms)"
+                                        label={t('advanced.bargeIn.chunkExtendLabel')}
                                         type="number"
                                         value={bargeInConfig.provider_output_suppress_chunk_extend_ms ?? 250}
                                         onChange={(e) => updateBargeInConfig('provider_output_suppress_chunk_extend_ms', parseInt(e.target.value))}
-                                        tooltip="While suppressed, extend suppression when provider chunks keep arriving (prevents tail audio from restarting output)."
+                                        tooltip={t('advanced.bargeIn.chunkExtendTooltip')}
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <div className="text-sm font-medium">Pipeline / local_hybrid mode</div>
+                                <div className="text-sm font-medium">{t('advanced.bargeIn.pipelineMode')}</div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormSwitch
-                                        label="Enable TALK_DETECT"
-                                        description="Use Asterisk TALK_DETECT for robust barge-in during local file playback."
-                                        tooltip="Recommended for local_hybrid: Asterisk DSP detects caller speech even during ARI file playback."
+                                        label={t('advanced.bargeIn.talkDetectLabel')}
+                                        description={t('advanced.bargeIn.talkDetectDesc')}
+                                        tooltip={t('advanced.bargeIn.talkDetectTooltip')}
                                         checked={bargeInConfig.pipeline_talk_detect_enabled ?? true}
                                         onChange={(e) => updateBargeInConfig('pipeline_talk_detect_enabled', e.target.checked)}
                                     />
                                     <FormInput
-                                        label="Pipeline Min Duration (ms)"
+                                        label={t('advanced.bargeIn.pipelineMinLabel')}
                                         type="number"
                                         value={bargeInConfig.pipeline_min_ms ?? 120}
                                         onChange={(e) => updateBargeInConfig('pipeline_min_ms', parseInt(e.target.value))}
-                                        tooltip="Pipeline-specific minimum speech duration (more sensitive than provider-owned mode)."
+                                        tooltip={t('advanced.bargeIn.pipelineMinTooltip')}
                                     />
                                     <FormInput
-                                        label="Pipeline Energy Threshold"
+                                        label={t('advanced.bargeIn.pipelineEnergyLabel')}
                                         type="number"
                                         value={bargeInConfig.pipeline_energy_threshold ?? 300}
                                         onChange={(e) => updateBargeInConfig('pipeline_energy_threshold', parseInt(e.target.value))}
-                                        tooltip="Pipeline-specific energy threshold (more sensitive than provider-owned mode)."
+                                        tooltip={t('advanced.bargeIn.pipelineEnergyTooltip')}
                                     />
                                     <FormInput
-                                        label="TALK_DETECT Silence (ms)"
+                                        label={t('advanced.bargeIn.talkDetectSilenceLabel')}
                                         type="number"
                                         value={bargeInConfig.pipeline_talk_detect_silence_ms ?? 1200}
                                         onChange={(e) => updateBargeInConfig('pipeline_talk_detect_silence_ms', parseInt(e.target.value))}
-                                        tooltip="Asterisk TALK_DETECT(set) silence threshold in ms. Higher treats more audio as ‘silence’."
+                                        tooltip={t('advanced.bargeIn.talkDetectSilenceTooltip')}
                                     />
                                     <FormInput
-                                        label="TALK_DETECT Talking Threshold"
+                                        label={t('advanced.bargeIn.talkDetectTalkingLabel')}
                                         type="number"
                                         value={bargeInConfig.pipeline_talk_detect_talking_threshold ?? 128}
                                         onChange={(e) => updateBargeInConfig('pipeline_talk_detect_talking_threshold', parseInt(e.target.value))}
-                                        tooltip="Asterisk TALK_DETECT(set) talking threshold (DSP energy). Higher requires louder speech to trigger."
+                                        tooltip={t('advanced.bargeIn.talkDetectTalkingTooltip')}
                                     />
                                 </div>
                             </div>
@@ -341,28 +343,28 @@ const BargeInPage = () => {
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection 
-                title="Current Configuration" 
-                description="Summary of your barge-in settings."
+            <ConfigSection
+                title={t('advanced.bargeIn.currentConfigTitle')}
+                description={t('advanced.bargeIn.currentConfigDesc')}
             >
                 <ConfigCard>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                            <span className="text-muted-foreground">Status:</span>
+                            <span className="text-muted-foreground">{t('advanced.bargeIn.status')}:</span>
                             <span className={`ml-2 font-medium ${bargeInConfig.enabled ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                {bargeInConfig.enabled ? 'Enabled' : 'Disabled'}
+                                {bargeInConfig.enabled ? t('advanced.bargeIn.enabled') : t('advanced.bargeIn.disabled')}
                             </span>
                         </div>
                         <div>
-                            <span className="text-muted-foreground">Energy Threshold:</span>
+                            <span className="text-muted-foreground">{t('advanced.bargeIn.energyThresholdLabel')}:</span>
                             <span className="ml-2 font-medium">{bargeInConfig.energy_threshold ?? 1000} RMS</span>
                         </div>
                         <div>
-                            <span className="text-muted-foreground">Minimum Duration:</span>
+                            <span className="text-muted-foreground">{t('advanced.bargeIn.minDurationLabel')}:</span>
                             <span className="ml-2 font-medium">{bargeInConfig.min_ms ?? 250}ms</span>
                         </div>
                         <div>
-                            <span className="text-muted-foreground">Post-TTS Protection:</span>
+                            <span className="text-muted-foreground">{t('advanced.bargeIn.postTTSLabel')}:</span>
                             <span className="ml-2 font-medium">{bargeInConfig.post_tts_end_protection_ms ?? 250}ms</span>
                         </div>
                     </div>

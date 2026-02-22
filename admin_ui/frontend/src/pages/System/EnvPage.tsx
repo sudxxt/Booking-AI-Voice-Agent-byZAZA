@@ -6,20 +6,21 @@ import { Save, Eye, EyeOff, RefreshCw, AlertTriangle, AlertCircle, CheckCircle, 
 import { ConfigSection } from '../../components/ui/ConfigSection';
 import { ConfigCard } from '../../components/ui/ConfigCard';
 import { FormInput, FormSelect, FormSwitch } from '../../components/ui/FormComponents';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../auth/AuthContext';
 
 type EnvTab = 'ai-engine' | 'local-ai' | 'system';
 
 // SecretInput defined OUTSIDE EnvPage to prevent re-creation on every render
-const SecretInput = ({ 
-    label, 
+const SecretInput = ({
+    label,
     placeholder,
     value,
     onChange,
     showSecret,
     onToggleSecret
-}: { 
+}: {
     label: string;
     placeholder?: string;
     value: string;
@@ -46,13 +47,14 @@ const SecretInput = ({
 );
 
 const EnvPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const { token, loading: authLoading } = useAuth();
     const [env, setEnv] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
-    const [ariTestResult, setAriTestResult] = useState<{success: boolean; message?: string; error?: string; asterisk_version?: string} | null>(null);
+    const [ariTestResult, setAriTestResult] = useState<{ success: boolean; message?: string; error?: string; asterisk_version?: string } | null>(null);
     const [ariTesting, setAriTesting] = useState(false);
     const [pendingRestart, setPendingRestart] = useState(false);
     const [restartingEngine, setRestartingEngine] = useState(false);
@@ -61,7 +63,7 @@ const EnvPage = () => {
     const [showAdvancedKokoro, setShowAdvancedKokoro] = useState(false);
     const [smtpTestTo, setSmtpTestTo] = useState('');
     const [smtpTesting, setSmtpTesting] = useState(false);
-    const [smtpTestResult, setSmtpTestResult] = useState<{success: boolean; message?: string; error?: string} | null>(null);
+    const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
 
     const [error, setError] = useState<string | null>(null);
 
@@ -129,7 +131,7 @@ const EnvPage = () => {
             }
         } catch (err: any) {
             console.error('Failed to load env', err);
-            setError(err.response?.data?.detail || 'Failed to load environment variables');
+            setError(err.response?.data?.detail || t('system.env.actions.loadingFailed') || 'Failed to load environment variables');
             if (err.response && err.response.status === 401) {
                 // AuthContext handles logout
             }
@@ -142,7 +144,7 @@ const EnvPage = () => {
         // Validate ARI Port
         const port = parseInt(env['ASTERISK_ARI_PORT'] || '8088');
         if (isNaN(port) || port < 1 || port > 65535) {
-            toast.error('Invalid ARI Port. Must be between 1 and 65535.');
+            toast.error(t('system.env.asterisk.invalidPort'));
             return;
         }
 
@@ -178,16 +180,16 @@ const EnvPage = () => {
 
             const services = Array.from(new Set(plan.map((p) => p.service))).sort();
             if (plan.length > 0) {
-                toast.success('Environment saved', { description: `Apply changes by restarting: ${services.join(', ')}` });
+                toast.success(t('system.env.actions.saveSuccess'), { description: `${t('system.env.actions.restartServices')}: ${services.join(', ')}` });
             } else {
-                toast.success('Environment saved (no restart needed)');
+                toast.success(t('system.env.actions.saveSuccessNoRestart'));
             }
         } catch (err: any) {
             console.error('Failed to save env', err);
             if (err.response && err.response.status === 401) {
-                toast.error('Session expired. Please login again.');
+                toast.error(t('common.sessionExpired') || 'Session expired. Please login again.');
             } else {
-                toast.error('Failed to save environment variables');
+                toast.error(t('system.env.actions.saveFailed'));
             }
         } finally {
             setSaving(false);
@@ -206,7 +208,7 @@ const EnvPage = () => {
         setRestartingEngine(true);
         try {
             if (!applyPlan || applyPlan.length === 0) {
-                toast.info('No pending changes to apply');
+                toast.info(t('system.env.actions.noChanges'));
                 return;
             }
             // Apply in safe order: local_ai_server → ai_engine → admin_ui
@@ -218,12 +220,12 @@ const EnvPage = () => {
             const jwtChanged = changedKeys.includes('JWT_SECRET');
             if (touchesAdminUI) {
                 const msg = jwtChanged
-                    ? 'This will restart Admin UI and JWT_SECRET changed. You will be logged out.'
-                    : 'This will restart Admin UI and may interrupt your session.';
+                    ? t('system.env.actions.jwtChangedLogout')
+                    : t('system.env.actions.adminUiRestartWarning');
                 const confirmed = await confirm({
-                    title: 'Restart Admin UI?',
+                    title: t('system.env.actions.restartAdminUiTitle'),
                     description: msg,
-                    confirmText: 'Continue',
+                    confirmText: t('common.continue') || 'Continue',
                     variant: 'destructive'
                 });
                 if (!confirmed) return;
@@ -273,7 +275,7 @@ const EnvPage = () => {
     const testAriConnection = async () => {
         setAriTesting(true);
         setAriTestResult(null);
-        
+
         try {
             const response = await axios.post('/api/system/test-ari', {
                 host: env['ASTERISK_HOST'] || '127.0.0.1',
@@ -285,7 +287,7 @@ const EnvPage = () => {
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            
+
             setAriTestResult(response.data);
         } catch (err: any) {
             setAriTestResult({
@@ -300,7 +302,7 @@ const EnvPage = () => {
     const testSmtp = async () => {
         const toEmail = (smtpTestTo || '').trim();
         if (!toEmail) {
-            toast.error('Enter a recipient email for the SMTP test.');
+            toast.error(t('system.env.smtp.testRecipientRequired') || 'Enter a recipient email for the SMTP test.');
             return;
         }
         setSmtpTesting(true);
@@ -342,18 +344,18 @@ const EnvPage = () => {
         />
     );
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading environment variables...</div>;
+    if (loading) return <div className="p-8 text-center text-muted-foreground">{t('system.env.actions.loading')}</div>;
 
     if (error) return (
         <div className="p-8 text-center text-destructive">
             <AlertTriangle className="w-8 h-8 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold">Error Loading Configuration</h3>
+            <h3 className="text-lg font-semibold">{t('system.env.actions.errorTitle')}</h3>
             <p className="mt-2">{error}</p>
             <button
                 onClick={fetchEnv}
                 className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
             >
-                Retry
+                {t('system.env.actions.retry')}
             </button>
         </div>
     );
@@ -436,8 +438,8 @@ const EnvPage = () => {
         ? `./asterisk_media/${logFilePath.slice(defaultContainerMediaPrefix.length)}`
         : './asterisk_media/ai-engine.log';
     const logFilePathTooltip = logFilePath.startsWith(defaultContainerMediaPrefix) || !logFilePath
-        ? `This is a path inside the ai_engine container. With the default docker-compose mount (./asterisk_media → /mnt/asterisk_media), the host file is ${hostLogPathHint}. You can confirm mounts in Admin → Docker Services.`
-        : 'This is a path inside the ai_engine container. To find the host file location, confirm the ai_engine mounts in Admin → Docker Services.';
+        ? t('system.env.logging.logFilePathTooltipInternal', { hostPath: hostLogPathHint })
+        : t('system.env.logging.logFilePathTooltipExternal');
 
     return (
         <div className="space-y-6">
@@ -446,42 +448,41 @@ const EnvPage = () => {
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
                     {pendingRestart && applyPlan.length > 0
-                        ? `Pending changes require restart of: ${Array.from(new Set(applyPlan.map((p) => p.service))).sort().join(', ')}`
-                        : 'Changes to environment variables require a service restart to take effect.'}
+                        ? t('system.env.banners.pendingRestart', { services: Array.from(new Set(applyPlan.map((p) => p.service))).sort().join(', ') })
+                        : t('system.env.banners.restartRequired')}
                 </div>
                 <button
                     onClick={() => handleApplyChanges(false)}
                     disabled={restartingEngine || applyPlan.length === 0}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium' 
-                            : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                        ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
+                        : 'bg-yellow-500/20 hover:bg-yellow-500/30'
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Applying...' : 'Apply Changes'}
+                    {restartingEngine ? t('system.env.banners.applying') : t('system.env.banners.apply')}
                 </button>
             </div>
 
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Environment Variables</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('system.env.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Manage system-level configuration and API secrets.
+                        {t('system.env.desc')}
                     </p>
                 </div>
                 <div className="flex gap-2">
                     <button
                         onClick={async () => {
                             const confirmed = await confirm({
-                                title: 'Run Setup Wizard?',
-                                description: 'Warning: Running the Setup Wizard will overwrite your current configuration.',
-                                confirmText: 'Continue',
+                                title: t('system.env.actions.wizardConfirmTitle'),
+                                description: t('system.env.actions.wizardConfirmDesc'),
+                                confirmText: t('common.continue') || 'Continue',
                                 variant: 'destructive'
                             });
                             if (confirmed) {
@@ -491,14 +492,14 @@ const EnvPage = () => {
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                     >
                         <RefreshCw className="w-4 h-4 mr-2" />
-                        Setup Wizard
+                        {t('system.env.actions.setupWizard')}
                     </button>
                     <button
                         onClick={fetchEnv}
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                     >
                         <RefreshCw className="w-4 h-4 mr-2" />
-                        Refresh
+                        {t('system.env.actions.refresh')}
                     </button>
                     <button
                         onClick={handleSave}
@@ -506,7 +507,7 @@ const EnvPage = () => {
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                     >
                         <Save className="w-4 h-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Changes'}
+                        {saving ? t('system.env.actions.saving') : t('system.env.actions.saveChanges')}
                     </button>
                 </div>
             </div>
@@ -516,36 +517,33 @@ const EnvPage = () => {
                 <div className="flex space-x-1">
                     <button
                         onClick={() => handleTabChange('ai-engine')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                            activeTab === 'ai-engine'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === 'ai-engine'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                            }`}
                     >
                         <Cpu className="w-4 h-4" />
-                        AI Engine
+                        {t('system.env.tabs.aiEngine')}
                     </button>
                     <button
                         onClick={() => handleTabChange('local-ai')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                            activeTab === 'local-ai'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === 'local-ai'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                            }`}
                     >
                         <Server className="w-4 h-4" />
-                        Local AI Server
+                        {t('system.env.tabs.localAi')}
                     </button>
                     <button
                         onClick={() => handleTabChange('system')}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                            activeTab === 'system'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === 'system'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                            }`}
                     >
                         <Settings className="w-4 h-4" />
-                        System
+                        {t('system.env.tabs.system')}
                     </button>
                 </div>
             </div>
@@ -554,204 +552,204 @@ const EnvPage = () => {
             {activeTab === 'ai-engine' && (
                 <>
                     {/* Asterisk Settings */}
-                    <ConfigSection title="Asterisk Settings" description="Connection details for the Asterisk server.">
-                <ConfigCard>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormInput
-                            label="Asterisk Host"
-                            value={env['ASTERISK_HOST'] || ''}
-                            onChange={(e) => updateEnv('ASTERISK_HOST', e.target.value)}
-                        />
-                        <FormInput
-                            label="ARI Username"
-                            value={env['ASTERISK_ARI_USERNAME'] || ''}
-                            onChange={(e) => updateEnv('ASTERISK_ARI_USERNAME', e.target.value)}
-                        />
-                        {renderSecretInput('ARI Password', 'ASTERISK_ARI_PASSWORD')}
-                        <FormInput
-                            label="ARI Port"
-                            type="number"
-                            value={env['ASTERISK_ARI_PORT'] || '8088'}
-                            onChange={(e) => updateEnv('ASTERISK_ARI_PORT', e.target.value)}
-                        />
-                        <FormSelect
-                            label="WebSocket Scheme"
-                            value={env['ASTERISK_ARI_WEBSOCKET_SCHEME'] || 'ws'}
-                            onChange={(e) => {
-                                const wsScheme = e.target.value;
-                                updateEnv('ASTERISK_ARI_WEBSOCKET_SCHEME', wsScheme);
-                                // Sync HTTP scheme: wss requires https, ws uses http
-                                updateEnv('ASTERISK_ARI_SCHEME', wsScheme === 'wss' ? 'https' : 'http');
-                            }}
-                            options={[
-                                { value: 'ws', label: 'WS (Unencrypted)' },
-                                { value: 'wss', label: 'WSS (Encrypted)' },
-                            ]}
-                        />
-                        {env['ASTERISK_ARI_WEBSOCKET_SCHEME'] === 'wss' && (
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="w-4 h-4 rounded border border-input"
-                                        checked={env['ASTERISK_ARI_SSL_VERIFY'] !== 'false'}
-                                        onChange={(e) => updateEnv('ASTERISK_ARI_SSL_VERIFY', e.target.checked ? 'true' : 'false')}
-                                    />
-                                    Verify SSL Certificate
-                                </label>
-                                <p className="text-xs text-muted-foreground">
-                                    Uncheck for self-signed certificates or IP/hostname mismatches
-                                </p>
-                            </div>
-                        )}
-                        <FormInput
-                            label="Stasis App Name"
-                            value={env['ASTERISK_APP_NAME'] || 'asterisk-ai-voice-agent'}
-                            onChange={(e) => updateEnv('ASTERISK_APP_NAME', e.target.value)}
-                            tooltip="Name of the Stasis application registered with Asterisk ARI."
-                        />
-                        <FormInput
-                            label="Media Directory"
-                            value={env['AST_MEDIA_DIR'] || '/mnt/asterisk_media/ai-generated'}
-                            onChange={(e) => updateEnv('AST_MEDIA_DIR', e.target.value)}
-                            tooltip="Directory for AI-generated audio files (playback fallback)."
-                        />
-                    </div>
-                    
-                    {/* Test Connection Button */}
-                    <div className="mt-6 pt-4 border-t">
-                        <div className="flex items-center gap-4">
-                            <button
-                                type="button"
-                                onClick={testAriConnection}
-                                disabled={ariTesting}
-                                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
-                            >
-                                {ariTesting ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Testing...
-                                    </>
-                                ) : (
-                                    'Test Connection'
+                    <ConfigSection title={t('system.env.asterisk.title')} description={t('system.env.asterisk.desc')}>
+                        <ConfigCard>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label={t('system.env.asterisk.host')}
+                                    value={env['ASTERISK_HOST'] || ''}
+                                    onChange={(e) => updateEnv('ASTERISK_HOST', e.target.value)}
+                                />
+                                <FormInput
+                                    label={t('system.env.asterisk.ariUsername')}
+                                    value={env['ASTERISK_ARI_USERNAME'] || ''}
+                                    onChange={(e) => updateEnv('ASTERISK_ARI_USERNAME', e.target.value)}
+                                />
+                                {renderSecretInput(t('system.env.asterisk.ariPassword'), 'ASTERISK_ARI_PASSWORD')}
+                                <FormInput
+                                    label={t('system.env.asterisk.ariPort')}
+                                    type="number"
+                                    value={env['ASTERISK_ARI_PORT'] || '8088'}
+                                    onChange={(e) => updateEnv('ASTERISK_ARI_PORT', e.target.value)}
+                                />
+                                <FormSelect
+                                    label={t('system.env.asterisk.wsScheme')}
+                                    value={env['ASTERISK_ARI_WEBSOCKET_SCHEME'] || 'ws'}
+                                    onChange={(e) => {
+                                        const wsScheme = e.target.value;
+                                        updateEnv('ASTERISK_ARI_WEBSOCKET_SCHEME', wsScheme);
+                                        // Sync HTTP scheme: wss requires https, ws uses http
+                                        updateEnv('ASTERISK_ARI_SCHEME', wsScheme === 'wss' ? 'https' : 'http');
+                                    }}
+                                    options={[
+                                        { value: 'ws', label: t('system.env.asterisk.wsUnencrypted') },
+                                        { value: 'wss', label: t('system.env.asterisk.wsEncrypted') },
+                                    ]}
+                                />
+                                {env['ASTERISK_ARI_WEBSOCKET_SCHEME'] === 'wss' && (
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 rounded border border-input"
+                                                checked={env['ASTERISK_ARI_SSL_VERIFY'] !== 'false'}
+                                                onChange={(e) => updateEnv('ASTERISK_ARI_SSL_VERIFY', e.target.checked ? 'true' : 'false')}
+                                            />
+                                            {t('system.env.asterisk.verifySsl')}
+                                        </label>
+                                        <p className="text-xs text-muted-foreground">
+                                            {t('system.env.asterisk.verifySslHint')}
+                                        </p>
+                                    </div>
                                 )}
-                            </button>
-                            
-                            {ariTestResult && (
-                                <div className={`flex items-center gap-2 text-sm ${ariTestResult.success ? 'text-green-600' : 'text-red-600'}`}>
-                                    {ariTestResult.success ? (
-                                        <>
-                                            <CheckCircle className="w-4 h-4" />
-                                            <span>{ariTestResult.message}</span>
-                                            {ariTestResult.asterisk_version && (
-                                                <span className="text-muted-foreground ml-2">
-                                                    (Asterisk {ariTestResult.asterisk_version})
-                                                </span>
+                                <FormInput
+                                    label={t('system.env.asterisk.stasisApp')}
+                                    value={env['ASTERISK_APP_NAME'] || 'asterisk-ai-voice-agent'}
+                                    onChange={(e) => updateEnv('ASTERISK_APP_NAME', e.target.value)}
+                                    tooltip={t('system.env.asterisk.stasisAppTooltip')}
+                                />
+                                <FormInput
+                                    label={t('system.env.asterisk.mediaDir')}
+                                    value={env['AST_MEDIA_DIR'] || '/mnt/asterisk_media/ai-generated'}
+                                    onChange={(e) => updateEnv('AST_MEDIA_DIR', e.target.value)}
+                                    tooltip={t('system.env.asterisk.mediaDirTooltip')}
+                                />
+                            </div>
+
+                            {/* Test Connection Button */}
+                            <div className="mt-6 pt-4 border-t">
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={testAriConnection}
+                                        disabled={ariTesting}
+                                        className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+                                    >
+                                        {ariTesting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                {t('system.env.asterisk.testing')}
+                                            </>
+                                        ) : (
+                                            t('system.env.asterisk.testConnection')
+                                        )}
+                                    </button>
+
+                                    {ariTestResult && (
+                                        <div className={`flex items-center gap-2 text-sm ${ariTestResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                                            {ariTestResult.success ? (
+                                                <>
+                                                    <CheckCircle className="w-4 h-4" />
+                                                    <span>{ariTestResult.message || t('system.env.asterisk.testSuccess')}</span>
+                                                    {ariTestResult.asterisk_version && (
+                                                        <span className="text-muted-foreground ml-2">
+                                                            (Asterisk {ariTestResult.asterisk_version})
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <XCircle className="w-4 h-4" />
+                                                    <span>{ariTestResult.error || t('system.env.asterisk.testFailed')}</span>
+                                                </>
                                             )}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <XCircle className="w-4 h-4" />
-                                            <span>{ariTestResult.error}</span>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                    </ConfigCard>
+                            </div>
+                        </ConfigCard>
                     </ConfigSection>
 
                     {/* Cloud Provider API Keys */}
-                    <ConfigSection title="Cloud Provider API Keys" description="API keys for cloud AI services used by AI Engine.">
-                <ConfigCard>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {renderSecretInput('OpenAI API Key', 'OPENAI_API_KEY', 'sk-...')}
-                        {renderSecretInput('Groq API Key', 'GROQ_API_KEY', 'gsk_...')}
-                        {renderSecretInput('Deepgram API Key', 'DEEPGRAM_API_KEY', 'Token...')}
-                        {renderSecretInput('Google API Key', 'GOOGLE_API_KEY', 'AIza...')}
-                        {renderSecretInput('Telnyx API Key', 'TELNYX_API_KEY', 'KEY...')}
-                        {renderSecretInput('ElevenLabs API Key', 'ELEVENLABS_API_KEY', 'xi-...')}
-                        <FormInput
-                            label="ElevenLabs Agent ID"
-                            value={env['ELEVENLABS_AGENT_ID'] || ''}
-                            onChange={(e) => updateEnv('ELEVENLABS_AGENT_ID', e.target.value)}
-                            placeholder="agent_..."
-                            tooltip="Required for ElevenLabs Conversational AI mode."
-                        />
-                        {renderSecretInput('Resend API Key', 'RESEND_API_KEY', 're_...')}
-                        <FormInput
-                            label="Google Service Account"
-                            value={env['GOOGLE_APPLICATION_CREDENTIALS'] || ''}
-                            onChange={(e) => updateEnv('GOOGLE_APPLICATION_CREDENTIALS', e.target.value)}
-                            placeholder="/path/to/service-account-key.json"
-                            tooltip="Path to Google Cloud service account JSON key file. Required for Vertex AI mode."
-                        />
-                        <FormInput
-                            label="GCP Project ID (Vertex AI)"
-                            value={env['GOOGLE_CLOUD_PROJECT'] || ''}
-                            onChange={(e) => updateEnv('GOOGLE_CLOUD_PROJECT', e.target.value)}
-                            placeholder="my-gcp-project-id"
-                            tooltip="Google Cloud project ID. Required when using Vertex AI Live API (use_vertex_ai: true)."
-                        />
-                        <FormInput
-                            label="GCP Location (Vertex AI)"
-                            value={env['GOOGLE_CLOUD_LOCATION'] || ''}
-                            onChange={(e) => updateEnv('GOOGLE_CLOUD_LOCATION', e.target.value)}
-                            placeholder="us-central1"
-                            tooltip="Google Cloud region for Vertex AI endpoint. Defaults to us-central1."
-                        />
-                    </div>
-                    </ConfigCard>
+                    <ConfigSection title={t('system.env.cloud.title')} description={t('system.env.cloud.desc')}>
+                        <ConfigCard>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {renderSecretInput('OpenAI API Key', 'OPENAI_API_KEY', 'sk-...')}
+                                {renderSecretInput('Groq API Key', 'GROQ_API_KEY', 'gsk_...')}
+                                {renderSecretInput('Deepgram API Key', 'DEEPGRAM_API_KEY', 'Token...')}
+                                {renderSecretInput('Google API Key', 'GOOGLE_API_KEY', 'AIza...')}
+                                {renderSecretInput('Telnyx API Key', 'TELNYX_API_KEY', 'KEY...')}
+                                {renderSecretInput('ElevenLabs API Key', 'ELEVENLABS_API_KEY', 'xi-...')}
+                                <FormInput
+                                    label={t('system.env.cloud.elevenLabsAgent')}
+                                    value={env['ELEVENLABS_AGENT_ID'] || ''}
+                                    onChange={(e) => updateEnv('ELEVENLABS_AGENT_ID', e.target.value)}
+                                    placeholder="agent_..."
+                                    tooltip={t('system.env.cloud.elevenLabsAgentTooltip')}
+                                />
+                                {renderSecretInput('Resend API Key', 'RESEND_API_KEY', 're_...')}
+                                <FormInput
+                                    label={t('system.env.cloud.googleCreds')}
+                                    value={env['GOOGLE_APPLICATION_CREDENTIALS'] || ''}
+                                    onChange={(e) => updateEnv('GOOGLE_APPLICATION_CREDENTIALS', e.target.value)}
+                                    placeholder="/path/to/service-account-key.json"
+                                    tooltip={t('system.env.cloud.googleCredsTooltip')}
+                                />
+                                <FormInput
+                                    label={t('system.env.cloud.gcpProject')}
+                                    value={env['GOOGLE_CLOUD_PROJECT'] || ''}
+                                    onChange={(e) => updateEnv('GOOGLE_CLOUD_PROJECT', e.target.value)}
+                                    placeholder="my-gcp-project-id"
+                                    tooltip={t('system.env.cloud.gcpProjectTooltip')}
+                                />
+                                <FormInput
+                                    label={t('system.env.cloud.gcpLocation')}
+                                    value={env['GOOGLE_CLOUD_LOCATION'] || ''}
+                                    onChange={(e) => updateEnv('GOOGLE_CLOUD_LOCATION', e.target.value)}
+                                    placeholder="us-central1"
+                                    tooltip={t('system.env.cloud.gcpLocationTooltip')}
+                                />
+                            </div>
+                        </ConfigCard>
                     </ConfigSection>
 
                     {/* Email Delivery (SMTP) */}
                     <ConfigSection
-                        title="Email Delivery (SMTP)"
-                        description="SMTP settings for sending transcript/summary emails when SMTP is selected as the email provider."
+                        title={t('system.env.smtp.title')}
+                        description={t('system.env.smtp.desc')}
                     >
                         <ConfigCard>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormInput
-                                    label="SMTP Host"
+                                    label={t('system.env.smtp.host')}
                                     value={env['SMTP_HOST'] || ''}
                                     onChange={(e) => updateEnv('SMTP_HOST', e.target.value)}
                                     placeholder="smtp.yourcompany.com"
-                                    tooltip="If set, email tools can use SMTP (local mail server) instead of Resend."
+                                    tooltip={t('system.env.smtp.hostTooltip')}
                                 />
                                 <FormInput
-                                    label="SMTP Port"
+                                    label={t('system.env.smtp.port')}
                                     type="number"
                                     value={env['SMTP_PORT'] || ''}
                                     onChange={(e) => updateEnv('SMTP_PORT', e.target.value)}
                                     placeholder="587"
-                                    tooltip="587 for STARTTLS, 465 for SMTPS (implicit TLS). Leave blank for defaults."
+                                    tooltip={t('system.env.smtp.portTooltip')}
                                 />
                                 <FormInput
-                                    label="SMTP Username (Optional)"
+                                    label={t('system.env.smtp.username')}
                                     value={env['SMTP_USERNAME'] || ''}
                                     onChange={(e) => updateEnv('SMTP_USERNAME', e.target.value)}
                                     placeholder="username"
                                 />
-                                {renderSecretInput('SMTP Password (Optional)', 'SMTP_PASSWORD', 'password')}
+                                {renderSecretInput(t('system.env.smtp.password'), 'SMTP_PASSWORD', 'password')}
                                 <FormSelect
-                                    label="SMTP TLS Mode"
+                                    label={t('system.env.smtp.tlsMode')}
                                     options={[
-                                        { value: 'starttls', label: 'STARTTLS (recommended)' },
-                                        { value: 'smtps', label: 'SMTPS (implicit TLS)' },
-                                        { value: 'none', label: 'None (not recommended)' },
+                                        { value: 'starttls', label: t('system.env.smtp.tlsStarttls') },
+                                        { value: 'smtps', label: t('system.env.smtp.tlsSmtps') },
+                                        { value: 'none', label: t('system.env.smtp.tlsNone') },
                                     ]}
                                     value={env['SMTP_TLS_MODE'] || 'starttls'}
                                     onChange={(e) => updateEnv('SMTP_TLS_MODE', e.target.value)}
                                 />
                                 <FormSwitch
-                                    label="Verify TLS Certificates"
+                                    label={t('system.env.smtp.verifyTls')}
                                     checked={isTrue(env['SMTP_TLS_VERIFY'] || 'true')}
                                     onChange={(e) => updateEnv('SMTP_TLS_VERIFY', e.target.checked ? 'true' : 'false')}
-                                    description="Disable only for self-signed certs on trusted networks."
+                                    description={t('system.env.smtp.verifyTlsDesc')}
                                 />
                                 <FormInput
-                                    label="SMTP Timeout (Seconds)"
+                                    label={t('system.env.smtp.timeout')}
                                     type="number"
                                     value={env['SMTP_TIMEOUT_SECONDS'] || ''}
                                     onChange={(e) => updateEnv('SMTP_TIMEOUT_SECONDS', e.target.value)}
@@ -761,11 +759,11 @@ const EnvPage = () => {
                                     <div className="flex flex-col md:flex-row md:items-end gap-3">
                                         <div className="flex-1">
                                             <FormInput
-                                                label="Send Test Email To"
+                                                label={t('system.env.smtp.testEmailLabel')}
                                                 value={smtpTestTo}
                                                 onChange={(e) => setSmtpTestTo(e.target.value)}
                                                 placeholder="you@company.com"
-                                                tooltip="Sends a one-off test email using SMTP_* values from the saved .env file."
+                                                tooltip={t('system.env.smtp.testEmailTooltip')}
                                             />
                                         </div>
                                         <button
@@ -773,32 +771,32 @@ const EnvPage = () => {
                                             onClick={testSmtp}
                                             disabled={smtpTesting}
                                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
-                                            title="Validates SMTP connectivity/auth. For live calls to use SMTP, click Apply Changes to recreate ai_engine."
+                                            title={t('system.env.smtp.sendTestTooltip')}
                                         >
                                             {smtpTesting ? (
                                                 <>
                                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                    Sending...
+                                                    {t('system.env.smtp.sending')}
                                                 </>
                                             ) : (
-                                                'Send Test Email'
+                                                t('system.env.smtp.sendTest')
                                             )}
                                         </button>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-2">
-                                        Note: This test uses the values currently shown above. Live calls use the AI Engine container environment. After saving SMTP settings, click “Apply Changes” to recreate <code>ai_engine</code>.
+                                        {t('system.env.smtp.testNote')}
                                     </p>
                                     {smtpTestResult && (
                                         <div className={`flex items-center gap-2 text-sm mt-2 ${smtpTestResult.success ? 'text-green-600' : 'text-red-600'}`}>
                                             {smtpTestResult.success ? (
                                                 <>
                                                     <CheckCircle className="w-4 h-4" />
-                                                    <span>{smtpTestResult.message || 'SMTP test succeeded.'}</span>
+                                                    <span>{smtpTestResult.message || t('system.env.smtp.testSuccess')}</span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <XCircle className="w-4 h-4" />
-                                                    <span>{smtpTestResult.error || 'SMTP test failed.'}</span>
+                                                    <span>{smtpTestResult.error || t('system.env.smtp.testFailed')}</span>
                                                 </>
                                             )}
                                         </div>
@@ -826,215 +824,183 @@ const EnvPage = () => {
                                     onChange={(e) => updateEnv('HEALTH_BIND_PORT', e.target.value)}
                                     placeholder="15000"
                                 />
-                                {renderSecretInput('API Token', 'HEALTH_API_TOKEN', 'Required for remote access to sensitive endpoints')}
+                                {renderSecretInput(t('system.env.health.apiToken') || "API Token", 'HEALTH_API_TOKEN', t('system.env.health.apiTokenTooltip') || 'Required for remote access to sensitive endpoints')}
                             </div>
                         </ConfigCard>
                     </ConfigSection>
 
                     {/* NAT/Hybrid Network */}
-                    <ConfigSection title="NAT / Hybrid Network" description="Use when AI Engine is behind NAT and Asterisk is remote.">
+                    <ConfigSection title={t('system.env.nat.title')} description={t('system.env.nat.desc')}>
                         <ConfigCard>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormInput
-                                    label="AudioSocket Advertise Host"
+                                    label={t('system.env.nat.audiosocketAdvertise')}
                                     value={env['AUDIOSOCKET_ADVERTISE_HOST'] || ''}
                                     onChange={(e) => updateEnv('AUDIOSOCKET_ADVERTISE_HOST', e.target.value)}
                                     placeholder="10.8.0.5"
-                                    tooltip="IP address Asterisk can reach for AudioSocket (VPN IP, public IP, LAN IP)."
+                                    tooltip={t('system.env.nat.audiosocketAdvertiseTooltip')}
                                 />
                                 <FormInput
-                                    label="ExternalMedia Advertise Host"
+                                    label={t('system.env.nat.externalMediaAdvertise')}
                                     value={env['EXTERNAL_MEDIA_ADVERTISE_HOST'] || ''}
                                     onChange={(e) => updateEnv('EXTERNAL_MEDIA_ADVERTISE_HOST', e.target.value)}
                                     placeholder="10.8.0.5"
-                                    tooltip="IP address Asterisk can reach for ExternalMedia RTP."
+                                    tooltip={t('system.env.nat.externalMediaAdvertiseTooltip')}
                                 />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-3">
-                                Leave blank if AI Engine and Asterisk are on the same network.
-                            </p>
                         </ConfigCard>
                     </ConfigSection>
 
-                    {/* Local AI Server Connection (Client-side) */}
-                    <ConfigSection title="Local AI Connection" description="How AI Engine connects to Local AI Server.">
-                <ConfigCard>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormInput
-                            label="WebSocket URL"
-                            value={env['LOCAL_WS_URL'] || 'ws://local_ai_server:8765'}
-                            onChange={(e) => updateEnv('LOCAL_WS_URL', e.target.value)}
-                            tooltip="URL ai_engine uses to connect to local_ai_server."
-                        />
-                        <FormInput
-                            label="Connect Timeout (s)"
-                            type="number"
-                            value={env['LOCAL_WS_CONNECT_TIMEOUT'] || '2.0'}
-                            onChange={(e) => updateEnv('LOCAL_WS_CONNECT_TIMEOUT', e.target.value)}
-                        />
-                        <FormInput
-                            label="Response Timeout (s)"
-                            type="number"
-                            value={env['LOCAL_WS_RESPONSE_TIMEOUT'] || '5.0'}
-                            onChange={(e) => updateEnv('LOCAL_WS_RESPONSE_TIMEOUT', e.target.value)}
-                        />
-                        <FormInput
-                            label="Chunk Size (ms)"
-                            type="number"
-                            value={env['LOCAL_WS_CHUNK_MS'] || '320'}
-                            onChange={(e) => updateEnv('LOCAL_WS_CHUNK_MS', e.target.value)}
-                        />
-                    </div>
-                    </ConfigCard>
-                    </ConfigSection>
-
-                    {/* Logging Section */}
-                    <ConfigSection title="Logging" description="System logging configuration.">
-                <ConfigCard>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormSelect
-                            label="Log Level"
-                            value={(env['LOG_LEVEL'] || 'info').toLowerCase()}
-                            onChange={(e) => updateEnv('LOG_LEVEL', e.target.value)}
-                            options={[
-                                { value: 'debug', label: 'Debug' },
-                                { value: 'info', label: 'Info' },
-                                { value: 'warning', label: 'Warning' },
-                                { value: 'error', label: 'Error' },
-                            ]}
-                        />
-                        <FormSelect
-                            label="Log Format"
-                            value={env['LOG_FORMAT'] || 'console'}
-                            onChange={(e) => updateEnv('LOG_FORMAT', e.target.value)}
-                            options={[
-                                { value: 'console', label: 'Console' },
-                                { value: 'json', label: 'JSON' },
-                            ]}
-                        />
-                        <FormSwitch
-                            id="log-color"
-                            label="Log Color"
-                            description="Enable colored log output."
-                            checked={isTrue(env['LOG_COLOR'])}
-                            onChange={(e) => updateEnv('LOG_COLOR', e.target.checked ? '1' : '0')}
-                        />
-                        <FormSelect
-                            label="Show Tracebacks"
-                            value={env['LOG_SHOW_TRACEBACKS'] || 'auto'}
-                            onChange={(e) => updateEnv('LOG_SHOW_TRACEBACKS', e.target.value)}
-                            options={[
-                                { value: 'auto', label: 'Auto' },
-                                { value: 'always', label: 'Always' },
-                                { value: 'never', label: 'Never' },
-                            ]}
-                        />
-	                        <FormSwitch
-	                            id="log-to-file"
-	                            label="Log to File"
-	                            description="Enable logging to file."
-                                tooltip="Writes ai_engine logs to LOG_FILE_PATH (inside the container). If LOG_FILE_PATH is under /mnt/asterisk_media, the file is on the host under ./asterisk_media."
-	                            checked={isTrue(env['LOG_TO_FILE'])}
-	                            onChange={(e) => {
-	                                const enabled = e.target.checked;
-	                                updateEnv('LOG_TO_FILE', enabled ? '1' : '0');
-	                                // If the user enables file logging but LOG_FILE_PATH is not set,
-	                                // auto-populate the standard shared volume location so it persists into .env.
-	                                if (enabled && !(env['LOG_FILE_PATH'] || '').trim()) {
-	                                    updateEnv('LOG_FILE_PATH', '/mnt/asterisk_media/ai-engine.log');
-	                                }
-	                            }}
-	                        />
-	                        <div className="col-span-full">
-	                            <FormInput
-	                                label="Log File Path"
-                                    tooltip={logFilePathTooltip}
-	                                value={env['LOG_FILE_PATH'] || ''}
-	                                onChange={(e) => updateEnv('LOG_FILE_PATH', e.target.value)}
-	                                placeholder="/mnt/asterisk_media/ai-engine.log"
-	                            />
-	                        </div>
-                    </div>
-                    </ConfigCard>
-                    </ConfigSection>
-
-                    {/* Streaming Logging Section */}
-                    <ConfigSection title="Streaming Logging" description="Logging settings for streaming operations.">
+                    {/* Local AI Connection */}
+                    <ConfigSection title={t('system.env.localAiConn.title')} description={t('system.env.localAiConn.desc')}>
                         <ConfigCard>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormSelect
-                            label="Streaming Log Level"
-                            value={(env['STREAMING_LOG_LEVEL'] || 'info').toLowerCase()}
-                            onChange={(e) => updateEnv('STREAMING_LOG_LEVEL', e.target.value)}
-                            options={[
-                                { value: 'debug', label: 'Debug' },
-                                { value: 'info', label: 'Info' },
-                                { value: 'warning', label: 'Warning' },
-                                { value: 'error', label: 'Error' },
-                            ]}
-                        />
-                    </div>
-                    </ConfigCard>
-                    </ConfigSection>
-
-                    {/* Diagnostics */}
-                    <ConfigSection title="Diagnostics" description="Advanced debugging and diagnostic output settings.">
-                        <ConfigCard>
-                    <div className="space-y-6">
-                        <FormSwitch
-                            id="diag-enable-taps"
-                            label="Enable Diagnostic Taps"
-                            description="Save audio streams to disk for debugging."
-                            checked={isTrue(env['DIAG_ENABLE_TAPS'])}
-                            onChange={(e) => updateEnv('DIAG_ENABLE_TAPS', String(e.target.checked))}
-                        />
-
-                        {isTrue(env['DIAG_ENABLE_TAPS']) && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pl-4 border-l-2 border-border ml-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormInput
-                                    label="Pre-Event Seconds"
+                                    label={t('system.env.localAiConn.wsUrl')}
+                                    value={env['LOCAL_WS_URL'] || ''}
+                                    onChange={(e) => updateEnv('LOCAL_WS_URL', e.target.value)}
+                                    placeholder="ws://local-ai-server:8000/ws"
+                                    tooltip={t('system.env.localAiConn.wsUrlTooltip')}
+                                />
+                                {renderSecretInput(t('system.env.localAiConn.authToken'), 'LOCAL_WS_AUTH_TOKEN', t('system.env.localAiConn.authTokenTooltip'))}
+                                <FormInput
+                                    label={t('system.env.localAiConn.chunkMs')}
                                     type="number"
-                                    value={env['DIAG_TAP_PRE_SECS'] || '1'}
-                                    onChange={(e) => updateEnv('DIAG_TAP_PRE_SECS', e.target.value)}
+                                    value={env['LOCAL_WS_CHUNK_MS'] || '160'}
+                                    onChange={(e) => updateEnv('LOCAL_WS_CHUNK_MS', e.target.value)}
+                                    tooltip={t('system.env.localAiConn.chunkMsTooltip')}
                                 />
                                 <FormInput
-                                    label="Post-Event Seconds"
+                                    label={t('system.env.localAiConn.connectTimeout')}
                                     type="number"
-                                    value={env['DIAG_TAP_POST_SECS'] || '1'}
-                                    onChange={(e) => updateEnv('DIAG_TAP_POST_SECS', e.target.value)}
+                                    value={env['LOCAL_WS_CONNECT_TIMEOUT'] || '5'}
+                                    onChange={(e) => updateEnv('LOCAL_WS_CONNECT_TIMEOUT', e.target.value)}
                                 />
                                 <FormInput
-                                    label="Output Directory"
-                                    value={env['DIAG_TAP_OUTPUT_DIR'] || '/tmp/ai-engine-taps'}
-                                    onChange={(e) => updateEnv('DIAG_TAP_OUTPUT_DIR', e.target.value)}
-                                />
-                                <FormSelect
-                                    label="Egress Swap Mode"
-                                    value={env['DIAG_EGRESS_SWAP_MODE'] || 'none'}
-                                    onChange={(e) => updateEnv('DIAG_EGRESS_SWAP_MODE', e.target.value)}
-                                    options={[
-                                        { value: 'none', label: 'None (Normal)' },
-                                        { value: 'swap', label: 'Swap Channels' },
-                                        { value: 'left_only', label: 'Left Channel Only' },
-                                        { value: 'right_only', label: 'Right Channel Only' }
-                                    ]}
-                                />
-                                <FormSwitch
-                                    id="diag-egress-force-mulaw"
-                                    label="Force MuLaw"
-                                    description="Force MuLaw encoding for egress."
-                                    checked={isTrue(env['DIAG_EGRESS_FORCE_MULAW'])}
-                                    onChange={(e) => updateEnv('DIAG_EGRESS_FORCE_MULAW', String(e.target.checked))}
-                                />
-                                <FormInput
-                                    label="Attack MS"
+                                    label={t('system.env.localAiConn.responseTimeout')}
                                     type="number"
-                                    value={env['DIAG_ATTACK_MS'] || '0'}
-                                    onChange={(e) => updateEnv('DIAG_ATTACK_MS', e.target.value)}
+                                    value={env['LOCAL_WS_RESPONSE_TIMEOUT'] || '10'}
+                                    onChange={(e) => updateEnv('LOCAL_WS_RESPONSE_TIMEOUT', e.target.value)}
                                 />
                             </div>
-                        )}
-                        </div>
+                        </ConfigCard>
+                    </ConfigSection>
+
+                    {/* Logging & Diagnostics */}
+                    <ConfigSection title={t('system.env.logging.title')} description={t('system.env.logging.desc')}>
+                        <ConfigCard>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormSelect
+                                    label={t('system.env.logging.logLevel')}
+                                    value={env['LOG_LEVEL'] || 'INFO'}
+                                    onChange={(e) => updateEnv('LOG_LEVEL', e.target.value)}
+                                    options={[
+                                        { value: 'DEBUG', label: 'DEBUG' },
+                                        { value: 'INFO', label: 'INFO' },
+                                        { value: 'WARNING', label: 'WARNING' },
+                                        { value: 'ERROR', label: 'ERROR' },
+                                    ]}
+                                    tooltip={t('system.env.logging.logLevelTooltip')}
+                                />
+                                <FormSelect
+                                    label={t('system.env.logging.streamingLogLevel')}
+                                    value={env['STREAMING_LOG_LEVEL'] || 'INFO'}
+                                    onChange={(e) => updateEnv('STREAMING_LOG_LEVEL', e.target.value)}
+                                    options={[
+                                        { value: 'DEBUG', label: 'DEBUG' },
+                                        { value: 'INFO', label: 'INFO' },
+                                        { value: 'WARNING', label: 'WARNING' },
+                                        { value: 'ERROR', label: 'ERROR' },
+                                    ]}
+                                    tooltip={t('system.env.logging.streamingLogLevelTooltip')}
+                                />
+                                <FormInput
+                                    label={t('system.env.logging.logFilePath')}
+                                    value={env['LOG_FILE_PATH'] || ''}
+                                    onChange={(e) => updateEnv('LOG_FILE_PATH', e.target.value)}
+                                    placeholder="/mnt/asterisk_media/ai-engine.log"
+                                    tooltip={logFilePathTooltip}
+                                />
+                                <FormSwitch
+                                    label={t('system.env.logging.logToFile')}
+                                    checked={isTrue(env['LOG_TO_FILE'])}
+                                    onChange={(e) => updateEnv('LOG_TO_FILE', e.target.checked ? 'true' : 'false')}
+                                    description={t('system.env.logging.logToFileDesc')}
+                                />
+                                <FormSelect
+                                    label={t('system.env.logging.logFormat')}
+                                    value={env['LOG_FORMAT'] || 'basic'}
+                                    onChange={(e) => updateEnv('LOG_FORMAT', e.target.value)}
+                                    options={[
+                                        { value: 'basic', label: 'Basic' },
+                                        { value: 'rich', label: 'Rich (Structured)' },
+                                    ]}
+                                    tooltip={t('system.env.logging.logFormatTooltip')}
+                                />
+                                <FormSwitch
+                                    label={t('system.env.logging.logColor')}
+                                    checked={isTrue(env['LOG_COLOR'] || 'true')}
+                                    onChange={(e) => updateEnv('LOG_COLOR', e.target.checked ? 'true' : 'false')}
+                                />
+                                <FormSwitch
+                                    label={t('system.env.logging.showTracebacks')}
+                                    checked={isTrue(env['LOG_SHOW_TRACEBACKS'] || 'true')}
+                                    onChange={(e) => updateEnv('LOG_SHOW_TRACEBACKS', e.target.checked ? 'true' : 'false')}
+                                />
+                                <div className="md:col-span-2 border-t pt-6 mt-2">
+                                    <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                        {t('system.env.logging.diagTaps')}
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormSwitch
+                                            label={t('system.env.logging.diagTaps')}
+                                            checked={isTrue(env['DIAG_ENABLE_TAPS'])}
+                                            onChange={(e) => updateEnv('DIAG_ENABLE_TAPS', e.target.checked ? 'true' : 'false')}
+                                            description={t('system.env.logging.diagTapsDesc')}
+                                        />
+                                        <FormInput
+                                            label={t('system.env.logging.outputDir')}
+                                            value={env['DIAG_TAP_OUTPUT_DIR'] || '/mnt/asterisk_media/taps'}
+                                            onChange={(e) => updateEnv('DIAG_TAP_OUTPUT_DIR', e.target.value)}
+                                            placeholder="/mnt/asterisk_media/taps"
+                                        />
+                                        <FormInput
+                                            label={t('system.env.logging.preSecs')}
+                                            type="number"
+                                            value={env['DIAG_TAP_PRE_SECS'] || '5'}
+                                            onChange={(e) => updateEnv('DIAG_TAP_PRE_SECS', e.target.value)}
+                                        />
+                                        <FormInput
+                                            label={t('system.env.logging.postSecs')}
+                                            type="number"
+                                            value={env['DIAG_TAP_POST_SECS'] || '5'}
+                                            onChange={(e) => updateEnv('DIAG_TAP_POST_SECS', e.target.value)}
+                                        />
+                                        <FormSelect
+                                            label={t('system.env.logging.egressSwap')}
+                                            value={env['DIAG_EGRESS_SWAP_MODE'] || 'none'}
+                                            onChange={(e) => updateEnv('DIAG_EGRESS_SWAP_MODE', e.target.value)}
+                                            options={[
+                                                { value: 'none', label: 'None (Normal)' },
+                                                { value: 'all', label: 'Swap All Agent Audio' },
+                                            ]}
+                                            tooltip={t('system.env.logging.egressSwapTooltip')}
+                                        />
+                                        <FormSwitch
+                                            label={t('system.env.logging.forceMulaw')}
+                                            checked={isTrue(env['DIAG_EGRESS_FORCE_MULAW'])}
+                                            onChange={(e) => updateEnv('DIAG_EGRESS_FORCE_MULAW', e.target.checked ? 'true' : 'false')}
+                                        />
+                                        <FormInput
+                                            label={t('system.env.logging.attackMs')}
+                                            type="number"
+                                            value={env['DIAG_ATTACK_MS'] || '20'}
+                                            onChange={(e) => updateEnv('DIAG_ATTACK_MS', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </ConfigCard>
                     </ConfigSection>
                 </>
@@ -1044,49 +1010,49 @@ const EnvPage = () => {
             {activeTab === 'local-ai' && (
                 <>
                     {/* Server Bind Settings */}
-                    <ConfigSection title="Server Bind Settings" description="How Local AI Server listens for connections.">
+                    <ConfigSection title={t('system.env.localAiServer.bind.title')} description={t('system.env.localAiServer.bind.desc')}>
                         <ConfigCard>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormInput
-                                    label="Bind Host"
+                                    label={t('system.env.localAiServer.bind.host')}
                                     value={env['LOCAL_WS_HOST'] || '0.0.0.0'}
                                     onChange={(e) => updateEnv('LOCAL_WS_HOST', e.target.value)}
-                                    tooltip="Address local_ai_server binds to (default 0.0.0.0 for all interfaces)."
+                                    tooltip={t('system.env.localAiServer.bind.hostTooltip')}
                                 />
                                 <FormInput
-                                    label="Bind Port"
+                                    label={t('system.env.localAiServer.bind.port')}
                                     type="number"
                                     value={env['LOCAL_WS_PORT'] || '8765'}
                                     onChange={(e) => updateEnv('LOCAL_WS_PORT', e.target.value)}
-                                    tooltip="Port local_ai_server listens on."
+                                    tooltip={t('system.env.localAiServer.bind.portTooltip')}
                                 />
                                 <FormInput
-                                    label="Auth Token (optional)"
+                                    label={t('system.env.localAiServer.bind.authToken')}
                                     type="password"
                                     value={env['LOCAL_WS_AUTH_TOKEN'] || ''}
                                     onChange={(e) => updateEnv('LOCAL_WS_AUTH_TOKEN', e.target.value)}
-                                    tooltip="If set, local_ai_server requires an auth handshake."
+                                    tooltip={t('system.env.localAiServer.bind.authTokenTooltip')}
                                 />
                             </div>
                         </ConfigCard>
                     </ConfigSection>
 
                     {/* Runtime & Logging */}
-                    <ConfigSection title="Runtime & Logging" description="Server mode and logging configuration.">
+                    <ConfigSection title={t('system.env.localAiServer.runtime.title')} description={t('system.env.localAiServer.runtime.desc')}>
                         <ConfigCard>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormSelect
-                                    label="Runtime Mode"
+                                    label={t('system.env.localAiServer.runtime.mode')}
                                     value={env['LOCAL_AI_MODE'] || 'full'}
                                     onChange={(e) => updateEnv('LOCAL_AI_MODE', e.target.value)}
                                     options={[
-                                        { value: 'full', label: 'Full (Preload STT + LLM + TTS)' },
-                                        { value: 'minimal', label: 'Minimal (Skip LLM preload)' },
+                                        { value: 'full', label: t('system.env.localAiServer.runtime.modeFull') },
+                                        { value: 'minimal', label: t('system.env.localAiServer.runtime.modeMinimal') },
                                     ]}
-                                    tooltip="Use minimal for faster startup and lower memory when LLM is not needed."
+                                    tooltip={t('system.env.localAiServer.runtime.modeTooltip')}
                                 />
                                 <FormSelect
-                                    label="Log Level"
+                                    label={t('system.env.localAiServer.runtime.logLevel')}
                                     value={(env['LOCAL_LOG_LEVEL'] || 'INFO').toUpperCase()}
                                     onChange={(e) => updateEnv('LOCAL_LOG_LEVEL', e.target.value)}
                                     options={[
@@ -1098,8 +1064,8 @@ const EnvPage = () => {
                                 />
                                 <FormSwitch
                                     id="local-debug"
-                                    label="Verbose Audio Debug"
-                                    description="Enable detailed audio processing logs (high volume)."
+                                    label={t('system.env.localAiServer.runtime.verboseDebug')}
+                                    description={t('system.env.localAiServer.runtime.verboseDebugDesc')}
                                     checked={isTrue(env['LOCAL_DEBUG'])}
                                     onChange={(e) => updateEnv('LOCAL_DEBUG', e.target.checked ? '1' : '0')}
                                 />
@@ -1108,271 +1074,250 @@ const EnvPage = () => {
                     </ConfigSection>
 
                     {/* STT Backend Settings */}
-                    <ConfigSection title="STT (Speech-to-Text)" description="Speech recognition model and backend settings.">
+                    <ConfigSection title={t('system.env.localAiServer.stt.title')} description={t('system.env.localAiServer.stt.desc')}>
                         <ConfigCard>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormSelect
-                            label="STT Backend"
-                            value={env['LOCAL_STT_BACKEND'] || 'vosk'}
-                            onChange={(e) => updateEnv('LOCAL_STT_BACKEND', e.target.value)}
-                            options={[
-                                { value: 'vosk', label: 'Vosk (Local)' },
-                                { value: 'kroko', label: 'Kroko (Cloud/Embedded)' },
-                                { value: 'sherpa', label: 'Sherpa-ONNX (Local)' },
-                                { value: 'faster_whisper', label: 'Faster Whisper (High Accuracy)' },
-                            ]}
-                        />
-                        <FormInput
-                            label="Idle Timeout (ms)"
-                            type="number"
-                            value={env['LOCAL_STT_IDLE_TIMEOUT_MS'] || '3000'}
-                            onChange={(e) => updateEnv('LOCAL_STT_IDLE_TIMEOUT_MS', e.target.value)}
-                            tooltip="Time in milliseconds before finalizing speech after silence (default 3000ms)."
-                        />
-
-                        {/* Vosk Settings */}
-	                        {(env['LOCAL_STT_BACKEND'] || 'vosk') === 'vosk' && (
-	                            <FormInput
-	                                label="Vosk Model Path"
-	                                value={env['LOCAL_STT_MODEL_PATH'] || '/app/models/stt/vosk-model-en-us-0.22'}
-	                                onChange={(e) => updateEnv('LOCAL_STT_MODEL_PATH', e.target.value)}
-	                            />
-	                        )}
-
-                        {/* Kroko Settings */}
-                        {env['LOCAL_STT_BACKEND'] === 'kroko' && (
-                            <>
-                                <FormSwitch
-                                    id="kroko-embedded"
-                                    label="Embedded Mode"
-                                    description="Run Kroko locally (requires model download)."
-                                    checked={isTrue(env['KROKO_EMBEDDED'])}
-                                    onChange={(e) => updateEnv('KROKO_EMBEDDED', String(e.target.checked))}
-                                />
-                                {isTrue(env['KROKO_EMBEDDED']) ? (
-                                    <>
-                                        <FormInput
-                                            label="Kroko Model Path"
-                                            value={env['KROKO_MODEL_PATH'] || '/app/models/stt/kroko'}
-                                            onChange={(e) => updateEnv('KROKO_MODEL_PATH', e.target.value)}
-                                        />
-                                        <FormInput
-                                            label="Kroko Port"
-                                            type="number"
-                                            value={env['KROKO_PORT'] || '6006'}
-                                            onChange={(e) => updateEnv('KROKO_PORT', e.target.value)}
-                                        />
-                                    </>
-                                ) : (
-                                    <>
-                                        <FormInput
-                                            label="Kroko URL"
-                                            value={env['KROKO_URL'] || 'wss://app.kroko.ai/api/v1/transcripts/streaming'}
-                                            onChange={(e) => updateEnv('KROKO_URL', e.target.value)}
-                                        />
-                                        {renderSecretInput('Kroko API Key', 'KROKO_API_KEY', 'Your Kroko API key')}
-                                    </>
-                                )}
                                 <FormSelect
-                                    label="Language"
-                                    value={env['KROKO_LANGUAGE'] || 'en-US'}
-                                    onChange={(e) => updateEnv('KROKO_LANGUAGE', e.target.value)}
+                                    label={t('system.env.localAiServer.stt.backend')}
+                                    value={env['LOCAL_STT_BACKEND'] || 'vosk'}
+                                    onChange={(e) => updateEnv('LOCAL_STT_BACKEND', e.target.value)}
                                     options={[
-                                        { value: 'en-US', label: 'English (US)' },
-                                        { value: 'en-GB', label: 'English (UK)' },
-                                        { value: 'es-ES', label: 'Spanish' },
-                                        { value: 'fr-FR', label: 'French' },
-                                        { value: 'de-DE', label: 'German' },
-                                    ]}
-                                />
-                            </>
-                        )}
-
-                        {/* Sherpa Settings */}
-                        {env['LOCAL_STT_BACKEND'] === 'sherpa' && (
-                            <FormInput
-                                label="Sherpa Model Path"
-                                value={env['SHERPA_MODEL_PATH'] || '/app/models/stt/sherpa-onnx-streaming-zipformer-en-2023-06-26'}
-                                onChange={(e) => updateEnv('SHERPA_MODEL_PATH', e.target.value)}
-                            />
-                        )}
-
-                        {/* Faster Whisper Settings */}
-                        {env['LOCAL_STT_BACKEND'] === 'faster_whisper' && (
-                            <>
-                                <FormSelect
-                                    label="Model Size"
-                                    value={env['FASTER_WHISPER_MODEL'] || 'base'}
-                                    onChange={(e) => updateEnv('FASTER_WHISPER_MODEL', e.target.value)}
-                                    options={[
-                                        { value: 'tiny', label: 'Tiny (Fastest)' },
-                                        { value: 'base', label: 'Base' },
-                                        { value: 'small', label: 'Small' },
-                                        { value: 'medium', label: 'Medium' },
-                                        { value: 'large-v2', label: 'Large v2' },
-                                        { value: 'large-v3', label: 'Large v3 (Best)' },
-                                    ]}
-                                />
-                                <FormSelect
-                                    label="Device"
-                                    value={env['FASTER_WHISPER_DEVICE'] || 'cpu'}
-                                    onChange={(e) => updateEnv('FASTER_WHISPER_DEVICE', e.target.value)}
-                                    options={[
-                                        { value: 'cpu', label: 'CPU' },
-                                        ...(gpuAvailable ? [{ value: 'cuda', label: 'CUDA (GPU)' }] : []),
-                                        { value: 'auto', label: 'Auto' },
-                                    ]}
-                                />
-                                <FormSelect
-                                    label="Compute Type"
-                                    value={env['FASTER_WHISPER_COMPUTE_TYPE'] || 'int8'}
-                                    onChange={(e) => updateEnv('FASTER_WHISPER_COMPUTE_TYPE', e.target.value)}
-                                    options={[
-                                        { value: 'int8', label: 'INT8 (Fastest)' },
-                                        { value: 'float16', label: 'Float16' },
-                                        { value: 'float32', label: 'Float32 (Best)' },
+                                        { value: 'vosk', label: 'Vosk (Local)' },
+                                        { value: 'kroko', label: 'Kroko (Cloud/Embedded)' },
+                                        { value: 'sherpa', label: 'Sherpa-ONNX (Local)' },
+                                        { value: 'faster_whisper', label: 'Faster Whisper (High Accuracy)' },
                                     ]}
                                 />
                                 <FormInput
-                                    label="Language"
-                                    value={env['FASTER_WHISPER_LANGUAGE'] || 'en'}
-                                    onChange={(e) => updateEnv('FASTER_WHISPER_LANGUAGE', e.target.value)}
-                                    placeholder="en"
-                                    tooltip="Language code (e.g., en, es, fr, de)"
+                                    label={t('system.env.localAiServer.stt.idleTimeout')}
+                                    type="number"
+                                    value={env['LOCAL_STT_IDLE_TIMEOUT_MS'] || '3000'}
+                                    onChange={(e) => updateEnv('LOCAL_STT_IDLE_TIMEOUT_MS', e.target.value)}
+                                    tooltip={t('system.env.localAiServer.stt.idleTimeoutTooltip')}
                                 />
-                            </>
-                        )}
+
+                                {/* Vosk Settings */}
+                                {(env['LOCAL_STT_BACKEND'] || 'vosk') === 'vosk' && (
+                                    <FormInput
+                                        label={t('system.env.localAiServer.stt.voskModel')}
+                                        value={env['LOCAL_STT_MODEL_PATH'] || '/app/models/stt/vosk-model-en-us-0.22'}
+                                        onChange={(e) => updateEnv('LOCAL_STT_MODEL_PATH', e.target.value)}
+                                    />
+                                )}
+
+                                {/* Kroko Settings */}
+                                {env['LOCAL_STT_BACKEND'] === 'kroko' && (
+                                    <>
+                                        <FormSwitch
+                                            id="kroko-embedded"
+                                            label={t('system.env.localAiServer.stt.krokoEmbedded')}
+                                            description={t('system.env.localAiServer.stt.krokoEmbeddedDesc')}
+                                            checked={isTrue(env['KROKO_EMBEDDED'])}
+                                            onChange={(e) => updateEnv('KROKO_EMBEDDED', String(e.target.checked))}
+                                        />
+                                        {isTrue(env['KROKO_EMBEDDED']) ? (
+                                            <>
+                                                <FormInput
+                                                    label={t('system.env.localAiServer.stt.krokoModel')}
+                                                    value={env['KROKO_MODEL_PATH'] || '/app/models/stt/kroko'}
+                                                    onChange={(e) => updateEnv('KROKO_MODEL_PATH', e.target.value)}
+                                                />
+                                                <FormInput
+                                                    label={t('system.env.localAiServer.stt.krokoPort')}
+                                                    type="number"
+                                                    value={env['KROKO_PORT'] || '6006'}
+                                                    onChange={(e) => updateEnv('KROKO_PORT', e.target.value)}
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FormInput
+                                                    label={t('system.env.localAiServer.stt.krokoUrl')}
+                                                    value={env['KROKO_URL'] || 'wss://app.kroko.ai/api/v1/transcripts/streaming'}
+                                                    onChange={(e) => updateEnv('KROKO_URL', e.target.value)}
+                                                />
+                                                {renderSecretInput(t('system.env.localAiServer.stt.krokoApiKey'), 'KROKO_API_KEY', t('system.env.localAiServer.stt.krokoApiKeyTooltip'))}
+                                            </>
+                                        )}
+                                        <FormSelect
+                                            label={t('system.env.localAiServer.stt.language')}
+                                            value={env['KROKO_LANGUAGE'] || 'en-US'}
+                                            onChange={(e) => updateEnv('KROKO_LANGUAGE', e.target.value)}
+                                            options={[
+                                                { value: 'en-US', label: 'English (US)' },
+                                                { value: 'en-GB', label: 'English (UK)' },
+                                                { value: 'es-ES', label: 'Spanish' },
+                                                { value: 'fr-FR', label: 'French' },
+                                                { value: 'de-DE', label: 'German' },
+                                            ]}
+                                        />
+                                    </>
+                                )}
+
+                                {/* Sherpa Settings */}
+                                {env['LOCAL_STT_BACKEND'] === 'sherpa' && (
+                                    <FormInput
+                                        label={t('system.env.localAiServer.stt.sherpaModel')}
+                                        value={env['SHERPA_MODEL_PATH'] || '/app/models/stt/sherpa-onnx-streaming-zipformer-en-2023-06-26'}
+                                        onChange={(e) => updateEnv('SHERPA_MODEL_PATH', e.target.value)}
+                                    />
+                                )}
+
+                                {/* Faster Whisper Settings */}
+                                {env['LOCAL_STT_BACKEND'] === 'faster_whisper' && (
+                                    <>
+                                        <FormSelect
+                                            label={t('system.env.localAiServer.stt.whisperModel')}
+                                            value={env['FASTER_WHISPER_MODEL'] || 'base'}
+                                            onChange={(e) => updateEnv('FASTER_WHISPER_MODEL', e.target.value)}
+                                            options={[
+                                                { value: 'tiny', label: 'Tiny (Fastest)' },
+                                                { value: 'base', label: 'Base' },
+                                                { value: 'small', label: 'Small' },
+                                                { value: 'medium', label: 'Medium' },
+                                                { value: 'large-v2', label: 'Large v2' },
+                                                { value: 'large-v3', label: 'Large v3 (Best)' },
+                                            ]}
+                                        />
+                                        <FormSelect
+                                            label={t('system.env.localAiServer.stt.whisperDevice')}
+                                            value={env['FASTER_WHISPER_DEVICE'] || 'cpu'}
+                                            onChange={(e) => updateEnv('FASTER_WHISPER_DEVICE', e.target.value)}
+                                            options={[
+                                                { value: 'cpu', label: 'CPU' },
+                                                ...(gpuAvailable ? [{ value: 'cuda', label: 'CUDA (GPU)' }] : []),
+                                                { value: 'auto', label: 'Auto' },
+                                            ]}
+                                        />
+                                        <FormSelect
+                                            label={t('system.env.localAiServer.stt.whisperCompute')}
+                                            value={env['FASTER_WHISPER_COMPUTE_TYPE'] || 'int8'}
+                                            onChange={(e) => updateEnv('FASTER_WHISPER_COMPUTE_TYPE', e.target.value)}
+                                            options={[
+                                                { value: 'int8', label: 'INT8 (Fastest)' },
+                                                { value: 'float16', label: 'Float16' },
+                                                { value: 'float32', label: 'Float32 (Best)' },
+                                            ]}
+                                        />
+                                        <FormInput
+                                            label={t('system.env.localAiServer.stt.language')}
+                                            value={env['FASTER_WHISPER_LANGUAGE'] || 'en'}
+                                            onChange={(e) => updateEnv('FASTER_WHISPER_LANGUAGE', e.target.value)}
+                                            placeholder="en"
+                                            tooltip={t('system.env.localAiServer.stt.whisperLanguageTooltip')}
+                                        />
+                                    </>
+                                )}
                             </div>
                         </ConfigCard>
                     </ConfigSection>
 
                     {/* TTS Backend Settings */}
-                    <ConfigSection title="TTS (Text-to-Speech)" description="Text-to-speech model and voice settings.">
+                    <ConfigSection title={t('system.env.localAiServer.tts.title')} description={t('system.env.localAiServer.tts.desc')}>
                         <ConfigCard>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormSelect
-                            label="TTS Backend"
-                            value={env['LOCAL_TTS_BACKEND'] || 'piper'}
-                            onChange={(e) => updateEnv('LOCAL_TTS_BACKEND', e.target.value)}
-                            options={[
-                                { value: 'piper', label: 'Piper (Local)' },
-                                { value: 'kokoro', label: 'Kokoro (Local, Premium)' },
-                                { value: 'melotts', label: 'MeloTTS (CPU-Optimized)' },
-                            ]}
-                        />
-
-                        {/* Piper Settings */}
-	                        {(env['LOCAL_TTS_BACKEND'] || 'piper') === 'piper' && (
-	                            <FormInput
-	                                label="Piper Model Path"
-	                                value={env['LOCAL_TTS_MODEL_PATH'] || '/app/models/tts/en_US-lessac-medium.onnx'}
-	                                onChange={(e) => updateEnv('LOCAL_TTS_MODEL_PATH', e.target.value)}
-	                            />
-	                        )}
-
-	                        {/* Kokoro Settings */}
-	                        {env['LOCAL_TTS_BACKEND'] === 'kokoro' && (
-	                            <>
-	                                <FormSelect
-	                                    label="Mode"
-	                                    value={kokoroMode}
-	                                    onChange={(e) => updateEnv('KOKORO_MODE', e.target.value)}
-	                                    options={[
-	                                        { value: 'local', label: 'Local (On-Premise)' },
-	                                        { value: 'api', label: 'Kokoro Web API (Cloud)' },
-	                                        ...(showHfKokoroMode ? [{ value: 'hf', label: 'HuggingFace (Auto-download, Advanced)' }] : []),
-	                                    ]}
-	                                />
-	                                <div className="col-span-full">
-	                                    <FormSwitch
-	                                        id="kokoro-advanced"
-	                                        label="Show advanced modes"
-	                                        description="Enables HuggingFace auto-download mode. Recommended only if you can tolerate runtime downloads."
-	                                        checked={showAdvancedKokoro}
-	                                        onChange={(e) => setShowAdvancedKokoro(e.target.checked)}
-	                                    />
-	                                </div>
-	                                <FormSelect
-	                                    label="Voice"
-	                                    value={env['KOKORO_VOICE'] || 'af_heart'}
-	                                    onChange={(e) => updateEnv('KOKORO_VOICE', e.target.value)}
-	                                    options={[
-                                        { value: 'af_heart', label: 'Heart (Female, American)' },
-                                        { value: 'af_bella', label: 'Bella (Female, American)' },
-                                        { value: 'af_nicole', label: 'Nicole (Female, American)' },
-                                        { value: 'af_sarah', label: 'Sarah (Female, American)' },
-                                        { value: 'af_sky', label: 'Sky (Female, American)' },
-                                        { value: 'am_adam', label: 'Adam (Male, American)' },
-                                        { value: 'am_michael', label: 'Michael (Male, American)' },
-                                        { value: 'bf_emma', label: 'Emma (Female, British)' },
-                                        { value: 'bf_isabella', label: 'Isabella (Female, British)' },
-                                        { value: 'bm_george', label: 'George (Male, British)' },
-                                        { value: 'bm_lewis', label: 'Lewis (Male, British)' },
+                                <FormSelect
+                                    label={t('system.env.localAiServer.tts.backend')}
+                                    value={env['LOCAL_TTS_BACKEND'] || 'piper'}
+                                    onChange={(e) => updateEnv('LOCAL_TTS_BACKEND', e.target.value)}
+                                    options={[
+                                        { value: 'piper', label: 'Piper (Local)' },
+                                        { value: 'kokoro', label: 'Kokoro (Local, Premium)' },
+                                        { value: 'melotts', label: 'MeloTTS (CPU-Optimized)' },
                                     ]}
                                 />
-	                                {kokoroMode === 'api' ? (
-	                                    <>
-	                                        <FormInput
-	                                            label="Kokoro Web API Base URL"
-	                                            value={env['KOKORO_API_BASE_URL'] || 'https://voice-generator.pages.dev/api/v1'}
-	                                            onChange={(e) => updateEnv('KOKORO_API_BASE_URL', e.target.value)}
-	                                        />
-	                                        {renderSecretInput(
-	                                            'Kokoro Web API Token (optional)',
-	                                            'KOKORO_API_KEY',
-	                                            'Bearer token (optional); Dashboard only shows Cloud/API option when a token is set'
-	                                        )}
-	                                    </>
-	                                ) : kokoroMode === 'hf' ? (
-	                                    <div className="text-xs text-muted-foreground">
-	                                        HuggingFace mode forces Kokoro to load via the HuggingFace cache in the container and may download
-	                                        weights/voices on first use. Rebuilding the container can trigger re-downloads unless the cache is
-	                                        persisted; for production, prefer Local mode with downloaded files.
-	                                    </div>
-	                                ) : (
-	                                    <FormInput
-	                                        label="Model Path"
-	                                        value={env['KOKORO_MODEL_PATH'] || '/app/models/tts/kokoro'}
-                                        onChange={(e) => updateEnv('KOKORO_MODEL_PATH', e.target.value)}
+
+                                {/* Piper Settings */}
+                                {(env['LOCAL_TTS_BACKEND'] || 'piper') === 'piper' && (
+                                    <FormInput
+                                        label={t('system.env.localAiServer.tts.piperModel')}
+                                        value={env['LOCAL_TTS_MODEL_PATH'] || '/app/models/tts/en_US-lessac-medium.onnx'}
+                                        onChange={(e) => updateEnv('LOCAL_TTS_MODEL_PATH', e.target.value)}
                                     />
                                 )}
-                            </>
-                        )}
 
-                        {/* MeloTTS Settings */}
-                        {env['LOCAL_TTS_BACKEND'] === 'melotts' && (
-                            <>
-                                <FormSelect
-                                    label="Voice"
-                                    value={env['MELOTTS_VOICE'] || 'EN-US'}
-                                    onChange={(e) => updateEnv('MELOTTS_VOICE', e.target.value)}
-                                    options={[
-                                        { value: 'EN-US', label: 'American English' },
-                                        { value: 'EN-BR', label: 'British English' },
-                                        { value: 'EN-AU', label: 'Australian English' },
-                                        { value: 'EN-IN', label: 'Indian English' },
-                                        { value: 'EN-Default', label: 'Default English' },
-                                    ]}
-                                />
-                                <FormSelect
-                                    label="Device"
-                                    value={env['MELOTTS_DEVICE'] || 'cpu'}
-                                    onChange={(e) => updateEnv('MELOTTS_DEVICE', e.target.value)}
-                                    options={[
-                                        { value: 'cpu', label: 'CPU' },
-                                        ...(gpuAvailable ? [{ value: 'cuda', label: 'CUDA (GPU)' }] : []),
-                                    ]}
-                                />
-                                <FormInput
-                                    label="Speed"
-                                    type="number"
-                                    step="0.1"
-                                    value={env['MELOTTS_SPEED'] || '1.0'}
-                                    onChange={(e) => updateEnv('MELOTTS_SPEED', e.target.value)}
-                                    tooltip="Speech speed (1.0 = normal)"
-                                />
-                            </>
-                        )}
+                                {/* Kokoro Settings */}
+                                {env['LOCAL_TTS_BACKEND'] === 'kokoro' && (
+                                    <>
+                                        <FormSelect
+                                            label={t('system.env.localAiServer.tts.kokoroMode')}
+                                            value={kokoroMode}
+                                            onChange={(e) => updateEnv('KOKORO_MODE', e.target.value)}
+                                            options={[
+                                                { value: 'local', label: t('system.env.localAiServer.tts.kokoroModeLocal') },
+                                                { value: 'api', label: t('system.env.localAiServer.tts.kokoroModeApi') },
+                                                ...(showHfKokoroMode ? [{ value: 'hf', label: t('system.env.localAiServer.tts.kokoroModeHf') }] : []),
+                                            ]}
+                                        />
+                                        <div className="col-span-full">
+                                            <FormSwitch
+                                                id="kokoro-advanced"
+                                                label={t('system.env.localAiServer.tts.kokoroAdvanced')}
+                                                description={t('system.env.localAiServer.tts.kokoroAdvancedDesc')}
+                                                checked={showAdvancedKokoro}
+                                                onChange={(e) => setShowAdvancedKokoro(e.target.checked)}
+                                            />
+                                        </div>
+                                        <FormSelect
+                                            label={t('system.env.localAiServer.tts.kokoroVoice')}
+                                            value={env['KOKORO_VOICE'] || 'af_heart'}
+                                            onChange={(e) => updateEnv('KOKORO_VOICE', e.target.value)}
+                                            options={[
+                                                { value: 'af_heart', label: 'Heart (Female, American)' },
+                                                { value: 'af_bella', label: 'Bella (Female, American)' },
+                                                { value: 'af_nicole', label: 'Nicole (Female, American)' },
+                                                { value: 'af_sarah', label: 'Sarah (Female, American)' },
+                                                { value: 'af_sky', label: 'Sky (Female, American)' },
+                                                { value: 'am_adam', label: 'Adam (Male, American)' },
+                                                { value: 'am_michael', label: 'Michael (Male, American)' },
+                                                { value: 'bf_emma', label: 'Emma (Female, British)' },
+                                                { value: 'bf_isabella', label: 'Isabella (Female, British)' },
+                                                { value: 'bm_george', label: 'George (Male, British)' },
+                                                { value: 'bm_lewis', label: 'Lewis (Male, British)' },
+                                            ]}
+                                        />
+                                        {kokoroMode === 'api' ? (
+                                            <>
+                                                <FormInput
+                                                    label={t('system.env.localAiServer.tts.kokoroApiUrl')}
+                                                    value={env['KOKORO_API_BASE_URL'] || 'https://voice-generator.pages.dev/api/v1'}
+                                                    onChange={(e) => updateEnv('KOKORO_API_BASE_URL', e.target.value)}
+                                                />
+                                                {renderSecretInput(
+                                                    t('system.env.localAiServer.tts.kokoroApiKey'),
+                                                    'KOKORO_API_KEY',
+                                                    t('system.env.localAiServer.tts.kokoroApiKeyTooltip')
+                                                )}
+                                            </>
+                                        ) : kokoroMode === 'hf' ? (
+                                            <div className="text-xs text-muted-foreground">
+                                                {t('system.env.localAiServer.tts.kokoroHfWarning')}
+                                            </div>
+                                        ) : (
+                                            <FormInput
+                                                label={t('system.env.localAiServer.tts.kokoroModel')}
+                                                value={env['KOKORO_MODEL_PATH'] || '/app/models/tts/kokoro-v0_19.onnx'}
+                                                onChange={(e) => updateEnv('KOKORO_MODEL_PATH', e.target.value)}
+                                            />
+                                        )}
+                                    </>
+                                )}
+
+                                {/* MeloTTS Settings */}
+                                {env['LOCAL_TTS_BACKEND'] === 'melotts' && (
+                                    <>
+                                        <FormInput
+                                            label={t('system.env.localAiServer.tts.meloModel')}
+                                            value={env['MELO_MODEL_PATH'] || '/app/models/tts/melo'}
+                                            onChange={(e) => updateEnv('MELO_MODEL_PATH', e.target.value)}
+                                        />
+                                        <FormInput
+                                            label={t('system.env.localAiServer.tts.meloConfig')}
+                                            value={env['MELO_CONFIG_PATH'] || '/app/models/tts/melo/config.json'}
+                                            onChange={(e) => updateEnv('MELO_CONFIG_PATH', e.target.value)}
+                                        />
+                                    </>
+                                )}
                             </div>
                         </ConfigCard>
                     </ConfigSection>
@@ -1687,7 +1632,7 @@ const EnvPage = () => {
                                     <div className="text-sm">
                                         <p className="font-medium text-amber-600 dark:text-amber-400">Build-time settings — require rebuild</p>
                                         <p className="text-muted-foreground mt-1">
-                                            These settings control which packages are installed during <code className="px-1 py-0.5 bg-muted rounded text-xs">docker compose build</code>. 
+                                            These settings control which packages are installed during <code className="px-1 py-0.5 bg-muted rounded text-xs">docker compose build</code>.
                                             After changing, run: <code className="px-1 py-0.5 bg-muted rounded text-xs">docker compose build --no-cache local_ai_server</code>
                                         </p>
                                     </div>
@@ -1718,7 +1663,7 @@ const EnvPage = () => {
                                         onChange={(e) => updateEnv('INCLUDE_FASTER_WHISPER', e.target.checked ? 'true' : 'false')}
                                     />
                                 </div>
-                                
+
                                 <h4 className="text-sm font-medium text-muted-foreground pt-4">TTS Backends</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormSwitch
@@ -1743,7 +1688,7 @@ const EnvPage = () => {
                                         onChange={(e) => updateEnv('INCLUDE_MELOTTS', e.target.checked ? 'true' : 'false')}
                                     />
                                 </div>
-                                
+
                                 <h4 className="text-sm font-medium text-muted-foreground pt-4">LLM & Other</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormSwitch

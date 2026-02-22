@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowUpCircle, RefreshCw, Play, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { ConfigSection } from '../../components/ui/ConfigSection';
@@ -59,6 +60,7 @@ interface UpdateHistoryResponse {
 }
 
 const UpdatesPage = () => {
+  const { t } = useTranslation();
   const { confirm } = useConfirmDialog();
   const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<UpdatesStatus | null>(null);
@@ -119,7 +121,7 @@ const UpdatesPage = () => {
       const def = pickDefaultBranch(branchesRes.data.branches || [], opts?.localBranch ?? status?.local?.branch);
       setSelectedBranch(def);
     } catch (err: any) {
-      setBranchesError(err.response?.data?.detail || err.message || 'Failed to load branches');
+      setBranchesError(err.response?.data?.detail || err.message || t('updates.errors.loadBranches'));
       setBranches([]);
     }
   };
@@ -160,7 +162,7 @@ const UpdatesPage = () => {
         loadBranches({ localBranch: localDef });
       }
     } catch (err: any) {
-      setStatusError(err.response?.data?.detail || err.message || 'Failed to check updates');
+      setStatusError(err.response?.data?.detail || err.message || t('updates.errors.checkUpdates'));
       setInitialized(false);
     } finally {
       setStatusLoading(false);
@@ -174,7 +176,7 @@ const UpdatesPage = () => {
       const res = await axios.get<UpdateHistoryResponse>('/api/system/updates/history', { params: { limit: 10 } });
       setHistory(res.data.jobs || []);
     } catch (err: any) {
-      setHistoryError(err.response?.data?.detail || err.message || 'Failed to load update history');
+      setHistoryError(err.response?.data?.detail || err.message || t('updates.errors.loadHistory'));
       setHistory([]);
     } finally {
       setHistoryLoading(false);
@@ -210,7 +212,7 @@ const UpdatesPage = () => {
       setCopiedJobId(job.job_id);
       setTimeout(() => setCopiedJobId(null), 2000);
     } catch (e) {
-      window.prompt('Copy recovery commands:', text);
+      window.prompt(t('updates.recovery.copyPrompt'), text);
     }
   };
 
@@ -221,9 +223,9 @@ const UpdatesPage = () => {
     const preBranch = sourceJob?.pre_update_branch || 'unknown';
     const backupRel = sourceJob?.backup_dir_rel || 'unknown';
     const ok = await confirm({
-      title: 'Start Rollback?',
-      description: `Source job: ${fromJobId}\nPre-update branch: ${preBranch}\nBackup: ${backupRel}\n\nThis will checkout the pre-update branch and restore operator config from the backup. Services may rebuild/restart.`,
-      confirmText: 'Start Rollback',
+      title: t('updates.dialogs.rollback.title'),
+      description: t('updates.dialogs.rollback.desc', { jobId: fromJobId, branch: preBranch, backup: backupRel }),
+      confirmText: t('updates.dialogs.rollback.confirm'),
       variant: 'destructive'
     });
     if (!ok) return;
@@ -236,7 +238,7 @@ const UpdatesPage = () => {
       localStorage.setItem('aava_update_job_id', id);
       setRunning(true);
     } catch (err: any) {
-      setRunError(err.response?.data?.detail || err.message || 'Failed to start rollback');
+      setRunError(err.response?.data?.detail || err.message || t('updates.errors.startRollback'));
     }
   };
 
@@ -249,7 +251,7 @@ const UpdatesPage = () => {
       });
       setPlan(res.data.plan);
     } catch (err: any) {
-      setPlanError(err.response?.data?.detail || err.message || 'Failed to compute update plan');
+      setPlanError(err.response?.data?.detail || err.message || t('updates.errors.computePlan'));
     } finally {
       setPlanLoading(false);
     }
@@ -272,27 +274,28 @@ const UpdatesPage = () => {
   const runUpdate = async () => {
     setRunError(null);
     if (!initialized) {
-      setRunError('Click “Check updates” first.');
+      setRunError(t('updates.proceed.clickCheckFirst'));
       return;
     }
     if (!plan) {
-      setRunError('Wait for the preview to load, then proceed.');
+      setRunError(t('updates.proceed.waitForPreview'));
       return;
     }
 
     const rebuild = plan.services_rebuild?.length ? plan.services_rebuild.join(', ') : 'none';
     const restart = plan.services_restart?.length ? plan.services_restart.join(', ') : 'none';
-    const skipped =
-      plan.skipped_services && Object.keys(plan.skipped_services).length
-        ? Object.entries(plan.skipped_services)
-            .map(([k, v]) => `${k}:${v}`)
-            .join(', ')
-        : 'none';
 
     const ok = await confirm({
-      title: 'Proceed with Update?',
-      description: `Target: ${targetRef || 'unknown'}\nUpdate UI: ${includeUI ? 'yes' : 'no'}\nUpdate CLI: ${updateCliHost ? 'yes' : 'no'}\nWill rebuild: ${rebuild}\nWill restart: ${restart}\nFiles changed: ${plan.changed_file_count ?? 'unknown'}\n\nThe updater will stash local changes first. Services may restart during update.`,
-      confirmText: 'Start Update',
+      title: t('updates.dialogs.update.title'),
+      description: t('updates.dialogs.update.desc', {
+        target: targetRef || t('updates.status.unknown'),
+        ui: includeUI ? t('common.yes') : t('common.no'),
+        cli: updateCliHost ? t('common.yes') : t('common.no'),
+        rebuild,
+        restart,
+        files: plan.changed_file_count ?? t('updates.status.unknown')
+      }),
+      confirmText: t('updates.dialogs.update.confirm'),
       variant: 'default'
     });
     if (!ok) return;
@@ -310,7 +313,7 @@ const UpdatesPage = () => {
       localStorage.setItem('aava_update_job_id', id);
       setRunning(true);
     } catch (err: any) {
-      setRunError(err.response?.data?.detail || err.message || 'Failed to start update');
+      setRunError(err.response?.data?.detail || err.message || t('updates.errors.startUpdate'));
     }
   };
 
@@ -346,11 +349,10 @@ const UpdatesPage = () => {
             setRunning(false);
             setJob(null);
             setJobId(null);
-            localStorage.removeItem('aava_update_job_id');
-            setRunError('Update job not found (may be stale or pruned).');
+            setRunError(t('updates.proceed.jobNotFound'));
             return;
           }
-          setRunError(err.response?.data?.detail || err.message || 'Failed to read update job');
+          setRunError(err.response?.data?.detail || err.message || t('updates.proceed.failedToReadJob'));
         }
       }
     };
@@ -363,15 +365,15 @@ const UpdatesPage = () => {
   }, [jobId]);
 
   const previewLabel = useMemo(() => {
-    if (!initialized) return 'Not checked';
-    if (!plan) return planLoading ? 'Loading preview…' : 'Preview unavailable';
-    if (plan.would_abort) return 'Blocked (dirty tree)';
-    if (plan.relation === 'behind') return 'Update available';
-    if (plan.relation === 'equal') return 'Up to date';
-    if (plan.relation === 'ahead') return 'Local ahead';
-    if (plan.relation === 'diverged') return 'Diverged';
-    return plan.relation || 'Unknown';
-  }, [initialized, plan, planLoading]);
+    if (!initialized) return t('updates.status.notChecked');
+    if (!plan) return planLoading ? t('updates.status.loadingPreview') : t('updates.status.previewUnavailable');
+    if (plan.would_abort) return t('updates.status.blockedDirty');
+    if (plan.relation === 'behind') return t('updates.status.updateAvailable');
+    if (plan.relation === 'equal') return t('updates.status.upToDate');
+    if (plan.relation === 'ahead') return t('updates.status.localAhead');
+    if (plan.relation === 'diverged') return t('updates.status.diverged');
+    return plan.relation || t('updates.status.unknown');
+  }, [initialized, plan, planLoading, t]);
 
   const previewIcon = useMemo(() => {
     if (!initialized) return <AlertTriangle className="w-4 h-4 text-muted-foreground" />;
@@ -572,7 +574,7 @@ const UpdatesPage = () => {
                 placeholder="auto (detect existing or install to /usr/local/bin/agent)"
                 className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm font-mono"
               />
-              <div className="mt-1 text-xs text-muted-foreground">Leave blank for auto-detect + default install.</div>
+              <div className="mt-1 text-xs text-muted-foreground">{t('updates.preview.cliPathNotice')}</div>
             </div>
           )}
 
@@ -590,12 +592,12 @@ const UpdatesPage = () => {
                   <div className="mt-1 font-mono text-xs">{plan.services_restart?.length ? plan.services_restart.join(', ') : 'none'}</div>
                 </div>
                 <div className="p-3 border border-border rounded-lg">
-                  <div className="text-xs text-muted-foreground">Skipped</div>
+                  <div className="text-xs text-muted-foreground">{t('updates.preview.skipped')}</div>
                   <div className="mt-1 font-mono text-xs">
                     {plan.skipped_services && Object.keys(plan.skipped_services).length
                       ? Object.entries(plan.skipped_services)
-                          .map(([k, v]) => `${k}:${v}`)
-                          .join(', ')
+                        .map(([k, v]) => `${k}:${v}`)
+                        .join(', ')
                       : 'none'}
                   </div>
                 </div>
@@ -744,11 +746,11 @@ const UpdatesPage = () => {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-muted-foreground">
-                            <RefreshCw className="w-4 h-4 animate-spin" /> {st || 'unknown'}
+                            <RefreshCw className="w-4 h-4 animate-spin" /> {st || t('updates.history.table.unknown')}
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs">{h.include_ui ? 'yes' : 'no'}</td>
+                      <td className="px-3 py-2 text-xs">{h.include_ui ? t('common.yes') : t('common.no')}</td>
                       <td className="px-3 py-2 font-mono text-xs">{rebuild || '-'}</td>
                       <td className="px-3 py-2 font-mono text-xs">{restart || '-'}</td>
                       <td className="px-3 py-2 font-mono text-xs">{files !== '' ? String(files) : '-'}</td>
@@ -780,7 +782,7 @@ const UpdatesPage = () => {
               ) : (
                 <tr>
                   <td colSpan={8} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                    {historyLoading ? 'Loading…' : 'No recent runs yet.'}
+                    {historyLoading ? t('common.loading') : t('updates.history.noRuns')}
                   </td>
                 </tr>
               )}

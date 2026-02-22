@@ -10,8 +10,10 @@ import { ConfigSection } from '../components/ui/ConfigSection';
 import { ConfigCard } from '../components/ui/ConfigCard';
 import { Modal } from '../components/ui/Modal';
 import ContextForm from '../components/config/ContextForm';
+import { useTranslation } from 'react-i18next';
 
 const ContextsPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ const ContextsPage = () => {
         } catch (err) {
             console.error('Failed to load config', err);
             const status = (err as any)?.response?.status;
-            
+
             if (status === 401) {
                 setError('Not authenticated. Please refresh and log in again.');
                 setYamlError(null);
@@ -195,9 +197,9 @@ const ContextsPage = () => {
 
             if (status === 'warning') {
                 const confirmForce = await confirm({
-                    title: 'Force Restart?',
-                    description: `${response.data.message} Do you want to force restart anyway? This may disconnect active calls.`,
-                    confirmText: 'Force Restart',
+                    title: t('contexts.restart.confirmTitleForce'),
+                    description: t('contexts.restart.confirmDescForce', { message: response.data.message }),
+                    confirmText: t('contexts.restart.btnForce'),
                     variant: 'destructive'
                 });
                 if (confirmForce) {
@@ -279,9 +281,9 @@ const ContextsPage = () => {
 
     const handleDeleteContext = async (name: string) => {
         const confirmed = await confirm({
-            title: 'Delete Context?',
-            description: `Are you sure you want to delete context "${name}"?`,
-            confirmText: 'Delete',
+            title: t('contexts.deleteConfirm.title'),
+            description: t('contexts.deleteConfirm.desc', { name }),
+            confirmText: t('contexts.deleteConfirm.confirm'),
             variant: 'destructive'
         });
         if (!confirmed) return;
@@ -297,11 +299,11 @@ const ContextsPage = () => {
         if (contextForm.provider) {
             const provider = config.providers?.[contextForm.provider];
             if (!provider) {
-                toast.error(`Provider '${contextForm.provider}' does not exist.`);
+                toast.error(t('contexts.errors.providerNotFound', { name: contextForm.provider }));
                 return;
             }
             if (provider.enabled === false) {
-                toast.error(`Provider '${contextForm.provider}' is disabled. Please enable it or select another provider.`);
+                toast.error(t('contexts.errors.providerDisabled', { name: contextForm.provider }));
                 return;
             }
         }
@@ -310,7 +312,7 @@ const ContextsPage = () => {
         if (contextForm.pipeline) {
             const pipeline = config.pipelines?.[contextForm.pipeline];
             if (!pipeline) {
-                toast.error(`Pipeline '${contextForm.pipeline}' does not exist. Please select a valid pipeline or leave blank to use the active pipeline.`);
+                toast.error(t('contexts.errors.pipelineNotFound', { name: contextForm.pipeline }));
                 return;
             }
         }
@@ -328,7 +330,7 @@ const ContextsPage = () => {
         });
 
         if (isNewContext && newConfig.contexts[name]) {
-            toast.error('Context already exists');
+            toast.error(t('contexts.errors.alreadyExists'));
             return;
         }
 
@@ -376,17 +378,17 @@ const ContextsPage = () => {
                 <div className="bg-orange-500/15 border border-orange-500/30 text-yellow-700 dark:text-yellow-400 p-4 rounded-md flex items-center justify-between">
                     <div className="flex items-center">
                         <AlertCircle className="w-5 h-5 mr-2" />
-                        {applyMethod === 'hot_reload' ? 'Changes saved. Apply to make them active.' : 'Changes saved. Restart required to make them active.'}
+                        {applyMethod === 'hot_reload' ? t('contexts.restart.hotReloadWarning') : t('contexts.restart.warning')}
                     </div>
                     <button
                         onClick={async () => {
                             const msg = applyMethod === 'hot_reload'
-                                ? 'Apply changes via hot reload now? Active calls should continue, new calls use updated config.'
-                                : 'Restart AI Engine now? This may disconnect active calls.';
+                                ? t('contexts.restart.confirmDescHotReload')
+                                : t('contexts.restart.confirmDescRestart');
                             const confirmed = await confirm({
-                                title: applyMethod === 'hot_reload' ? 'Apply Changes?' : 'Restart AI Engine?',
+                                title: applyMethod === 'hot_reload' ? t('contexts.restart.confirmTitleHotReload') : t('contexts.restart.confirmTitleRestart'),
                                 description: msg,
-                                confirmText: applyMethod === 'hot_reload' ? 'Apply' : 'Restart',
+                                confirmText: applyMethod === 'hot_reload' ? t('contexts.restart.btnHotReload') : t('contexts.restart.btnReload'),
                                 variant: 'default'
                             });
                             if (confirmed) {
@@ -401,7 +403,7 @@ const ContextsPage = () => {
                         ) : (
                             <RefreshCw className="w-3 h-3 mr-1.5" />
                         )}
-                        {restartingEngine ? 'Applying...' : applyMethod === 'hot_reload' ? 'Apply Changes' : 'Restart AI Engine'}
+                        {restartingEngine ? t('contexts.restart.reloading') : applyMethod === 'hot_reload' ? t('contexts.restart.hotReload') : t('contexts.restart.reload')}
                     </button>
                 </div>
             )}
@@ -423,9 +425,9 @@ const ContextsPage = () => {
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Contexts</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('contexts.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Define AI personalities and behaviors for different use cases.
+                        {t('contexts.description')}
                     </p>
                 </div>
                 <button
@@ -433,11 +435,11 @@ const ContextsPage = () => {
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Context
+                    {t('contexts.addContext')}
                 </button>
             </div>
 
-            <ConfigSection title="Defined Contexts" description="Manage conversation contexts and their settings.">
+            <ConfigSection title={t('contexts.sectionTitle')} description={t('contexts.sectionDesc')}>
                 <div className="grid grid-cols-1 gap-4">
                     {Object.entries(config.contexts || {}).map(([name, contextData]: [string, any]) => (
                         <ConfigCard key={name} className="group relative hover:border-primary/50 transition-colors">
@@ -483,7 +485,7 @@ const ContextsPage = () => {
 
                             <div className="space-y-3 text-sm">
                                 <div className="bg-secondary/30 p-3 rounded-md">
-                                    <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block mb-1">Greeting</span>
+                                    <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block mb-1">{t('contexts.greetingInfo')}</span>
                                     <p className="text-foreground/90 italic">"{contextData.greeting}"</p>
                                 </div>
 
@@ -497,7 +499,7 @@ const ContextsPage = () => {
                                     ];
                                     return allTools.length > 0 ? (
                                         <div>
-                                            <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block mb-2">Enabled Tools</span>
+                                            <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block mb-2">{t('contexts.enabledTools')}</span>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {allTools.map((tool, idx) => (
                                                     <span key={`${tool.phase}-${tool.name}-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-accent text-accent-foreground font-medium border border-accent-foreground/10">
@@ -516,7 +518,7 @@ const ContextsPage = () => {
                     ))}
                     {Object.keys(config.contexts || {}).length === 0 && (
                         <div className="col-span-full p-8 border border-dashed rounded-lg text-center text-muted-foreground">
-                            No contexts configured. Click "Add Context" to create one.
+                            {t('contexts.noContexts')}
                         </div>
                     )}
                 </div>
@@ -525,7 +527,7 @@ const ContextsPage = () => {
             <Modal
                 isOpen={!!editingContext}
                 onClose={() => setEditingContext(null)}
-                title={isNewContext ? 'Add Context' : 'Edit Context'}
+                title={isNewContext ? t('contexts.modal.addTitle') : t('contexts.modal.editTitle')}
                 size="lg"
                 footer={
                     <>
@@ -533,13 +535,13 @@ const ContextsPage = () => {
                             onClick={() => setEditingContext(null)}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                         >
-                            Cancel
+                            {t('contexts.actions.cancel')}
                         </button>
                         <button
                             onClick={handleSaveContext}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                         >
-                            Save Changes
+                            {t('contexts.actions.save')}
                         </button>
                     </>
                 }
@@ -553,7 +555,7 @@ const ContextsPage = () => {
                     toolCatalogByName={toolCatalogByName}
                     availableProfiles={availableProfiles}
                     defaultProfileName={defaultProfileName}
-                    httpTools={{...config.tools, ...config.in_call_tools}}
+                    httpTools={{ ...config.tools, ...config.in_call_tools }}
                     onChange={setContextForm}
                     isNew={isNewContext}
                 />

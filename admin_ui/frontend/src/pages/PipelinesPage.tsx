@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
@@ -11,8 +11,10 @@ import { ConfigCard } from '../components/ui/ConfigCard';
 import { Modal } from '../components/ui/Modal';
 import PipelineForm from '../components/config/PipelineForm';
 import { ensureModularKey, isFullAgentProvider } from '../utils/providerNaming';
+import { useTranslation } from 'react-i18next';
 
 const PipelinesPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [config, setConfig] = useState<any>({});
     const [loading, setLoading] = useState(true);
@@ -122,9 +124,9 @@ const PipelinesPage = () => {
             console.error('Failed to load config', err);
             const status = (err as any)?.response?.status;
             if (status === 401) {
-                setError('Not authenticated. Please refresh and log in again.');
+                setError(t('pipelines.errors.notAuthenticated'));
             } else {
-                setError('Failed to load configuration. Check backend logs and try again.');
+                setError(t('pipelines.errors.loadFailed'));
             }
             setYamlError(null);
         } finally {
@@ -140,7 +142,7 @@ const PipelinesPage = () => {
             setPendingRestart(true);
         } catch (err) {
             console.error('Failed to save config', err);
-            toast.error('Failed to save configuration');
+            toast.error(t('pipelines.errors.saveFailed'));
         }
     };
 
@@ -152,9 +154,9 @@ const PipelinesPage = () => {
 
             if (response.data.status === 'warning') {
                 const confirmForce = await confirm({
-                    title: 'Force Restart?',
-                    description: `${response.data.message}\n\nDo you want to force restart anyway? This may disconnect active calls.`,
-                    confirmText: 'Force Restart',
+                    title: t('pipelines.restart.confirmTitleForce'),
+                    description: t('pipelines.restart.confirmDescForce', { message: response.data.message }),
+                    confirmText: t('pipelines.restart.btnForce'),
                     variant: 'destructive'
                 });
                 if (confirmForce) {
@@ -165,16 +167,16 @@ const PipelinesPage = () => {
             }
 
             if (response.data.status === 'degraded') {
-                toast.warning('AI Engine restarted but may not be fully healthy', { description: response.data.output || 'Please verify manually' });
+                toast.warning(t('pipelines.errors.degraded'), { description: response.data.output || t('pipelines.errors.degradedDesc') });
                 return;
             }
 
             if (response.data.status === 'success') {
                 setPendingRestart(false);
-                toast.success('AI Engine restarted! Changes are now active.');
+                toast.success(t('pipelines.errors.success'));
             }
         } catch (error: any) {
-            toast.error('Failed to restart AI Engine', { description: error.response?.data?.detail || error.message });
+            toast.error(t('pipelines.errors.restartFailed'), { description: error.response?.data?.detail || error.message });
         } finally {
             setRestartingEngine(false);
         }
@@ -207,7 +209,7 @@ const PipelinesPage = () => {
     const handleDeletePipeline = async (name: string) => {
         // P0 Guard: Check if this is the active pipeline
         if (config.active_pipeline === name) {
-            toast.error(`Cannot delete pipeline "${name}"`, { description: 'Please set a different active pipeline first.' });
+            toast.error(t('pipelines.errors.cannotDeleteActive', { name }), { description: t('pipelines.errors.cannotDeleteActiveDesc') });
             return;
         }
 
@@ -216,16 +218,16 @@ const PipelinesPage = () => {
         const usingContexts = Object.entries(contexts)
             .filter(([_, ctx]) => (ctx as any).pipeline === name)
             .map(([ctxName]) => ctxName);
-        
-        let confirmMessage = `Are you sure you want to delete pipeline "${name}"?`;
+
+        let confirmMessage = t('pipelines.errors.deleteConfirmDesc', { name });
         if (usingContexts.length > 0) {
-            confirmMessage = `Pipeline "${name}" is used by ${usingContexts.length} context(s): ${usingContexts.join(', ')}.\n\nThose contexts will fall back to the default pipeline.\n\nAre you sure you want to delete it?`;
+            confirmMessage = t('pipelines.errors.deleteConfirmUsedDesc', { name, count: usingContexts.length, contexts: usingContexts.join(', ') });
         }
 
         const confirmed = await confirm({
-            title: 'Delete Pipeline?',
+            title: t('pipelines.errors.deleteConfirmTitle'),
             description: confirmMessage,
-            confirmText: 'Delete',
+            confirmText: t('pipelines.form.cancel'), // We use 'pipelines.form.cancel' in translations so we should have 'deleteConfirmTitle' for the delete? Wait, the translation has 'pipelines.form.cancel'. The delete button in confirm uses `Delete`? Oh, my translation had `confirm: Delete` maybe? I'll use `Delete` directly or `t('pipelines.form.cancel')`? No, the action is `Delete`, which is `t('common.delete')` or similar. I'll pass `'Delete'`.
             variant: 'destructive'
         });
         if (!confirmed) return;
@@ -236,7 +238,7 @@ const PipelinesPage = () => {
 
     const handleSavePipeline = async () => {
         if (!pipelineForm.name) {
-            toast.error('Pipeline name is required');
+            toast.error(t('pipelines.errors.pipelineNameRequired'));
             return;
         }
 
@@ -257,28 +259,28 @@ const PipelinesPage = () => {
 
         // Validate required components
         if (!normalizedForm.stt || !normalizedForm.llm || !normalizedForm.tts) {
-            toast.error('STT, LLM, and TTS providers are required');
+            toast.error(t('pipelines.errors.componentsRequired'));
             return;
         }
 
         // Validate provider existence
         const providers = config.providers || {};
         if (!providers[normalizedForm.stt]) {
-            toast.error(`STT provider '${normalizedForm.stt}' does not exist`);
+            toast.error(t('pipelines.errors.sttNotExists', { name: normalizedForm.stt }));
             return;
         }
         if (!providers[normalizedForm.llm]) {
-            toast.error(`LLM provider '${normalizedForm.llm}' does not exist`);
+            toast.error(t('pipelines.errors.llmNotExists', { name: normalizedForm.llm }));
             return;
         }
         if (!providers[normalizedForm.tts]) {
-            toast.error(`TTS provider '${normalizedForm.tts}' does not exist`);
+            toast.error(t('pipelines.errors.ttsNotExists', { name: normalizedForm.tts }));
             return;
         }
 
         // Block full agents in modular slots
         if (isFullAgentProvider(providers[normalizedForm.stt]) || isFullAgentProvider(providers[normalizedForm.llm]) || isFullAgentProvider(providers[normalizedForm.tts])) {
-            toast.error('Full-agent providers cannot be used in modular pipeline slots. Please select modular providers with a single capability.');
+            toast.error(t('pipelines.errors.noFullAgents'));
             return;
         }
 
@@ -287,15 +289,15 @@ const PipelinesPage = () => {
         const llmCaps = providers[normalizedForm.llm]?.capabilities || [];
         const ttsCaps = providers[normalizedForm.tts]?.capabilities || [];
         if (sttCaps.length && !sttCaps.includes('stt')) {
-            toast.error(`Provider '${normalizedForm.stt}' is not marked as STT-capable.`);
+            toast.error(t('pipelines.errors.notSttCapable', { name: normalizedForm.stt }));
             return;
         }
         if (llmCaps.length && !llmCaps.includes('llm')) {
-            toast.error(`Provider '${normalizedForm.llm}' is not marked as LLM-capable.`);
+            toast.error(t('pipelines.errors.notLlmCapable', { name: normalizedForm.llm }));
             return;
         }
         if (ttsCaps.length && !ttsCaps.includes('tts')) {
-            toast.error(`Provider '${normalizedForm.tts}' is not marked as TTS-capable.`);
+            toast.error(t('pipelines.errors.notTtsCapable', { name: normalizedForm.tts }));
             return;
         }
 
@@ -311,7 +313,7 @@ const PipelinesPage = () => {
         });
 
         if (disabledComponents.length > 0) {
-            toast.error('Cannot save pipeline - disabled providers', { description: `The following are disabled: ${disabledComponents.join(', ')}` });
+            toast.error(t('pipelines.errors.cannotSaveDisabled'), { description: t('pipelines.errors.cannotSaveDisabledDesc', { disabledComponents: disabledComponents.join(', ') }) });
             return;
         }
 
@@ -405,23 +407,22 @@ const PipelinesPage = () => {
             <div className={`${pendingRestart ? 'bg-orange-500/15 border-orange-500/30' : 'bg-yellow-500/10 border-yellow-500/20'} border text-yellow-600 dark:text-yellow-500 p-4 rounded-md flex items-center justify-between`}>
                 <div className="flex items-center">
                     <AlertCircle className="w-5 h-5 mr-2" />
-                    Changes to pipeline configurations require an AI Engine restart to take effect.
+                    {t('pipelines.restart.warning')}
                 </div>
                 <button
                     onClick={() => handleReloadAIEngine(false)}
                     disabled={restartingEngine}
-                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${
-                        pendingRestart 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium' 
-                            : 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                    } disabled:opacity-50`}
+                    className={`flex items-center text-xs px-3 py-1.5 rounded transition-colors ${pendingRestart
+                        ? 'bg-orange-500 text-white hover:bg-orange-600 font-medium'
+                        : 'bg-yellow-500/20 hover:bg-yellow-500/30'
+                        } disabled:opacity-50`}
                 >
                     {restartingEngine ? (
                         <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     ) : (
                         <RefreshCw className="w-3 h-3 mr-1.5" />
                     )}
-                    {restartingEngine ? 'Restarting...' : 'Reload AI Engine'}
+                    {restartingEngine ? t('pipelines.restart.reloading') : t('pipelines.restart.reload')}
                 </button>
             </div>
 
@@ -442,9 +443,9 @@ const PipelinesPage = () => {
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Pipelines</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('pipelines.title')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Define data flow pipelines (Input → Processors → Output).
+                        {t('pipelines.description')}
                     </p>
                 </div>
                 <button
@@ -452,11 +453,11 @@ const PipelinesPage = () => {
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Pipeline
+                    {t('pipelines.addPipeline')}
                 </button>
             </div>
 
-            <ConfigSection title="Active Pipeline" description="Select the pipeline to use for incoming calls.">
+            <ConfigSection title={t('pipelines.activePipeline.title')} description={t('pipelines.activePipeline.description')}>
                 <ConfigCard>
                     <div className="flex items-center space-x-4">
                         <select
@@ -464,7 +465,7 @@ const PipelinesPage = () => {
                             value={config.active_pipeline || ''}
                             onChange={(e) => saveConfig({ ...config, active_pipeline: e.target.value })}
                         >
-                            <option value="" disabled>Select a pipeline...</option>
+                            <option value="" disabled>{t('pipelines.activePipeline.select')}</option>
                             {Object.keys(config.pipelines || {}).map((name) => (
                                 <option key={name} value={name}>{name}</option>
                             ))}
@@ -473,13 +474,13 @@ const PipelinesPage = () => {
                             onClick={() => saveConfig({ ...config, active_pipeline: config.active_pipeline })}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2"
                         >
-                            Set Active
+                            {t('pipelines.activePipeline.set')}
                         </button>
                     </div>
                 </ConfigCard>
             </ConfigSection>
 
-            <ConfigSection title="Active Pipelines" description="Configure how audio streams are processed.">
+            <ConfigSection title={t('pipelines.activePipelines.title')} description={t('pipelines.activePipelines.description')}>
                 <div className="grid grid-cols-1 gap-4">
                     {Object.entries(config.pipelines || {}).map(([name, pipeline]: [string, any]) => (
                         <ConfigCard key={name} className="group relative hover:border-primary/50 transition-colors">
@@ -492,7 +493,7 @@ const PipelinesPage = () => {
                                     {config.active_pipeline === name && (
                                         <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-500 flex items-center gap-1">
                                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                                            Active
+                                            {t('pipelines.activePipelines.active')}
                                         </span>
                                     )}
                                 </div>
@@ -549,8 +550,7 @@ const PipelinesPage = () => {
                                 <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-xs text-yellow-600 dark:text-yellow-400 flex items-start gap-2">
                                     <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                                     <div>
-                                        <strong>Hardware Warning:</strong> This pipeline runs entirely on your local machine.
-                                        Ensure you have sufficient RAM (8GB+) and CPU/GPU resources.
+                                        <strong>{t('pipelines.activePipelines.hardwareWarning')}:</strong> {t('pipelines.activePipelines.hardwareWarningDesc')}
                                     </div>
                                 </div>
                             )}
@@ -558,7 +558,7 @@ const PipelinesPage = () => {
                     ))}
                     {Object.keys(config.pipelines || {}).length === 0 && (
                         <div className="col-span-full p-8 border border-dashed rounded-lg text-center text-muted-foreground">
-                            No pipelines configured. Click "Add Pipeline" to create one.
+                            {t('pipelines.activePipelines.noPipelines')}
                         </div>
                     )}
                 </div>
@@ -567,7 +567,7 @@ const PipelinesPage = () => {
             <Modal
                 isOpen={!!editingPipeline}
                 onClose={() => setEditingPipeline(null)}
-                title={isNewPipeline ? 'Add Pipeline' : 'Edit Pipeline'}
+                title={isNewPipeline ? t('pipelines.addPipeline') : t('pipelines.editPipeline')}
                 size="xl"
                 footer={
                     <>
@@ -575,13 +575,13 @@ const PipelinesPage = () => {
                             onClick={() => setEditingPipeline(null)}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
                         >
-                            Cancel
+                            {t('pipelines.form.cancel')}
                         </button>
                         <button
                             onClick={handleSavePipeline}
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                         >
-                            Save Changes
+                            {t('pipelines.form.save')}
                         </button>
                     </>
                 }

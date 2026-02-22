@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ConfigCard } from '../../components/ui/ConfigCard';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 interface ModelInfo {
     id: string;
@@ -86,6 +87,7 @@ interface RuntimeGpuStatus {
 }
 
 const ModelsPage = () => {
+    const { t } = useTranslation();
     const { confirm } = useConfirmDialog();
     const [catalog, setCatalog] = useState<{ stt: ModelInfo[]; tts: ModelInfo[]; llm: ModelInfo[] }>({ stt: [], tts: [], llm: [] });
     const [installedModels, setInstalledModels] = useState<InstalledModel[]>([]);
@@ -98,7 +100,7 @@ const ModelsPage = () => {
     const [selectedTab, setSelectedTab] = useState<'installed' | 'stt' | 'tts' | 'llm'>('installed');
     const [selectedRegion, setSelectedRegion] = useState<string>('all');
     const [toasts, setToasts] = useState<Toast[]>([]);
-    
+
     // Active models state (from Local AI Server)
     const [activeModels, setActiveModels] = useState<ActiveModels | null>(null);
     const [availableModels, setAvailableModels] = useState<AvailableModels | null>(null);
@@ -110,6 +112,7 @@ const ModelsPage = () => {
     const [envConfig, setEnvConfig] = useState<Record<string, string>>({});
     const [forceIncompatibleApply, setForceIncompatibleApply] = useState(false);
     const [runtimeGpu, setRuntimeGpu] = useState<RuntimeGpuStatus | null>(null);
+
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning') => {
         const id = Date.now();
@@ -135,10 +138,10 @@ const ModelsPage = () => {
             if (installedRes.data) {
                 // Flatten the nested response into a single array
                 const models: InstalledModel[] = [];
-                
+
                 // Process STT models (grouped by backend)
                 if (installedRes.data.stt) {
-                    Object.entries(installedRes.data.stt).forEach(([backend, backendModels]: [string, any]) => {
+                    Object.entries(installedRes.data.stt).forEach(([_backend, backendModels]: [string, any]) => {
                         if (Array.isArray(backendModels)) {
                             backendModels.forEach((m: any) => {
                                 models.push({
@@ -151,10 +154,10 @@ const ModelsPage = () => {
                         }
                     });
                 }
-                
+
                 // Process TTS models (grouped by backend)
                 if (installedRes.data.tts) {
-                    Object.entries(installedRes.data.tts).forEach(([backend, backendModels]: [string, any]) => {
+                    Object.entries(installedRes.data.tts).forEach(([_backend, backendModels]: [string, any]) => {
                         if (Array.isArray(backendModels)) {
                             backendModels.forEach((m: any) => {
                                 models.push({
@@ -167,7 +170,7 @@ const ModelsPage = () => {
                         }
                     });
                 }
-                
+
                 // Process LLM models (flat array)
                 if (Array.isArray(installedRes.data.llm)) {
                     installedRes.data.llm.forEach((m: any) => {
@@ -179,7 +182,7 @@ const ModelsPage = () => {
                         });
                     });
                 }
-                
+
                 setInstalledModels(models);
             }
         } catch (err) {
@@ -286,7 +289,7 @@ const ModelsPage = () => {
             const jobId = startRes.data?.job_id;
             const diskWarning = startRes.data?.disk_warning;
             if (diskWarning) showToast(diskWarning, 'warning');
-            showToast(`Started downloading ${model.name}`, 'success');
+            showToast(t('models.messages.startedDownload', { name: model.name }), 'success');
             // Poll for completion with progress updates
             const pollDownload = async () => {
                 try {
@@ -304,14 +307,14 @@ const ModelsPage = () => {
                             current_file: res.data.current_file || ''
                         });
                     }
-                    
+
                     if (res.data.completed) {
-                        showToast(`${model.name} downloaded successfully!`, 'success');
+                        showToast(t('models.messages.downloadSuccess', { name: model.name }), 'success');
                         setDownloadingModel(null);
                         setDownloadProgress(null);
                         fetchModels();
                     } else if (res.data.error) {
-                        showToast(`Download failed: ${res.data.error}`, 'error');
+                        showToast(t('models.messages.downloadFailed', { error: res.data.error }), 'error');
                         setDownloadingModel(null);
                         setDownloadProgress(null);
                     } else if (res.data.running) {
@@ -327,7 +330,7 @@ const ModelsPage = () => {
             setTimeout(pollDownload, 500);
         } catch (err: any) {
             const message = err.response?.data?.detail || err.response?.data?.message || err.message || 'Unknown error';
-            showToast(`Failed to start download: ${message}`, 'error');
+            showToast(t('models.messages.startDownloadFailed', { error: message }), 'error');
             setDownloadingModel(null);
             setDownloadProgress(null);
         }
@@ -335,9 +338,9 @@ const ModelsPage = () => {
 
     const handleDelete = async (model: InstalledModel) => {
         const confirmed = await confirm({
-            title: 'Delete Model?',
-            description: `Are you sure you want to delete "${model.name}"? This cannot be undone.`,
-            confirmText: 'Delete',
+            title: t('models.catalog.deleteConfirmTitle'),
+            description: t('models.catalog.deleteConfirmDesc', { name: model.name }),
+            confirmText: t('models.catalog.delete'),
             variant: 'destructive'
         });
         if (!confirmed) return;
@@ -347,11 +350,11 @@ const ModelsPage = () => {
             await axios.delete('/api/local-ai/models', {
                 data: { model_path: model.path, type: model.type }
             });
-            showToast(`${model.name} deleted successfully`, 'success');
+            showToast(t('models.messages.deletedSuccess', { name: model.name }), 'success');
             fetchModels();
         } catch (err: any) {
             const message = err.response?.data?.detail || err.message || 'Unknown error';
-            showToast(`Failed to delete model: ${message}`, 'error');
+            showToast(t('models.messages.deleteFailed', { error: message }), 'error');
         } finally {
             setDeletingModel(null);
         }
@@ -386,7 +389,7 @@ const ModelsPage = () => {
     // Get friendly display name for installed model by matching against catalog
     const getModelDisplayName = (model: InstalledModel): string => {
         const allCatalogModels = [...catalog.stt, ...catalog.tts, ...catalog.llm];
-        const catalogMatch = allCatalogModels.find(cm => 
+        const catalogMatch = allCatalogModels.find(cm =>
             cm.model_path && (model.path.includes(cm.model_path) || model.name === cm.model_path)
         );
         return catalogMatch?.name || model.name;
@@ -472,7 +475,7 @@ const ModelsPage = () => {
     const applyPendingChanges = async () => {
         if (Object.keys(pendingChanges).length === 0) return;
         if (compatibilityIssues.length > 0 && !forceIncompatibleApply) {
-            showToast('Resolve compatibility warnings or enable force apply.', 'warning');
+            showToast(t('models.compatibility.resolveWarnings'), 'warning');
             return;
         }
 
@@ -512,7 +515,7 @@ const ModelsPage = () => {
                 }
             }
 
-            showToast(requiresAnyRebuild ? 'Compatibility override applied. Local AI has been rebuilt/restarted.' : 'Model switch requested. Server will restart.', 'success');
+            showToast(requiresAnyRebuild ? t('models.messages.rebuildSuccess') : t('models.messages.applySuccess'), 'success');
             setPendingChanges({});
             setForceIncompatibleApply(false);
             setTimeout(() => {
@@ -520,7 +523,8 @@ const ModelsPage = () => {
                 setRestarting(false);
             }, 15000);
         } catch (err: any) {
-            showToast(`Failed to apply changes: ${err.response?.data?.detail || err.response?.data?.message || err.message}`, 'error');
+            const message = err.response?.data?.detail || err.response?.data?.message || err.message;
+            showToast(t('models.messages.applyFailed', { error: message }), 'error');
             setRestarting(false);
         }
     };
@@ -532,13 +536,12 @@ const ModelsPage = () => {
                 {toasts.map(toast => (
                     <div
                         key={toast.id}
-                        className={`px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
-                            toast.type === 'success' 
-                                ? 'bg-green-600 text-white' 
-                                : toast.type === 'warning'
-                                    ? 'bg-yellow-600 text-white'
-                                    : 'bg-red-600 text-white'
-                        }`}
+                        className={`px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${toast.type === 'success'
+                            ? 'bg-green-600 text-white'
+                            : toast.type === 'warning'
+                                ? 'bg-yellow-600 text-white'
+                                : 'bg-red-600 text-white'
+                            }`}
                     >
                         {toast.type === 'success' ? (
                             <CheckCircle2 className="w-4 h-4" />
@@ -557,41 +560,38 @@ const ModelsPage = () => {
                 <div className="flex justify-between items-center px-4 py-3 border-b border-border">
                     <div className="flex items-center gap-3">
                         <Cpu className="w-5 h-5 text-blue-500" />
-                        <h3 className="font-semibold">Local AI Server</h3>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${
-                            serverStatus === 'connected' ? 'bg-green-500/10 text-green-500' : 
+                        <h3 className="font-semibold">{t('models.server.title')}</h3>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${serverStatus === 'connected' ? 'bg-green-500/10 text-green-500' :
                             serverStatus === 'error' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500'
-                        }`}>
+                            }`}>
                             {serverStatus === 'connected' ? (
-                                <><CheckCircle2 className="w-3 h-3" /> Connected</>
+                                <><CheckCircle2 className="w-3 h-3" /> {t('models.server.connected')}</>
                             ) : serverStatus === 'error' ? (
-                                <><XCircle className="w-3 h-3" /> Error</>
+                                <><XCircle className="w-3 h-3" /> {t('models.server.error')}</>
                             ) : (
-                                'Loading...'
+                                t('models.server.loading')
                             )}
                         </span>
                         <div className="flex items-center gap-1 text-xs">
-                            <span className="text-muted-foreground">GPU Detected:</span>
+                            <span className="text-muted-foreground">{t('models.server.gpuDetected')}</span>
                             <span
-                                className={`px-2 py-0.5 rounded-full font-medium ${
-                                    gpuStatusKnown
-                                        ? (gpuDetected ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500')
-                                        : 'bg-muted text-muted-foreground'
-                                }`}
+                                className={`px-2 py-0.5 rounded-full font-medium ${gpuStatusKnown
+                                    ? (gpuDetected ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500')
+                                    : 'bg-muted text-muted-foreground'
+                                    }`}
                                 title={`Host/preflight signal from .env GPU_AVAILABLE=${envConfig.GPU_AVAILABLE ?? 'unset'}`}
                             >
-                                Host
+                                {t('models.server.host')}
                             </span>
                             <span className="text-muted-foreground">/</span>
                             <span
-                                className={`px-2 py-0.5 rounded-full font-medium ${
-                                    runtimeGpuKnown
-                                        ? (runtimeGpuDetected ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500')
-                                        : 'bg-muted text-muted-foreground'
-                                }`}
+                                className={`px-2 py-0.5 rounded-full font-medium ${runtimeGpuKnown
+                                    ? (runtimeGpuDetected ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500')
+                                    : 'bg-muted text-muted-foreground'
+                                    }`}
                                 title={runtimeGpu?.error || 'Runtime probe from local_ai_server status'}
                             >
-                                Runtime
+                                {t('models.server.runtime')}
                             </span>
                         </div>
                     </div>
@@ -599,16 +599,16 @@ const ModelsPage = () => {
                         <Link
                             to="/env"
                             className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                            title="Configure"
+                            title={t('common.configure')}
                         >
                             <Settings className="w-4 h-4" />
                         </Link>
                         <button
                             onClick={async () => {
                                 const confirmed = await confirm({
-                                    title: 'Restart Local AI Server?',
-                                    description: 'Are you sure you want to restart the Local AI Server? This will temporarily interrupt model inference.',
-                                    confirmText: 'Restart',
+                                    title: t('models.server.restartConfirmTitle'),
+                                    description: t('models.server.restartConfirmDesc'),
+                                    confirmText: t('common.restart'),
                                     variant: 'destructive'
                                 });
                                 if (!confirmed) return;
@@ -619,14 +619,14 @@ const ModelsPage = () => {
                             }}
                             disabled={restarting}
                             className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                            title="Restart"
+                            title={t('common.restart')}
                         >
                             <RefreshCw className={`w-4 h-4 ${restarting ? 'animate-spin' : ''}`} />
                         </button>
                         <Link
                             to="/logs?container=local_ai_server"
                             className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                            title="View Logs"
+                            title={t('common.viewLogs')}
                         >
                             <Terminal className="w-4 h-4" />
                         </Link>
@@ -638,145 +638,142 @@ const ModelsPage = () => {
                         <div className="text-xs text-muted-foreground">
                             {runtimeGpuKnown ? (
                                 <span>
-                                    Runtime probe: {runtimeGpuUsable ? 'GPU usable' : 'GPU not usable'}
-                                    {runtimeGpu?.source ? ` via ${runtimeGpu.source}` : ''}
+                                    {t('models.server.runtimeProbe')} {runtimeGpuUsable ? t('models.server.gpuUsable') : t('models.server.gpuNotUsable')}
+                                    {runtimeGpu?.source ? ` ${t('models.server.via', { source: runtimeGpu.source })}` : ''}
                                     {runtimeGpu?.name ? ` (${runtimeGpu.name}${runtimeGpu.memory_gb ? `, ${runtimeGpu.memory_gb} GB` : ''})` : ''}
                                     {runtimeGpu?.error ? ` • ${runtimeGpu.error}` : ''}
                                 </span>
                             ) : (
-                                <span>Runtime probe: unavailable (Local AI status did not report GPU details)</span>
+                                <span>{t('models.server.runtimeProbe')} {t('common.notAvailable')}</span>
                             )}
                         </div>
                         {!gpuDetected && (fasterWhisperDevice === 'cuda' || melottsDevice === 'cuda') && (
                             <div className="p-3 rounded-md border border-amber-500/40 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
-                                CUDA device is configured for Local AI while preflight reports no GPU. This can cause degraded startup. Update device settings in <Link to="/env" className="underline">Env</Link> or force apply changes knowingly.
+                                {t('models.server.cudaWarning')}
                             </div>
                         )}
                         {runtimeGpuKnown && !runtimeGpuUsable && (fasterWhisperDevice === 'cuda' || melottsDevice === 'cuda') && (
                             <div className="p-3 rounded-md border border-amber-500/40 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
-                                Runtime probe reports GPU unavailable in local_ai_server{runtimeGpu?.error ? ` (${runtimeGpu.error})` : ''}. CUDA-based STT/TTS may fail until runtime GPU is fixed.
+                                {t('models.server.cudaRuntimeWarning', { error: runtimeGpu?.error ? ` (${runtimeGpu.error})` : '' })}
                             </div>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* STT Model */}
-                        <div className="p-4 rounded-lg border border-border bg-muted/30">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Mic className="w-4 h-4 text-blue-500" />
-                                <span className="text-sm font-medium">STT</span>
-                                <span className={`ml-auto px-2 py-0.5 rounded text-xs ${
-                                    activeModels.stt.loaded ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
-                                }`}>
-                                    {activeModels.stt.loaded ? 'Loaded' : 'Not Loaded'}
-                                </span>
-                            </div>
-                            <select 
-                                className="w-full text-xs p-2 rounded border border-border bg-background"
-                                value={pendingChanges.stt || `${activeModels.stt.backend}:${activeModels.stt.path}`}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setPendingChanges(prev => ({ ...prev, stt: val }));
-                                }}
-                                disabled={restarting}
-                            >
-                                {availableModels?.stt && Object.entries(availableModels.stt).map(([backend, models]) => (
-                                    backend === 'faster_whisper' ? null : (
-                                    <optgroup key={backend} label={backend.charAt(0).toUpperCase() + backend.slice(1)}>
-                                        {models.map((m: any) => (
-                                            <option key={m.path} value={`${backend}:${m.path}`}>{m.name}</option>
-                                        ))}
+                            {/* STT Model */}
+                            <div className="p-4 rounded-lg border border-border bg-muted/30">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Mic className="w-4 h-4 text-blue-500" />
+                                    <span className="text-sm font-medium">{t('models.active.stt')}</span>
+                                    <span className={`ml-auto px-2 py-0.5 rounded text-xs ${activeModels.stt.loaded ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
+                                        }`}>
+                                        {activeModels.stt.loaded ? t('models.active.loaded') : t('models.active.notLoaded')}
+                                    </span>
+                                </div>
+                                <select
+                                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                                    value={pendingChanges.stt || `${activeModels.stt.backend}:${activeModels.stt.path}`}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setPendingChanges(prev => ({ ...prev, stt: val }));
+                                    }}
+                                    disabled={restarting}
+                                >
+                                    {availableModels?.stt && Object.entries(availableModels.stt).map(([backend, models]) => (
+                                        backend === 'faster_whisper' ? null : (
+                                            <optgroup key={backend} label={backend.charAt(0).toUpperCase() + backend.slice(1)}>
+                                                {models.map((m: any) => (
+                                                    <option key={m.path} value={`${backend}:${m.path}`}>{m.name}</option>
+                                                ))}
+                                            </optgroup>
+                                        )
+                                    ))}
+                                    <optgroup label="Faster Whisper">
+                                        <option value="faster_whisper:base">
+                                            Whisper Base {!capabilities?.stt?.faster_whisper?.available ? t('models.active.requiresRebuild') : ''}
+                                        </option>
+                                        <option value="faster_whisper:small">Whisper Small</option>
+                                        <option value="faster_whisper:medium">Whisper Medium</option>
                                     </optgroup>
-                                    )
-                                ))}
-                                <optgroup label="Faster Whisper">
-                                    <option value="faster_whisper:base">
-                                        Whisper Base {!capabilities?.stt?.faster_whisper?.available ? '(requires rebuild)' : ''}
-                                    </option>
-                                    <option value="faster_whisper:small">Whisper Small</option>
-                                    <option value="faster_whisper:medium">Whisper Medium</option>
-                                </optgroup>
-                            </select>
-                            <div className="mt-2 text-xs text-muted-foreground truncate" title={activeModels.stt.path}>
-                                {getModelName(activeModels.stt.path)}
+                                </select>
+                                <div className="mt-2 text-xs text-muted-foreground truncate" title={activeModels.stt.path}>
+                                    {getModelName(activeModels.stt.path)}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* LLM Model */}
-                        <div className="p-4 rounded-lg border border-border bg-muted/30">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Brain className="w-4 h-4 text-purple-500" />
-                                <span className="text-sm font-medium">LLM</span>
-                                <span className={`ml-auto px-2 py-0.5 rounded text-xs ${
-                                    activeModels.llm.loaded ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
-                                }`}>
-                                    {activeModels.llm.loaded ? 'Loaded' : 'Not Loaded'}
-                                </span>
+                            {/* LLM Model */}
+                            <div className="p-4 rounded-lg border border-border bg-muted/30">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Brain className="w-4 h-4 text-purple-500" />
+                                    <span className="text-sm font-medium">{t('models.active.llm')}</span>
+                                    <span className={`ml-auto px-2 py-0.5 rounded text-xs ${activeModels.llm.loaded ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
+                                        }`}>
+                                        {activeModels.llm.loaded ? t('models.active.loaded') : t('models.active.notLoaded')}
+                                    </span>
+                                </div>
+                                <select
+                                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                                    value={pendingChanges.llm || activeModels.llm.path}
+                                    onChange={(e) => {
+                                        setPendingChanges(prev => ({ ...prev, llm: e.target.value }));
+                                    }}
+                                    disabled={restarting}
+                                >
+                                    {availableModels?.llm?.map((m: any) => (
+                                        <option key={m.path} value={m.path}>{m.name}</option>
+                                    ))}
+                                </select>
+                                <div className="mt-2 text-xs text-muted-foreground truncate" title={activeModels.llm.path}>
+                                    {getModelName(activeModels.llm.path)}
+                                </div>
                             </div>
-                            <select 
-                                className="w-full text-xs p-2 rounded border border-border bg-background"
-                                value={pendingChanges.llm || activeModels.llm.path}
-                                onChange={(e) => {
-                                    setPendingChanges(prev => ({ ...prev, llm: e.target.value }));
-                                }}
-                                disabled={restarting}
-                            >
-                                {availableModels?.llm?.map((m: any) => (
-                                    <option key={m.path} value={m.path}>{m.name}</option>
-                                ))}
-                            </select>
-                            <div className="mt-2 text-xs text-muted-foreground truncate" title={activeModels.llm.path}>
-                                {getModelName(activeModels.llm.path)}
-                            </div>
-                        </div>
 
-                        {/* TTS Model */}
-                        <div className="p-4 rounded-lg border border-border bg-muted/30">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Volume2 className="w-4 h-4 text-green-500" />
-                                <span className="text-sm font-medium">TTS</span>
-                                <span className={`ml-auto px-2 py-0.5 rounded text-xs ${
-                                    activeModels.tts.loaded ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
-                                }`}>
-                                    {activeModels.tts.loaded ? 'Loaded' : 'Not Loaded'}
-                                </span>
-                            </div>
-                            <select 
-                                className="w-full text-xs p-2 rounded border border-border bg-background"
-                                value={pendingChanges.tts || `${activeModels.tts.backend}:${activeModels.tts.path}`}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setPendingChanges(prev => ({ ...prev, tts: val }));
-                                }}
-                                disabled={restarting}
-                            >
-                                {availableModels?.tts && Object.entries(availableModels.tts).map(([backend, models]) => (
-                                    backend === 'melotts' ? null : (
-                                    <optgroup key={backend} label={backend.charAt(0).toUpperCase() + backend.slice(1)}>
-                                        {models.map((m: any) => (
-                                            <option key={m.path} value={`${backend}:${m.path}`}>{m.name}</option>
-                                        ))}
+                            {/* TTS Model */}
+                            <div className="p-4 rounded-lg border border-border bg-muted/30">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Volume2 className="w-4 h-4 text-green-500" />
+                                    <span className="text-sm font-medium">{t('models.active.tts')}</span>
+                                    <span className={`ml-auto px-2 py-0.5 rounded text-xs ${activeModels.tts.loaded ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
+                                        }`}>
+                                        {activeModels.tts.loaded ? t('models.active.loaded') : t('models.active.notLoaded')}
+                                    </span>
+                                </div>
+                                <select
+                                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                                    value={pendingChanges.tts || `${activeModels.tts.backend}:${activeModels.tts.path}`}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setPendingChanges(prev => ({ ...prev, tts: val }));
+                                    }}
+                                    disabled={restarting}
+                                >
+                                    {availableModels?.tts && Object.entries(availableModels.tts).map(([backend, models]) => (
+                                        backend === 'melotts' ? null : (
+                                            <optgroup key={backend} label={backend.charAt(0).toUpperCase() + backend.slice(1)}>
+                                                {models.map((m: any) => (
+                                                    <option key={m.path} value={`${backend}:${m.path}`}>{m.name}</option>
+                                                ))}
+                                            </optgroup>
+                                        )
+                                    ))}
+                                    <optgroup label="MeloTTS">
+                                        <option value="melotts:EN-US">
+                                            MeloTTS US {!capabilities?.tts?.melotts?.available ? t('models.active.requiresRebuild') : ''}
+                                        </option>
+                                        <option value="melotts:EN-BR">MeloTTS UK</option>
+                                        <option value="melotts:EN-AU">MeloTTS AU</option>
                                     </optgroup>
-                                    )
-                                ))}
-                                <optgroup label="MeloTTS">
-                                    <option value="melotts:EN-US">
-                                        MeloTTS US {!capabilities?.tts?.melotts?.available ? '(requires rebuild)' : ''}
-                                    </option>
-                                    <option value="melotts:EN-BR">MeloTTS UK</option>
-                                    <option value="melotts:EN-AU">MeloTTS AU</option>
-                                </optgroup>
-                            </select>
-                            <div className="mt-2 text-xs text-muted-foreground truncate" title={activeModels.tts.path}>
-                                {getModelName(activeModels.tts.path)}
+                                </select>
+                                <div className="mt-2 text-xs text-muted-foreground truncate" title={activeModels.tts.path}>
+                                    {getModelName(activeModels.tts.path)}
+                                </div>
                             </div>
                         </div>
-                    </div>
                     </div>
                 )}
 
                 {serverStatus === 'error' && (
                     <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                         <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-3">
-                            Local AI Server is not reachable. The container may still be running.
+                            {t('models.server.unreachable')}
                         </p>
                         <button
                             onClick={() => {
@@ -791,12 +788,12 @@ const ModelsPage = () => {
                             {startingServer ? (
                                 <>
                                     <RefreshCw className="w-4 h-4 animate-spin" />
-                                    Starting...
+                                    {t('models.server.starting')}
                                 </>
                             ) : (
                                 <>
                                     <Play className="w-4 h-4" />
-                                    Start Local AI Server
+                                    {t('models.server.start')}
                                 </>
                             )}
                         </button>
@@ -886,41 +883,37 @@ const ModelsPage = () => {
                 <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border">
                     <button
                         onClick={() => setSelectedTab('installed')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                            selectedTab === 'installed'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${selectedTab === 'installed'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted hover:bg-muted/80'
+                            }`}
                     >
                         Installed ({installedModels.length})
                     </button>
                     <button
                         onClick={() => setSelectedTab('stt')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                            selectedTab === 'stt'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${selectedTab === 'stt'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted hover:bg-muted/80'
+                            }`}
                     >
                         <Mic className="w-3.5 h-3.5" /> STT ({catalog.stt.length})
                     </button>
                     <button
                         onClick={() => setSelectedTab('tts')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                            selectedTab === 'tts'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${selectedTab === 'tts'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted hover:bg-muted/80'
+                            }`}
                     >
                         <Volume2 className="w-3.5 h-3.5" /> TTS ({catalog.tts.length})
                     </button>
                     <button
                         onClick={() => setSelectedTab('llm')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                            selectedTab === 'llm'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${selectedTab === 'llm'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted hover:bg-muted/80'
+                            }`}
                     >
                         <Brain className="w-3.5 h-3.5" /> LLM ({catalog.llm.length})
                     </button>
@@ -945,78 +938,71 @@ const ModelsPage = () => {
                     {/* Download Progress Bar */}
                     {downloadingModel && downloadProgress && (
                         <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                                Downloading: {downloadProgress.current_file || downloadingModel}
-                            </span>
-                            <span className="text-sm text-blue-600 dark:text-blue-400">
-                                {downloadProgress.total_bytes > 0 ? `${downloadProgress.percent}%` : 'Downloading...'}
-                            </span>
-                        </div>
-                        <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mb-2 overflow-hidden">
-                            {downloadProgress.total_bytes > 0 ? (
-                                <div 
-                                    className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: `${downloadProgress.percent}%` }}
-                                />
-                            ) : (
-                                <div className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full animate-pulse w-full opacity-50" />
-                            )}
-                        </div>
-                        <div className="flex justify-between text-xs text-blue-600 dark:text-blue-400">
-                            <span>
-                                {(downloadProgress.bytes_downloaded / (1024 * 1024)).toFixed(1)} MB
-                                {downloadProgress.total_bytes > 0 && ` / ${(downloadProgress.total_bytes / (1024 * 1024)).toFixed(1)} MB`}
-                            </span>
-                            <span>
-                                {downloadProgress.speed_bps > 0 && `${(downloadProgress.speed_bps / (1024 * 1024)).toFixed(2)} MB/s`}
-                                {downloadProgress.eta_seconds !== null && downloadProgress.eta_seconds > 0 && (
-                                    <> • ETA: {Math.floor(downloadProgress.eta_seconds / 60)}m {downloadProgress.eta_seconds % 60}s</>
-                                )}
-                            </span>
-                        </div>
-                    </div>
-                )}
-
-                {loading ? (
-                    <div className="flex justify-center items-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                    </div>
-                ) : (
-                    <>
-                        {/* Installed Models Tab */}
-                        {selectedTab === 'installed' && (
-                            <div className="space-y-4">
-                                {installedModels.length === 0 ? (
-                                    <div className="text-center py-12 text-muted-foreground">
-                                        <HardDrive className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                        <p>No models installed yet.</p>
-                                        <p className="text-sm mt-2">Browse the STT, TTS, and LLM tabs to download models.</p>
-                                    </div>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                    {t('models.catalog.downloading')}: {downloadProgress.current_file || downloadingModel}
+                                </span>
+                                <span className="text-sm text-blue-600 dark:text-blue-400">
+                                    {downloadProgress.total_bytes > 0 ? `${downloadProgress.percent}%` : t('models.catalog.downloading')}
+                                </span>
+                            </div>
+                            <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mb-2 overflow-hidden">
+                                {downloadProgress.total_bytes > 0 ? (
+                                    <div
+                                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                                        style={{ width: `${downloadProgress.percent}%` }}
+                                    />
                                 ) : (
-                                    <div className="grid gap-4">
-                                        {installedModels.map(model => (
-                                            <ConfigCard key={model.path}>
-                                                <div className="flex justify-between items-center">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`p-2 rounded-lg ${
-                                                            model.type === 'stt' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' :
-                                                            model.type === 'tts' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' :
-                                                            'bg-purple-100 dark:bg-purple-900/30 text-purple-600'
-                                                        }`}>
-                                                            {getTypeIcon(model.type)}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium">{getModelDisplayName(model)}</p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {model.type.toUpperCase()} • {model.size_mb.toFixed(0)} MB • {model.name}
-                                                            </p>
-                                                        </div>
-                                                    </div>
+                                    <div className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full animate-pulse w-full opacity-50" />
+                                )}
+                            </div>
+                            <div className="flex justify-between text-xs text-blue-600 dark:text-blue-400">
+                                <span>
+                                    {(downloadProgress.bytes_downloaded / (1024 * 1024)).toFixed(1)} MB
+                                    {downloadProgress.total_bytes > 0 && ` / ${(downloadProgress.total_bytes / (1024 * 1024)).toFixed(1)} MB`}
+                                </span>
+                                <span>
+                                    {downloadProgress.speed_bps > 0 && `${(downloadProgress.speed_bps / (1024 * 1024)).toFixed(2)} MB/s`}
+                                    {downloadProgress.eta_seconds !== null && downloadProgress.eta_seconds > 0 && (
+                                        <> • {t('models.catalog.remaining')}: {Math.floor(downloadProgress.eta_seconds / 60)}m {downloadProgress.eta_seconds % 60}s</>
+                                    )}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {loading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {selectedTab === 'installed' ? (
+                                installedModels.length > 0 ? (
+                                    installedModels.map((model) => (
+                                        <ConfigCard
+                                            key={model.path}
+                                            title={getModelDisplayName(model)}
+                                            icon={getTypeIcon(model.type)}
+                                        >
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary font-medium uppercase">
+                                                        {model.type.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground break-all bg-muted/50 p-2 rounded">
+                                                    {model.path}
+                                                </div>
+                                                <div className="flex justify-between items-center pt-2 border-t border-border">
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {t('models.catalog.size')} {model.size_mb > 0 ? `${(model.size_mb).toFixed(1)} MB` : 'N/A'}
+                                                    </span>
                                                     <button
                                                         onClick={() => handleDelete(model)}
                                                         disabled={deletingModel === model.name}
-                                                        className="p-2 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                                        className="p-2 text-red-500 hover:bg-red-500/10 rounded-md transition-colors disabled:opacity-50"
+                                                        title={t('models.catalog.delete')}
                                                     >
                                                         {deletingModel === model.name ? (
                                                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -1025,173 +1011,113 @@ const ModelsPage = () => {
                                                         )}
                                                     </button>
                                                 </div>
-                                            </ConfigCard>
-                                        ))}
+                                            </div>
+                                        </ConfigCard>
+                                    ))
+                                ) : (
+                                    <div className="col-span-full py-12 text-center text-muted-foreground">
+                                        <HardDrive className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                        <p>{t('models.catalog.noModels')}</p>
+                                        <p className="text-sm mt-2">{t('models.catalog.browseTabs')}</p>
                                     </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* STT Models Tab */}
-                        {selectedTab === 'stt' && (
-                            <div className="grid gap-4">
-                                {filterByRegion(catalog.stt).map(model => (
-                                    <ConfigCard key={model.id}>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600">
-                                                    <Mic className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-medium">{model.name}</p>
-                                                        {isModelInstalled(model.model_path || '') && (
-                                                            <span className="px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full">
-                                                                Installed
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {languageNames[model.language || ''] || model.language} • {model.size_display} • {model.backend}
-                                                    </p>
-                                                </div>
+                                )
+                            ) : (
+                                filterByRegion(catalog[selectedTab as 'stt' | 'tts'] || catalog.llm).map((model) => (
+                                    <ConfigCard
+                                        key={model.id}
+                                        title={model.name}
+                                        icon={getTypeIcon(selectedTab === 'llm' ? 'llm' : selectedTab as 'stt' | 'tts')}
+                                    >
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary font-medium uppercase">
+                                                    {catalog.llm.some(m => m.id === model.id) ? 'GGUF' : model.size_display}
+                                                </span>
                                             </div>
-                                            {!isModelInstalled(model.model_path || '') && model.download_url && (
-                                                <button
-                                                    onClick={() => handleDownload(model, 'stt')}
-                                                    disabled={downloadingModel === model.id}
-                                                    className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    {downloadingModel === model.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <Download className="w-4 h-4" />
-                                                    )}
-                                                    Download
-                                                </button>
+                                            <div className="space-y-1">
+                                                {model.language && (
+                                                    <div className="text-xs flex justify-between">
+                                                        <span className="text-muted-foreground">{t('models.catalog.language')}</span>
+                                                        <span className="font-medium">{languageNames[model.language] || model.language}</span>
+                                                    </div>
+                                                )}
+                                                {model.region && (
+                                                    <div className="text-xs flex justify-between">
+                                                        <span className="text-muted-foreground">{t('models.catalog.region')}</span>
+                                                        <span className="font-medium">{regionNames[model.region] || model.region}</span>
+                                                    </div>
+                                                )}
+                                                {model.quality && (
+                                                    <div className="text-xs flex justify-between">
+                                                        <span className="text-muted-foreground">{t('models.catalog.quality')}</span>
+                                                        <span className="font-medium">{model.quality}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {model.note && (
+                                                <p className="text-[10px] text-muted-foreground bg-muted/50 p-2 rounded italic">
+                                                    {model.note}
+                                                </p>
                                             )}
-                                            {!isModelInstalled(model.model_path || '') && model.auto_download && !model.download_url && (
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <span className="px-3 py-2 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm flex items-center gap-2">
-                                                        <RefreshCw className="w-4 h-4" />
-                                                        Auto-download
-                                                    </span>
-                                                    <span className="text-[10px] text-amber-600 dark:text-amber-500 max-w-[200px] text-right">
-                                                        {model.note || 'Downloads automatically when backend is enabled'}
-                                                    </span>
+
+                                            {downloadingModel === model.id && downloadProgress && (
+                                                <div className="space-y-1.5">
+                                                    <div className="flex justify-between text-[10px]">
+                                                        <span className="truncate max-w-[150px]">{downloadProgress.current_file}</span>
+                                                        <span>{downloadProgress.percent}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
+                                                        <div
+                                                            className="bg-primary h-full transition-all duration-300"
+                                                            style={{ width: `${downloadProgress.percent}%` }}
+                                                        />
+                                                    </div>
+                                                    {downloadProgress.eta_seconds !== null && (
+                                                        <div className="text-[10px] text-right text-muted-foreground">
+                                                            {Math.floor(downloadProgress.eta_seconds / 60)}m {downloadProgress.eta_seconds % 60}s {t('models.catalog.remaining')}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
+
+                                            <div className="pt-2 border-t border-border">
+                                                {isModelInstalled(model.model_path || model.id) ? (
+                                                    <div className="flex items-center justify-center gap-2 py-2 text-xs font-medium text-green-500">
+                                                        <CheckCircle2 className="w-4 h-4" />
+                                                        {t('models.catalog.installed')}
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleDownload(model, selectedTab === 'llm' ? 'llm' : selectedTab as 'stt' | 'tts')}
+                                                        disabled={!!downloadingModel || (model.auto_download && !model.download_url)}
+                                                        className="w-full flex items-center justify-center gap-2 py-2 bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors disabled:opacity-50 text-xs font-medium"
+                                                    >
+                                                        {model.auto_download && !model.download_url ? (
+                                                            <>
+                                                                <RefreshCw className="w-4 h-4" />
+                                                                {t('models.catalog.autoDownload')}
+                                                            </>
+                                                        ) : downloadingModel === model.id ? (
+                                                            <>
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                                {t('models.catalog.downloading')}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Download className="w-4 h-4" />
+                                                                {t('models.catalog.download')}
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </ConfigCard>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* TTS Models Tab */}
-                        {selectedTab === 'tts' && (
-                            <div className="grid gap-4">
-                                {filterByRegion(catalog.tts).map(model => (
-                                    <ConfigCard key={model.id}>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600">
-                                                    <Volume2 className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-medium">{model.name}</p>
-                                                        {model.gender && (
-                                                            <span className="px-2 py-0.5 text-xs bg-muted text-muted-foreground rounded-full">
-                                                                {model.gender}
-                                                            </span>
-                                                        )}
-                                                        {isModelInstalled(model.model_path || '') && (
-                                                            <span className="px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full">
-                                                                Installed
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {languageNames[model.language || ''] || model.language} • {model.size_display} • {model.quality || 'medium'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {!isModelInstalled(model.model_path || '') && model.download_url && (
-                                                <button
-                                                    onClick={() => handleDownload(model, 'tts')}
-                                                    disabled={downloadingModel === model.id}
-                                                    className="px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    {downloadingModel === model.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <Download className="w-4 h-4" />
-                                                    )}
-                                                    Download
-                                                </button>
-                                            )}
-                                            {!isModelInstalled(model.model_path || '') && model.auto_download && !model.download_url && (
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <span className="px-3 py-2 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm flex items-center gap-2">
-                                                        <RefreshCw className="w-4 h-4" />
-                                                        Auto-download
-                                                    </span>
-                                                    <span className="text-[10px] text-amber-600 dark:text-amber-500 max-w-[200px] text-right">
-                                                        {model.note || 'Downloads automatically when backend is enabled'}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </ConfigCard>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* LLM Models Tab */}
-                        {selectedTab === 'llm' && (
-                            <div className="grid gap-4">
-                                {catalog.llm.map(model => (
-                                    <ConfigCard key={model.id}>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600">
-                                                    <Brain className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-medium">{model.name}</p>
-                                                        {isModelInstalled(model.model_path || '') && (
-                                                            <span className="px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full">
-                                                                Installed
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {model.size_display}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {!isModelInstalled(model.model_path || '') && model.download_url && (
-                                                <button
-                                                    onClick={() => handleDownload(model, 'llm')}
-                                                    disabled={downloadingModel === model.id}
-                                                    className="px-3 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    {downloadingModel === model.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <Download className="w-4 h-4" />
-                                                    )}
-                                                    Download
-                                                </button>
-                                            )}
-                                        </div>
-                                    </ConfigCard>
-                                ))}
-                            </div>
-                        )}
-                    </>
-                )}
+                                ))
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

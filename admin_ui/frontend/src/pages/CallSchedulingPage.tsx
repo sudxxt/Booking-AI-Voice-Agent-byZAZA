@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import {
     AlertTriangle,
@@ -290,6 +291,7 @@ const formatSeconds = (secs: number): string => {
 
 const CallSchedulingPage = () => {
     const { confirm } = useConfirmDialog();
+    const { t, i18n } = useTranslation();
     const [meta, setMeta] = useState<OutboundMeta | null>(null);
     const [serverOffsetMs, setServerOffsetMs] = useState(0);
     const [clockTick, setClockTick] = useState(0);
@@ -1003,7 +1005,7 @@ const CallSchedulingPage = () => {
     const renderLeadTime = (iso?: string | null) => {
         if (!iso || !selectedCampaign) return '-';
         try {
-            return new Intl.DateTimeFormat('en-US', {
+            return new Intl.DateTimeFormat(i18n.language === 'ru' ? 'ru-RU' : 'en-US', {
                 timeZone: selectedCampaign.timezone || 'UTC',
                 year: 'numeric',
                 month: 'numeric',
@@ -1031,7 +1033,7 @@ const CallSchedulingPage = () => {
             <div className="p-6">
                 <div className="flex items-center gap-2 text-muted-foreground">
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    Loading call scheduling…
+                    {t('scheduling.loading')}
                 </div>
             </div>
         );
@@ -1049,10 +1051,10 @@ const CallSchedulingPage = () => {
                 <div>
                     <h1 className="text-3xl font-bold flex items-center gap-2">
                         <CalendarClock className="w-7 h-7" />
-                        Call Scheduling
+                        {t('scheduling.title')}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Campaign scheduler (MVP): lead list + optional voicemail drop + optional consent gate.
+                        {t('scheduling.description')}
                     </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
@@ -1065,26 +1067,26 @@ const CallSchedulingPage = () => {
                             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm"
                         >
                             <RefreshCw className="w-4 h-4" />
-                            Refresh
+                            {t('scheduling.refresh')}
                         </button>
                         <button
                             onClick={openCreate}
                             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm"
                         >
                             <Plus className="w-4 h-4" />
-                            New Campaign
+                            {t('scheduling.newCampaign')}
                         </button>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="inline-flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            Server: <span className="font-mono text-foreground">{formatClock(serverNow, serverTz)}</span>{' '}
+                            {t('scheduling.server')} <span className="font-mono text-foreground">{formatClock(serverNow, serverTz)}</span>{' '}
                             <span className="font-mono">{serverTz}</span>
                         </span>
                         {selectedCampaign && (
                             <span className="inline-flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                Campaign: <span className="font-mono text-foreground">{formatClock(serverNow, selectedTz)}</span>{' '}
+                                {t('scheduling.campaign')} <span className="font-mono text-foreground">{formatClock(serverNow, selectedTz)}</span>{' '}
                                 <span className="font-mono">{selectedTz}</span>
                             </span>
                         )}
@@ -1094,13 +1096,12 @@ const CallSchedulingPage = () => {
 
             {notice && (
                 <div
-                    className={`rounded-lg border p-3 text-sm ${
-                        notice.type === 'error'
-                            ? 'border-red-500/30 bg-red-500/10 text-red-600'
-                            : notice.type === 'success'
-                              ? 'border-green-500/30 bg-green-500/10 text-green-700'
-                              : 'border-border bg-muted/30 text-foreground'
-                    }`}
+                    className={`rounded-lg border p-3 text-sm ${notice.type === 'error'
+                        ? 'border-red-500/30 bg-red-500/10 text-red-600'
+                        : notice.type === 'success'
+                            ? 'border-green-500/30 bg-green-500/10 text-green-700'
+                            : 'border-border bg-muted/30 text-foreground'
+                        }`}
                 >
                     <div className="flex items-center justify-between gap-3">
                         <span>{notice.message}</span>
@@ -1114,22 +1115,22 @@ const CallSchedulingPage = () => {
             {lastLeadImport && ((lastLeadImport.rejected || 0) > 0 || (lastLeadImport.warnings?.length || 0) > 0) && (
                 <div className="rounded-lg border border-border bg-card p-3 text-sm">
                     <div className="flex items-center justify-between gap-3">
-                        <div className="font-medium">CSV import details</div>
+                        <div className="font-medium">{t('scheduling.results.title')}</div>
                         <button className="text-muted-foreground hover:text-foreground" onClick={() => setLastLeadImport(null)}>
                             ×
                         </button>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        <span>Accepted: <span className="font-mono text-foreground">{lastLeadImport.accepted}</span></span>
-                        <span>Duplicates: <span className="font-mono text-foreground">{lastLeadImport.duplicates}</span></span>
-                        <span>Rejected: <span className="font-mono text-foreground">{lastLeadImport.rejected}</span></span>
-                        <span>Warnings: <span className="font-mono text-foreground">{lastLeadImport.warnings?.length || 0}</span></span>
+                        <span>{t('scheduling.results.accepted')}: <span className="font-mono text-foreground">{lastLeadImport.accepted}</span></span>
+                        <span>{t('scheduling.results.duplicates')}: <span className="font-mono text-foreground">{lastLeadImport.duplicates}</span></span>
+                        <span>{t('scheduling.results.rejected')}: <span className="font-mono text-foreground">{lastLeadImport.rejected}</span></span>
+                        <span>{t('scheduling.results.errors')}: <span className="font-mono text-foreground">{lastLeadImport.warnings?.length || 0}</span></span>
                         {lastLeadImport.rejected > 0 && lastLeadImport.error_csv && (
                             <button
                                 className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs hover:bg-muted/50"
                                 onClick={downloadImportErrorCsv}
                             >
-                                Download error CSV
+                                {t('scheduling.results.downloadErrorCsv')}
                             </button>
                         )}
                     </div>
@@ -1140,9 +1141,9 @@ const CallSchedulingPage = () => {
                                 <table className="w-full text-xs">
                                     <thead className="sticky top-0 bg-muted/40 text-muted-foreground">
                                         <tr>
-                                            <th className="px-2 py-1 text-left">Row</th>
-                                            <th className="px-2 py-1 text-left">Phone</th>
-                                            <th className="px-2 py-1 text-left">Reason</th>
+                                            <th className="px-2 py-1 text-left">{t('scheduling.results.table.row')}</th>
+                                            <th className="px-2 py-1 text-left">{t('scheduling.results.table.phone')}</th>
+                                            <th className="px-2 py-1 text-left">{t('scheduling.results.table.reason')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1168,9 +1169,9 @@ const CallSchedulingPage = () => {
                                 <table className="w-full text-xs">
                                     <thead className="sticky top-0 bg-muted/40 text-muted-foreground">
                                         <tr>
-                                            <th className="px-2 py-1 text-left">Row</th>
-                                            <th className="px-2 py-1 text-left">Phone</th>
-                                            <th className="px-2 py-1 text-left">Reason</th>
+                                            <th className="px-2 py-1 text-left">{t('scheduling.results.table.row')}</th>
+                                            <th className="px-2 py-1 text-left">{t('scheduling.results.table.phone')}</th>
+                                            <th className="px-2 py-1 text-left">{t('scheduling.results.table.reason')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1199,15 +1200,15 @@ const CallSchedulingPage = () => {
             <div className="grid grid-cols-[320px_1fr] gap-6">
                 <div className="border rounded-lg p-3 bg-card">
                     <div className="flex items-center justify-between mb-2">
-                        <div className="font-semibold">Campaigns</div>
+                        <div className="font-semibold">{t('scheduling.campaigns')}</div>
                         <label className="flex items-center gap-2 text-xs text-muted-foreground">
                             <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} />
-                            Show archived
+                            {t('scheduling.showArchived')}
                         </label>
                     </div>
                     <div className="max-h-[520px] overflow-auto">
                         {campaigns.length === 0 ? (
-                            <div className="text-sm text-muted-foreground py-6 text-center">No campaigns yet.</div>
+                            <div className="text-sm text-muted-foreground py-6 text-center">{t('scheduling.noCampaigns')}</div>
                         ) : (
                             <div className="space-y-2">
                                 {campaigns.map(c => (
@@ -1217,9 +1218,8 @@ const CallSchedulingPage = () => {
                                             setSelectedCampaignId(c.id);
                                             setLeadPage(1);
                                         }}
-                                        className={`w-full text-left rounded-lg border p-3 hover:bg-muted/40 transition-colors ${
-                                            selectedCampaignId === c.id ? 'border-primary/40 bg-primary/5' : 'border-border'
-                                        }`}
+                                        className={`w-full text-left rounded-lg border p-3 hover:bg-muted/40 transition-colors ${selectedCampaignId === c.id ? 'border-primary/40 bg-primary/5' : 'border-border'
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between gap-2">
                                             <div className="font-medium truncate">{c.name}</div>
@@ -1237,7 +1237,7 @@ const CallSchedulingPage = () => {
 
                 <div className="border rounded-lg p-4 bg-card">
                     {!selectedCampaign ? (
-                        <div className="text-sm text-muted-foreground py-10 text-center">Select a campaign to view details.</div>
+                        <div className="text-sm text-muted-foreground py-10 text-center">{t('scheduling.selectCampaign')}</div>
                     ) : (
                         <>
                             <div className="flex items-start justify-between gap-4">
@@ -1247,11 +1247,11 @@ const CallSchedulingPage = () => {
                                         <span className="text-xs px-2 py-0.5 rounded border">{selectedCampaign.status}</span>
                                     </div>
                                     <div className="text-sm text-muted-foreground mt-1">
-                                        Default context: <span className="font-mono">{selectedCampaign.default_context}</span> · Max concurrent:{' '}
-                                        {selectedCampaign.max_concurrent} · Min interval: {selectedCampaign.min_interval_seconds_between_calls}s
+                                        {t('scheduling.form.context')}: <span className="font-mono">{selectedCampaign.default_context}</span> · {t('scheduling.form.maxConcurrent')}:{' '}
+                                        {selectedCampaign.max_concurrent} · {t('scheduling.form.minInterval')}: {selectedCampaign.min_interval_seconds_between_calls}s
                                     </div>
                                     <div className="text-xs text-muted-foreground mt-1">
-                                        TZ: <span className="font-mono">{selectedCampaign.timezone}</span> · Window:{' '}
+                                        {t('scheduling.form.timezone')}: <span className="font-mono">{selectedCampaign.timezone}</span> · {t('scheduling.form.dailyWindow')}:{' '}
                                         {selectedCampaign.daily_window_start_local}–{selectedCampaign.daily_window_end_local}
                                         {windowInfo && (
                                             <span>
@@ -1264,20 +1264,20 @@ const CallSchedulingPage = () => {
                                 </div>
                                 <div className="flex flex-wrap items-center justify-end gap-2">
                                     <button className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm" onClick={openEdit}>
-                                        <Pencil className="w-4 h-4" /> Edit
+                                        <Pencil className="w-4 h-4" /> {t('scheduling.actions.edit')}
                                     </button>
                                     <button
                                         className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm"
                                         onClick={() => cloneCampaign(selectedCampaign.id)}
                                     >
-                                        <Copy className="w-4 h-4" /> Clone
+                                        <Copy className="w-4 h-4" /> {t('scheduling.actions.clone')}
                                     </button>
                                     {selectedCampaign.status !== 'archived' && (
                                         <button
                                             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm"
                                             onClick={() => archiveCampaign(selectedCampaign.id)}
                                         >
-                                            <Ban className="w-4 h-4" /> Archive
+                                            <Ban className="w-4 h-4" /> {t('scheduling.actions.archive')}
                                         </button>
                                     )}
                                     <button
@@ -1285,16 +1285,16 @@ const CallSchedulingPage = () => {
                                         disabled={selectedCampaign.status === 'running'}
                                         onClick={async () => {
                                             const confirmed = await confirm({
-                                                title: 'Delete Campaign?',
+                                                title: t('scheduling.actions.delete') + '?',
                                                 description: 'Permanently delete this campaign and all leads/attempts? This cannot be undone.',
-                                                confirmText: 'Delete',
+                                                confirmText: t('scheduling.actions.delete'),
                                                 variant: 'destructive'
                                             });
                                             if (!confirmed) return;
                                             deleteCampaign(selectedCampaign.id);
                                         }}
                                     >
-                                        <Trash2 className="w-4 h-4" /> Delete
+                                        <Trash2 className="w-4 h-4" /> {t('scheduling.actions.delete')}
                                     </button>
                                     {selectedCampaign.status !== 'running' ? (
                                         <button
@@ -1302,12 +1302,12 @@ const CallSchedulingPage = () => {
                                             disabled={(stats?.lead_states?.pending || 0) <= 0}
                                             title={
                                                 (stats?.lead_states?.pending || 0) <= 0
-                                                    ? 'No pending leads to dial. Recycle/uncancel leads first.'
+                                                    ? t('scheduling.tooltips.noPendingLeads')
                                                     : ''
                                             }
                                             onClick={() => setStatus(selectedCampaign.id, 'running')}
                                         >
-                                            <Play className="w-4 h-4" /> Start
+                                            <Play className="w-4 h-4" /> {t('scheduling.actions.start')}
                                         </button>
                                     ) : (
                                         <>
@@ -1315,18 +1315,18 @@ const CallSchedulingPage = () => {
                                                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500 text-black hover:bg-yellow-500/90 text-sm"
                                                 onClick={() => setStatus(selectedCampaign.id, 'paused')}
                                             >
-                                                <Pause className="w-4 h-4" /> Pause
+                                                <Pause className="w-4 h-4" /> {t('scheduling.actions.pause')}
                                             </button>
                                             <button
                                                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-500/90 text-sm"
                                                 onClick={async () => {
                                                     const cancelPending = window.confirm(
-                                                        'Stop campaign and cancel all remaining pending leads?\n\nOK = Stop + cancel pending (non-resumable)\nCancel = Stop only (resumable)'
+                                                        t('scheduling.confirmations.stopCampaign')
                                                     );
                                                     await setStatus(selectedCampaign.id, 'stopped', cancelPending);
                                                 }}
                                             >
-                                                <Square className="w-4 h-4" /> Stop
+                                                <Square className="w-4 h-4" /> {t('scheduling.actions.stop')}
                                             </button>
                                         </>
                                     )}
@@ -1335,37 +1335,37 @@ const CallSchedulingPage = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
                                 <div className="border rounded-lg p-3">
-                                    <div className="text-xs text-muted-foreground">QUEUE</div>
+                                    <div className="text-xs text-muted-foreground">{t('scheduling.callStats.queue')}</div>
                                     <div className="text-sm mt-1">
-                                        Pending: <span className="font-medium">{stats?.lead_states?.pending || 0}</span> · Leased:{' '}
+                                        {t('scheduling.callStats.pending')}: <span className="font-medium">{stats?.lead_states?.pending || 0}</span> · {t('scheduling.callStats.leased')}:{' '}
                                         <span className="font-medium">{stats?.lead_states?.leased || 0}</span>
                                     </div>
                                 </div>
                                 <div className="border rounded-lg p-3">
-                                    <div className="text-xs text-muted-foreground">IN PROGRESS</div>
+                                    <div className="text-xs text-muted-foreground">{t('scheduling.callStats.inProgress')}</div>
                                     <div className="text-sm mt-1">
-                                        Dialing: <span className="font-medium">{stats?.lead_states?.dialing || 0}</span> · In call:{' '}
+                                        {t('scheduling.callStats.dialing')}: <span className="font-medium">{stats?.lead_states?.dialing || 0}</span> · {t('scheduling.callStats.inCall')}:{' '}
                                         <span className="font-medium">{stats?.lead_states?.in_progress || 0}</span>
                                     </div>
                                 </div>
                                 <div className="border rounded-lg p-3">
-                                    <div className="text-xs text-muted-foreground">OUTCOMES</div>
+                                    <div className="text-xs text-muted-foreground">{t('scheduling.outcomes')}</div>
                                     <div className="text-sm mt-1">
-                                        VM: <span className="font-medium">{stats?.attempt_outcomes?.voicemail_dropped || 0}</span> · Human:{' '}
-                                        <span className="font-medium">{stats?.attempt_outcomes?.answered_human || 0}</span> · Errors:{' '}
+                                        {t('scheduling.callStats.vm')}: <span className="font-medium">{stats?.attempt_outcomes?.voicemail_dropped || 0}</span> · {t('scheduling.callStats.human')}:{' '}
+                                        <span className="font-medium">{stats?.attempt_outcomes?.answered_human || 0}</span> · {t('scheduling.results.errors')}:{' '}
                                         <span className="font-medium">{stats?.attempt_outcomes?.error || 0}</span>
                                     </div>
                                 </div>
                                 <div className="border rounded-lg p-3">
-                                    <div className="text-xs text-muted-foreground">STATUS</div>
+                                    <div className="text-xs text-muted-foreground">{t('scheduling.status.title')}</div>
                                     <div className="text-sm mt-1">
                                         {statusInfo?.within === false ? (
                                             <span className="inline-flex items-center gap-1 text-yellow-600">
-                                                <AlertTriangle className="w-4 h-4" /> Outside window
+                                                <AlertTriangle className="w-4 h-4" /> {t('scheduling.status.outsideWindow')}
                                             </span>
                                         ) : (
                                             <span className="inline-flex items-center gap-1 text-green-700">
-                                                <PhoneCall className="w-4 h-4" /> Ready
+                                                <PhoneCall className="w-4 h-4" /> {t('scheduling.status.ready')}
                                             </span>
                                         )}
                                     </div>
@@ -1387,7 +1387,7 @@ const CallSchedulingPage = () => {
                 <div className="col-span-2 border rounded-lg bg-card">
                     <div className="flex items-center justify-between gap-3 p-3 border-b">
                         <div className="flex items-center gap-2">
-                            <div className="font-semibold">Leads</div>
+                            <div className="font-semibold">{t('scheduling.leads')}</div>
                             {selectedCampaign && leads.length === 0 && (
                                 <button
                                     className="inline-flex items-center gap-2 px-2 py-1 rounded-md border hover:bg-muted text-xs"
@@ -1397,7 +1397,7 @@ const CallSchedulingPage = () => {
                                         setShowCampaignModal(true);
                                     }}
                                 >
-                                    <Upload className="w-3 h-3" /> Import leads
+                                    <Upload className="w-3 h-3" /> {t('scheduling.actions.import')}
                                 </button>
                             )}
                         </div>
@@ -1410,7 +1410,7 @@ const CallSchedulingPage = () => {
                                         setLeadQuery(e.target.value);
                                         setLeadPage(1);
                                     }}
-                                    placeholder="Search name/number…"
+                                    placeholder={t('scheduling.placeholders.searchLeads')}
                                     className="pl-8 pr-3 py-2 rounded-lg border bg-background text-sm w-56"
                                 />
                             </div>
@@ -1422,14 +1422,14 @@ const CallSchedulingPage = () => {
                                 }}
                                 className="px-3 py-2 rounded-lg border bg-background text-sm"
                             >
-                                <option value="">All states</option>
-                                <option value="pending">pending</option>
-                                <option value="leased">leased</option>
-                                <option value="dialing">dialing</option>
-                                <option value="in_progress">in_progress</option>
-                                <option value="completed">completed</option>
-                                <option value="failed">failed</option>
-                                <option value="canceled">canceled</option>
+                                <option value="">{t('scheduling.filters.allStates')}</option>
+                                <option value="pending">{t('scheduling.callStats.pending')}</option>
+                                <option value="leased">{t('scheduling.callStats.leased')}</option>
+                                <option value="dialing">{t('scheduling.callStats.dialing')}</option>
+                                <option value="in_progress">{t('scheduling.callStats.inProgress')}</option>
+                                <option value="completed">{t('scheduling.callStats.completed')}</option>
+                                <option value="failed">{t('scheduling.callStats.failed')}</option>
+                                <option value="canceled">{t('scheduling.callStats.canceled')}</option>
                             </select>
                         </div>
                     </div>
@@ -1438,20 +1438,20 @@ const CallSchedulingPage = () => {
                         <table className="min-w-[1500px] w-full text-sm">
                             <thead className="bg-muted/30 text-muted-foreground">
                                 <tr className="text-left">
-                                    <th className="py-2 px-3">Name</th>
-                                    <th className="py-2 px-3">Number</th>
-                                    <th className="py-2 px-3">State</th>
-                                    <th className="py-2 px-3">Context</th>
-                                    <th className="py-2 px-3">Provider</th>
-                                    <th className="py-2 px-3">Time</th>
-                                    <th className="py-2 px-3">Duration</th>
-                                    <th className="py-2 px-3">Attempts</th>
-                                    <th className="py-2 px-3">Outcome</th>
-                                    <th className="py-2 px-3">AMD</th>
-                                    <th className="py-2 px-3">DTMF</th>
-                                    <th className="py-2 px-3">Call History</th>
-                                    <th className="py-2 px-3">Last Error</th>
-                                    <th className="py-2 px-3 text-right">Actions</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.name')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.number')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.state')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.context')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.provider')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.time')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.duration')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.attempts')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.outcome')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.amd')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.dtmf')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.callHistory')}</th>
+                                    <th className="py-2 px-3">{t('scheduling.leadsTable.lastError')}</th>
+                                    <th className="py-2 px-3 text-right">{t('scheduling.leadsTable.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1482,7 +1482,7 @@ const CallSchedulingPage = () => {
                                                         className="inline-flex items-center gap-2 px-2 py-1 rounded-md border hover:bg-muted text-xs"
                                                         onClick={() => openCallHistory(l.last_call_history_call_id as string)}
                                                     >
-                                                        <ExternalLink className="w-3 h-3" /> Open
+                                                        <ExternalLink className="w-3 h-3" /> {t('common.open')}
                                                     </button>
                                                 ) : (
                                                     <span className="text-muted-foreground">-</span>
@@ -1502,25 +1502,25 @@ const CallSchedulingPage = () => {
                                                         setRecycleLeadRow(l);
                                                         setRecycleMode('redial');
                                                     }}
-                                                    title="Recycle lead"
+                                                    title={t('scheduling.tooltips.recycleLead')}
                                                 >
-                                                    <RotateCcw className="w-3 h-3" /> Recycle
+                                                    <RotateCcw className="w-3 h-3" /> {t('scheduling.actions.recycle')}
                                                 </button>
                                                 <button
                                                     className="inline-flex items-center gap-2 px-2 py-1 rounded-md hover:bg-accent text-xs"
                                                     onClick={() => ignoreLead(l.id)}
                                                     disabled={isIgnored}
-                                                    title="Ignore lead (canceled, reversible)"
+                                                    title={t('scheduling.tooltips.ignoreLead')}
                                                 >
-                                                    <Ban className="w-3 h-3" /> {isIgnored ? 'Ignored' : 'Ignore'}
+                                                    <Ban className="w-3 h-3" /> {isIgnored ? t('scheduling.actions.ignored') : t('scheduling.actions.ignore')}
                                                 </button>
                                                 <button
                                                     className="inline-flex items-center gap-2 px-2 py-1 rounded-md hover:bg-accent text-xs text-red-600 disabled:opacity-50"
                                                     onClick={() => deleteLead(l.id)}
                                                     disabled={!canDelete}
-                                                    title={canDelete ? 'Delete lead' : 'Pause/stop campaign to delete leads'}
+                                                    title={canDelete ? t('scheduling.tooltips.deleteLead') : t('scheduling.tooltips.deleteLeadDisabled')}
                                                 >
-                                                    <Trash2 className="w-3 h-3" /> Delete
+                                                    <Trash2 className="w-3 h-3" /> {t('scheduling.actions.delete')}
                                                 </button>
                                             </td>
                                         </tr>
@@ -1529,7 +1529,7 @@ const CallSchedulingPage = () => {
                                 {leads.length === 0 && (
                                     <tr>
                                         <td colSpan={14} className="py-10 text-center text-sm text-muted-foreground">
-                                            No leads yet. Use the campaign modal to import a CSV.
+                                            {t('scheduling.status.noLeadsYet')}
                                         </td>
                                     </tr>
                                 )}
@@ -1539,7 +1539,7 @@ const CallSchedulingPage = () => {
 
                     <div className="flex items-center justify-between p-3">
                         <div className="text-xs text-muted-foreground">
-                            Page {leadPage} of {leadTotalPages}
+                            {t('pagination.page')} {leadPage} {t('pagination.of')} {leadTotalPages}
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -1547,14 +1547,14 @@ const CallSchedulingPage = () => {
                                 disabled={leadPage <= 1 || !selectedCampaignId}
                                 onClick={() => setLeadPage(p => Math.max(1, p - 1))}
                             >
-                                Prev
+                                {t('pagination.prev')}
                             </button>
                             <button
                                 className="px-3 py-1 rounded border text-sm disabled:opacity-50"
                                 disabled={leadPage >= leadTotalPages || !selectedCampaignId}
-                                onClick={() => setLeadPage(p => Math.min(leadTotalPages, p + 1))}
+                                onClick={() => setLeadPage(p => p + 1)}
                             >
-                                Next
+                                {t('pagination.next')}
                             </button>
                         </div>
                     </div>
@@ -1565,7 +1565,7 @@ const CallSchedulingPage = () => {
             {showCampaignModal && (
                 <Modal
                     isOpen={true}
-                    title={campaignModalMode === 'create' ? 'Create Campaign' : 'Campaign Setup'}
+                    title={campaignModalMode === 'create' ? t('scheduling.actions.create') : t('scheduling.modals.campaignSetup')}
                     onClose={() => {
                         setShowCampaignModal(false);
                         setCampaignModalStep('settings');
@@ -1587,7 +1587,7 @@ const CallSchedulingPage = () => {
                                     setPendingConsentFile(null);
                                 }}
                             >
-                                Close
+                                {t('scheduling.actions.close')}
                             </button>
                             {campaignModalMode === 'create' ? (
                                 <button
@@ -1595,7 +1595,7 @@ const CallSchedulingPage = () => {
                                     onClick={createCampaign}
                                     disabled={!createForm.name.trim() || !modalTimezoneValid}
                                 >
-                                    Create
+                                    {t('scheduling.actions.create')}
                                 </button>
                             ) : (
                                 <button
@@ -1603,7 +1603,7 @@ const CallSchedulingPage = () => {
                                     onClick={saveEdit}
                                     disabled={!modalTimezoneValid}
                                 >
-                                    Save
+                                    {t('scheduling.actions.save')}
                                 </button>
                             )}
                         </>
@@ -1613,11 +1613,11 @@ const CallSchedulingPage = () => {
                     <div className="space-y-4">
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span className="inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> Server now:{' '}
+                                <Clock className="w-3 h-3" /> {t('scheduling.serverNow')}{' '}
                                 <span className="font-mono text-foreground">{formatClock(serverNow, serverTz)}</span> <span className="font-mono">{serverTz}</span>
                             </span>
                             <span className="inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> Campaign now:{' '}
+                                <Clock className="w-3 h-3" /> {t('scheduling.campaignNow')}{' '}
                                 <span className="font-mono text-foreground">
                                     {formatClock(serverNow, (campaignModalMode === 'create' ? createForm.timezone : editForm.timezone) || 'UTC')}
                                 </span>{' '}
@@ -1627,50 +1627,45 @@ const CallSchedulingPage = () => {
 
                         <div className="flex items-center gap-2">
                             <button
-                                className={`px-3 py-1 rounded border text-sm ${
-                                    campaignModalStep === 'settings' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                                }`}
+                                className={`px-3 py-1 rounded border text-sm ${campaignModalStep === 'settings' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                                    }`}
                                 onClick={() => setCampaignModalStep('settings')}
                             >
-                                Settings
+                                {t('scheduling.tabs.settings')}
                             </button>
                             <button
-                                className={`px-3 py-1 rounded border text-sm ${
-                                    campaignModalStep === 'leads' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                                }`}
+                                className={`px-3 py-1 rounded border text-sm ${campaignModalStep === 'leads' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                                    }`}
                                 onClick={() => setCampaignModalStep('leads')}
                             >
-                                Leads
+                                {t('scheduling.tabs.leads')}
                             </button>
                             <button
-                                className={`px-3 py-1 rounded border text-sm ${
-                                    campaignModalStep === 'recordings' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                                }`}
+                                className={`px-3 py-1 rounded border text-sm ${campaignModalStep === 'recordings' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                                    }`}
                                 onClick={() => setCampaignModalStep('recordings')}
                             >
-                                Recordings
+                                {t('scheduling.tabs.recordings')}
                             </button>
                             <button
-                                className={`px-3 py-1 rounded border text-sm ${
-                                    campaignModalStep === 'setup' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                                }`}
+                                className={`px-3 py-1 rounded border text-sm ${campaignModalStep === 'setup' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                                    }`}
                                 onClick={() => setCampaignModalStep('setup')}
                             >
-                                Setup Guide
+                                {t('scheduling.tabs.setupGuide')}
                             </button>
                             <button
-                                className={`px-3 py-1 rounded border text-sm ${
-                                    campaignModalStep === 'advanced' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                                }`}
+                                className={`px-3 py-1 rounded border text-sm ${campaignModalStep === 'advanced' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                                    }`}
                                 onClick={() => setCampaignModalStep('advanced')}
                             >
-                                Advanced (AMD)
+                                {t('scheduling.tabs.advanced')}
                             </button>
                         </div>
 
                         {dialplanNeedsReview && (
                             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                                Consent/voicemail settings changed in this modal. Review the updated dialplan in the “Setup Guide” tab and reload Asterisk dialplan if needed.
+                                {t('scheduling.notices.dialplanReview')}
                             </div>
                         )}
 
@@ -1678,7 +1673,7 @@ const CallSchedulingPage = () => {
                             <div className="space-y-3">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
-                                        <FormLabel tooltip="Friendly name shown in the scheduling UI.">Name</FormLabel>
+                                        <FormLabel tooltip={t('scheduling.tooltips.campaignName')}>{t('scheduling.form.name')}</FormLabel>
                                         <input
                                             value={campaignModalMode === 'create' ? createForm.name : editForm.name}
                                             onChange={e =>
@@ -1690,7 +1685,7 @@ const CallSchedulingPage = () => {
                                         />
                                     </div>
                                     <div>
-                                        <FormLabel tooltip="IANA timezone used for daily window scheduling and campaign-local timestamps (e.g., America/Phoenix).">Timezone</FormLabel>
+                                        <FormLabel tooltip={t('scheduling.tooltips.timezone')}>{t('scheduling.form.timezone')}</FormLabel>
                                         <input
                                             list="aava-iana-timezones"
                                             value={campaignModalMode === 'create' ? createForm.timezone : editForm.timezone}
@@ -1703,12 +1698,12 @@ const CallSchedulingPage = () => {
                                         />
                                         {!modalTimezoneValid && (
                                             <div className="mt-1 text-xs text-yellow-700 flex items-center gap-1">
-                                                <AlertTriangle className="w-3 h-3" /> Invalid timezone; use an IANA timezone (e.g., America/Phoenix).
+                                                <AlertTriangle className="w-3 h-3" /> {t('scheduling.errors.invalidTimezone')}
                                             </div>
                                         )}
                                     </div>
                                     <div>
-                                        <FormLabel tooltip="Daily start time in the campaign timezone. If end is earlier than start, the window crosses midnight.">Daily Window Start (local)</FormLabel>
+                                        <FormLabel tooltip={t('scheduling.tooltips.windowStart')}>{t('scheduling.form.start')}</FormLabel>
                                         <input
                                             type="time"
                                             value={campaignModalMode === 'create' ? createForm.daily_window_start_local : editForm.daily_window_start_local}
@@ -1721,7 +1716,7 @@ const CallSchedulingPage = () => {
                                         />
                                     </div>
                                     <div>
-                                        <FormLabel tooltip="Daily end time in the campaign timezone. If end is earlier than start, the window crosses midnight.">Daily Window End (local)</FormLabel>
+                                        <FormLabel tooltip={t('scheduling.tooltips.windowEnd')}>{t('scheduling.form.end')}</FormLabel>
                                         <input
                                             type="time"
                                             value={campaignModalMode === 'create' ? createForm.daily_window_end_local : editForm.daily_window_end_local}
@@ -1738,13 +1733,13 @@ const CallSchedulingPage = () => {
                                             const crosses = Boolean(s && e && e < s);
                                             return crosses ? (
                                                 <div className="mt-1 text-xs text-yellow-700 flex items-center gap-1">
-                                                    <AlertTriangle className="w-3 h-3" /> Crosses midnight
+                                                    <AlertTriangle className="w-3 h-3" /> {t('scheduling.notices.crossesMidnight')}
                                                 </div>
                                             ) : null;
                                         })()}
                                     </div>
                                     <div>
-                                        <FormLabel tooltip="Maximum simultaneous outbound calls for this campaign (MVP supports 1–5).">Max Concurrent</FormLabel>
+                                        <FormLabel tooltip={t('scheduling.tooltips.maxConcurrent')}>{t('scheduling.form.maxConcurrent')}</FormLabel>
                                         <input
                                             type="number"
                                             min={1}
@@ -1759,7 +1754,7 @@ const CallSchedulingPage = () => {
                                         />
                                     </div>
                                     <div>
-                                        <FormLabel tooltip="Minimum delay between starting new calls (helps rate-limit trunk load).">Min Interval Between Calls (sec)</FormLabel>
+                                        <FormLabel tooltip={t('scheduling.tooltips.minInterval')}>{t('scheduling.form.minInterval')}</FormLabel>
                                         <input
                                             type="number"
                                             min={0}
@@ -1777,7 +1772,7 @@ const CallSchedulingPage = () => {
                                         />
                                     </div>
                                     <div className="md:col-span-2">
-                                        <FormLabel tooltip="Default AI context for leads that don’t provide a context override.">Default Context</FormLabel>
+                                        <FormLabel tooltip={t('scheduling.tooltips.defaultContext')}>{t('scheduling.form.context')}</FormLabel>
                                         <input
                                             value={campaignModalMode === 'create' ? createForm.default_context : editForm.default_context}
                                             onChange={e =>
@@ -1791,80 +1786,80 @@ const CallSchedulingPage = () => {
                                 </div>
 
                                 <div className="border rounded-lg p-3 space-y-2">
-                                    <div className="font-medium text-sm">Features</div>
+                                    <div className="font-medium text-sm">{t('scheduling.form.features')}</div>
                                     <FormLabel
                                         tooltip="When enabled, MACHINE/NOTSURE results play the campaign voicemail recording (if set)."
                                         className="mb-0"
                                     >
                                         <span className="flex items-center gap-2 text-sm">
                                             <input
-                                            type="checkbox"
-                                            checked={
-                                                Boolean(
-                                                    campaignModalMode === 'create' ? createForm.voicemail_drop_enabled : editForm.voicemail_drop_enabled
-                                                )
-                                            }
-                                            onChange={e =>
-                                                campaignModalMode === 'create'
-                                                    ? setCreateForm(p => {
-                                                          setDialplanNeedsReview(true);
-                                                          const enabled = e.target.checked;
-                                                          const next: any = { ...p, voicemail_drop_enabled: enabled };
-                                                          if (enabled && !(String(next.voicemail_drop_media_uri || '').trim())) {
-                                                              next.voicemail_drop_media_uri = DEFAULT_VOICEMAIL_MEDIA_URI;
-                                                          }
-                                                          return next;
-                                                      })
-                                                    : setEditForm(p => {
-                                                          setDialplanNeedsReview(true);
-                                                          const enabled = e.target.checked;
-                                                          const next: any = { ...p, voicemail_drop_enabled: enabled };
-                                                          if (enabled && !(String(next.voicemail_drop_media_uri || '').trim())) {
-                                                              next.voicemail_drop_media_uri = DEFAULT_VOICEMAIL_MEDIA_URI;
-                                                          }
-                                                          return next;
-                                                      })
-                                            }
-                                        />
-                                        Voicemail drop (AMD MACHINE/NOTSURE → leave voicemail recording)
+                                                type="checkbox"
+                                                checked={
+                                                    Boolean(
+                                                        campaignModalMode === 'create' ? createForm.voicemail_drop_enabled : editForm.voicemail_drop_enabled
+                                                    )
+                                                }
+                                                onChange={e =>
+                                                    campaignModalMode === 'create'
+                                                        ? setCreateForm(p => {
+                                                            setDialplanNeedsReview(true);
+                                                            const enabled = e.target.checked;
+                                                            const next: any = { ...p, voicemail_drop_enabled: enabled };
+                                                            if (enabled && !(String(next.voicemail_drop_media_uri || '').trim())) {
+                                                                next.voicemail_drop_media_uri = DEFAULT_VOICEMAIL_MEDIA_URI;
+                                                            }
+                                                            return next;
+                                                        })
+                                                        : setEditForm(p => {
+                                                            setDialplanNeedsReview(true);
+                                                            const enabled = e.target.checked;
+                                                            const next: any = { ...p, voicemail_drop_enabled: enabled };
+                                                            if (enabled && !(String(next.voicemail_drop_media_uri || '').trim())) {
+                                                                next.voicemail_drop_media_uri = DEFAULT_VOICEMAIL_MEDIA_URI;
+                                                            }
+                                                            return next;
+                                                        })
+                                                }
+                                            />
+                                            {t('scheduling.form.vmDrop')}
                                         </span>
                                     </FormLabel>
                                     <FormLabel
-                                        tooltip="When enabled, HUMAN results play a consent prompt and collect DTMF (1 accept / 2 deny) before connecting to AI."
+                                        tooltip={t('scheduling.tooltips.consentGate')}
                                         className="mb-0"
                                     >
                                         <span className="flex items-center gap-2 text-sm">
                                             <input
-                                            type="checkbox"
-                                            checked={Boolean(campaignModalMode === 'create' ? createForm.consent_enabled : editForm.consent_enabled)}
-                                            onChange={e =>
-                                                campaignModalMode === 'create'
-                                                    ? setCreateForm(p => {
-                                                          setDialplanNeedsReview(true);
-                                                          const enabled = e.target.checked;
-                                                          const next: any = { ...p, consent_enabled: enabled };
-                                                          if (enabled && !(String(next.consent_media_uri || '').trim())) {
-                                                              next.consent_media_uri = DEFAULT_CONSENT_MEDIA_URI;
-                                                          }
-                                                          return next;
-                                                      })
-                                                    : setEditForm(p => {
-                                                          setDialplanNeedsReview(true);
-                                                          const enabled = e.target.checked;
-                                                          const next: any = { ...p, consent_enabled: enabled };
-                                                          if (enabled && !(String(next.consent_media_uri || '').trim())) {
-                                                              next.consent_media_uri = DEFAULT_CONSENT_MEDIA_URI;
-                                                          }
-                                                          return next;
-                                                      })
-                                            }
-                                        />
-                                        Consent gate (HUMAN → play consent prompt, DTMF 1 accept / 2 deny)
+                                                type="checkbox"
+                                                checked={Boolean(campaignModalMode === 'create' ? createForm.consent_enabled : editForm.consent_enabled)}
+                                                onChange={e =>
+                                                    campaignModalMode === 'create'
+                                                        ? setCreateForm(p => {
+                                                            setDialplanNeedsReview(true);
+                                                            const enabled = e.target.checked;
+                                                            const next: any = { ...p, consent_enabled: enabled };
+                                                            if (enabled && !(String(next.consent_media_uri || '').trim())) {
+                                                                next.consent_media_uri = DEFAULT_CONSENT_MEDIA_URI;
+                                                            }
+                                                            return next;
+                                                        })
+                                                        : setEditForm(p => {
+                                                            setDialplanNeedsReview(true);
+                                                            const enabled = e.target.checked;
+                                                            const next: any = { ...p, consent_enabled: enabled };
+                                                            if (enabled && !(String(next.consent_media_uri || '').trim())) {
+                                                                next.consent_media_uri = DEFAULT_CONSENT_MEDIA_URI;
+                                                            }
+                                                            return next;
+                                                        })
+                                                }
+                                            />
+                                            {t('scheduling.form.consent')}
                                         </span>
                                     </FormLabel>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                                         <div>
-                                            <FormLabel tooltip="How long to wait for DTMF after playing the consent prompt.">Consent timeout (sec)</FormLabel>
+                                            <FormLabel tooltip={t('scheduling.tooltips.consentGate')}>{t('scheduling.form.timeout')}</FormLabel>
                                             <input
                                                 type="number"
                                                 min={1}
@@ -1886,25 +1881,24 @@ const CallSchedulingPage = () => {
                             <div className="space-y-4">
                                 <div className="border rounded-lg p-3 space-y-2">
                                     <FormLabel
-                                        tooltip="Import leads for this campaign. Columns: name, phone_number (required), context, timezone, caller_id, custom_vars (JSON)."
+                                        tooltip={t('scheduling.tooltips.campaignLeads')}
                                         className="mb-0"
                                     >
-                                        Leads (CSV)
+                                        {t('scheduling.form.leadsCsv')}
                                     </FormLabel>
                                     <div className="text-xs text-muted-foreground">
-                                        Import leads from CSV. Default behavior is <span className="font-mono">skip_existing</span>.
-                                        {campaignModalMode === 'create' ? ' Choose a CSV now; it will import after Create.' : ''}
+                                        {t('scheduling.form.leadsCsvDesc1')}
+                                        {campaignModalMode === 'create' ? ` ${t('scheduling.form.leadsCsvDesc2')}` : ''}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
-                                        Note: If a CSV row is missing/blank (or invalid) for <span className="font-mono">context</span> or{' '}
-                                        <span className="font-mono">timezone</span>, the campaign defaults will be used and a warning will be shown.
+                                        {t('scheduling.form.leadsCsvDesc3')}
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <button
                                             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm"
                                             onClick={downloadSampleCsv}
                                         >
-                                            <FileDown className="w-4 h-4" /> Sample CSV
+                                            <FileDown className="w-4 h-4" /> {t('scheduling.form.sampleCsv')}
                                         </button>
                                         <input type="file" accept=".csv,text/csv" onChange={e => setPendingImportFile(e.target.files?.[0] || null)} />
                                         <button
@@ -1913,7 +1907,7 @@ const CallSchedulingPage = () => {
                                             onClick={async () => {
                                                 if (!pendingImportFile) return;
                                                 if (campaignModalMode === 'create') {
-                                                    setNotice({ type: 'info', message: 'CSV selected. It will import after campaign creation.' });
+                                                    setNotice({ type: 'info', message: t('scheduling.notices.csvSelected') });
                                                     return;
                                                 }
                                                 if (!selectedCampaign) return;
@@ -1921,16 +1915,16 @@ const CallSchedulingPage = () => {
                                                 setPendingImportFile(null);
                                             }}
                                         >
-                                            <Upload className="w-4 h-4" /> Import CSV (skip existing)
+                                            <Upload className="w-4 h-4" /> {t('scheduling.form.importCsv')}
                                         </button>
                                     </div>
                                     {campaignModalMode === 'create' && pendingImportFile && (
                                         <div className="text-xs text-muted-foreground">
-                                            Queued: <span className="font-mono">{pendingImportFile.name}</span>
+                                            {t('scheduling.form.queued')} <span className="font-mono">{pendingImportFile.name}</span>
                                         </div>
                                     )}
                                     {campaignModalMode === 'edit' && !selectedCampaign && (
-                                        <div className="text-xs text-muted-foreground">Select a campaign to import leads.</div>
+                                        <div className="text-xs text-muted-foreground">{t('scheduling.form.selectCampaignToImport')}</div>
                                     )}
                                 </div>
                             </div>
@@ -1938,25 +1932,25 @@ const CallSchedulingPage = () => {
                             <div className="space-y-4">
                                 <div className="border rounded-lg p-3 space-y-3">
                                     <FormLabel
-                                        tooltip="Recording used by the consent gate (played after HUMAN detection)."
+                                        tooltip={t('scheduling.tooltips.consentGate')}
                                         className="mb-0"
                                     >
-                                        Consent prompt
+                                        {t('scheduling.form.consentPrompt')}
                                     </FormLabel>
                                     <div className="text-xs text-muted-foreground">
-                                        Used only when “Consent gate” is enabled (DTMF 1 accept / 2 deny).
+                                        {t('scheduling.form.consentPromptDesc')}
                                     </div>
                                     {!modalConsentEnabled && (
                                         <div className="text-xs text-muted-foreground">
-                                            Enable “Consent gate” in <span className="font-medium text-foreground">Settings</span> to select a consent prompt recording.
+                                            {t('scheduling.form.enableConsentGateNotice')}
                                         </div>
                                     )}
                                     <div className="text-xs text-muted-foreground">
-                                        Current:{' '}
+                                        {t('scheduling.form.current')}{' '}
                                         <span className="font-mono">
                                             {modalConsentEnabled
-                                                ? String((campaignModalMode === 'create' ? (createForm as any).consent_media_uri : (editForm as any).consent_media_uri) || '(not set)')
-                                                : '(disabled)'}
+                                                ? String((campaignModalMode === 'create' ? (createForm as any).consent_media_uri : (editForm as any).consent_media_uri) || t('scheduling.form.notSet'))
+                                                : t('scheduling.form.disabled')}
                                         </span>
                                         {pendingConsentFile && (
                                             <>
@@ -1973,22 +1967,22 @@ const CallSchedulingPage = () => {
                                             const hasCurrent = Boolean(currentUri);
                                             const inLibrary = hasCurrent && recordingsLibrary.some(r => r.media_uri === currentUri);
                                             return (
-                                        <select
-                                            className="px-3 py-2 rounded-lg border bg-background text-sm min-w-[320px] disabled:opacity-50"
-                                            disabled={!modalConsentEnabled}
-                                            value={currentUri}
-                                            onChange={e => setRecordingUri('consent', e.target.value)}
-                                        >
-                                            <option value="">Select a recording…</option>
-                                            {hasCurrent && !inLibrary && (
-                                                <option value={currentUri}>{currentUri}</option>
-                                            )}
-                                            {recordingsLibrary.map(r => (
-                                                <option key={r.media_uri} value={r.media_uri}>
-                                                    {r.filename}
-                                                </option>
-                                            ))}
-                                        </select>
+                                                <select
+                                                    className="px-3 py-2 rounded-lg border bg-background text-sm min-w-[320px] disabled:opacity-50"
+                                                    disabled={!modalConsentEnabled}
+                                                    value={currentUri}
+                                                    onChange={e => setRecordingUri('consent', e.target.value)}
+                                                >
+                                                    <option value="">{t('scheduling.form.selectRecording')}</option>
+                                                    {hasCurrent && !inLibrary && (
+                                                        <option value={currentUri}>{currentUri}</option>
+                                                    )}
+                                                    {recordingsLibrary.map(r => (
+                                                        <option key={r.media_uri} value={r.media_uri}>
+                                                            {r.filename}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             );
                                         })()}
                                     </div>
@@ -2012,7 +2006,7 @@ const CallSchedulingPage = () => {
                                                 } catch (e: any) {
                                                     setNotice({
                                                         type: 'error',
-                                                        message: e?.response?.data?.detail || e?.message || 'Failed to upload consent recording'
+                                                        message: e?.response?.data?.detail || e?.message || t('scheduling.form.uploadFailed')
                                                     });
                                                 }
                                             }}
@@ -2020,17 +2014,16 @@ const CallSchedulingPage = () => {
                                             <Upload className="w-4 h-4" /> Upload
                                         </button>
                                         <button
-                                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm disabled:opacity-50 ${
-                                                audioPreview?.playing &&
+                                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm disabled:opacity-50 ${audioPreview?.playing &&
                                                 audioPreview?.mediaUri ===
-                                                    String(
-                                                        (campaignModalMode === 'create'
-                                                            ? (createForm as any).consent_media_uri
-                                                            : (editForm as any).consent_media_uri) || ''
-                                                    ).trim()
-                                                    ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-600'
-                                                    : 'hover:bg-muted'
-                                            }`}
+                                                String(
+                                                    (campaignModalMode === 'create'
+                                                        ? (createForm as any).consent_media_uri
+                                                        : (editForm as any).consent_media_uri) || ''
+                                                ).trim()
+                                                ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-600'
+                                                : 'hover:bg-muted'
+                                                }`}
                                             disabled={!modalConsentEnabled || !Boolean(String((campaignModalMode === 'create' ? (createForm as any).consent_media_uri : (editForm as any).consent_media_uri) || '').trim())}
                                             onClick={() => {
                                                 const uri = String((campaignModalMode === 'create' ? (createForm as any).consent_media_uri : (editForm as any).consent_media_uri) || '').trim();
@@ -2040,7 +2033,7 @@ const CallSchedulingPage = () => {
                                             {(() => {
                                                 const uri = String((campaignModalMode === 'create' ? (createForm as any).consent_media_uri : (editForm as any).consent_media_uri) || '').trim();
                                                 const playing = Boolean(audioPreview?.playing && audioPreview?.mediaUri === uri);
-                                                if (!playing) return <>Preview</>;
+                                                if (!playing) return <>{t('scheduling.form.preview')}</>;
                                                 const ct = audioPreview?.currentTime || 0;
                                                 const dur = audioPreview?.duration || 0;
                                                 const pct = dur > 0 ? Math.min(100, Math.round((ct / dur) * 100)) : 0;
@@ -2056,25 +2049,25 @@ const CallSchedulingPage = () => {
 
                                 <div className="border rounded-lg p-3 space-y-3">
                                     <FormLabel
-                                        tooltip="Recording left when AMD indicates MACHINE/NOTSURE and voicemail drop is enabled."
+                                        tooltip={t('scheduling.form.voicemailDropTooltip')}
                                         className="mb-0"
                                     >
-                                        Voicemail drop
+                                        {t('scheduling.form.voicemailDrop')}
                                     </FormLabel>
                                     <div className="text-xs text-muted-foreground">
-                                        Used only when “Voicemail drop” is enabled and AMD indicates MACHINE/NOTSURE.
+                                        {t('scheduling.form.usedWhenVmDropEnabled')}
                                     </div>
                                     {!modalVoicemailEnabled && (
                                         <div className="text-xs text-muted-foreground">
-                                            Enable “Voicemail drop” in <span className="font-medium text-foreground">Settings</span> to select a voicemail recording.
+                                            {t('scheduling.form.enableVmDropNotice')}
                                         </div>
                                     )}
                                     <div className="text-xs text-muted-foreground">
-                                        Current:{' '}
+                                        {t('scheduling.form.current')}{' '}
                                         <span className="font-mono">
                                             {modalVoicemailEnabled
-                                                ? String((campaignModalMode === 'create' ? (createForm as any).voicemail_drop_media_uri : (editForm as any).voicemail_drop_media_uri) || '(not set)')
-                                                : '(disabled)'}
+                                                ? String((campaignModalMode === 'create' ? (createForm as any).voicemail_drop_media_uri : (editForm as any).voicemail_drop_media_uri) || t('scheduling.form.notSet'))
+                                                : t('scheduling.form.disabled')}
                                         </span>
                                         {pendingVoicemailFile && (
                                             <>
@@ -2093,22 +2086,22 @@ const CallSchedulingPage = () => {
                                             const hasCurrent = Boolean(currentUri);
                                             const inLibrary = hasCurrent && recordingsLibrary.some(r => r.media_uri === currentUri);
                                             return (
-                                        <select
-                                            className="px-3 py-2 rounded-lg border bg-background text-sm min-w-[320px] disabled:opacity-50"
-                                            disabled={!modalVoicemailEnabled}
-                                            value={currentUri}
-                                            onChange={e => setRecordingUri('voicemail', e.target.value)}
-                                        >
-                                            <option value="">Select a recording…</option>
-                                            {hasCurrent && !inLibrary && (
-                                                <option value={currentUri}>{currentUri}</option>
-                                            )}
-                                            {recordingsLibrary.map(r => (
-                                                <option key={r.media_uri} value={r.media_uri}>
-                                                    {r.filename}
-                                                </option>
-                                            ))}
-                                        </select>
+                                                <select
+                                                    className="px-3 py-2 rounded-lg border bg-background text-sm min-w-[320px] disabled:opacity-50"
+                                                    disabled={!modalVoicemailEnabled}
+                                                    value={currentUri}
+                                                    onChange={e => setRecordingUri('voicemail', e.target.value)}
+                                                >
+                                                    <option value="">{t('scheduling.form.selectRecording')}</option>
+                                                    {hasCurrent && !inLibrary && (
+                                                        <option value={currentUri}>{currentUri}</option>
+                                                    )}
+                                                    {recordingsLibrary.map(r => (
+                                                        <option key={r.media_uri} value={r.media_uri}>
+                                                            {r.filename}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             );
                                         })()}
                                     </div>
@@ -2132,7 +2125,7 @@ const CallSchedulingPage = () => {
                                                 } catch (e: any) {
                                                     setNotice({
                                                         type: 'error',
-                                                        message: e?.response?.data?.detail || e?.message || 'Failed to upload voicemail recording'
+                                                        message: e?.response?.data?.detail || e?.message || t('scheduling.form.uploadFailed')
                                                     });
                                                 }
                                             }}
@@ -2140,17 +2133,16 @@ const CallSchedulingPage = () => {
                                             <Upload className="w-4 h-4" /> Upload
                                         </button>
                                         <button
-                                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm disabled:opacity-50 ${
-                                                audioPreview?.playing &&
+                                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm disabled:opacity-50 ${audioPreview?.playing &&
                                                 audioPreview?.mediaUri ===
-                                                    String(
-                                                        (campaignModalMode === 'create'
-                                                            ? (createForm as any).voicemail_drop_media_uri
-                                                            : (editForm as any).voicemail_drop_media_uri) || ''
-                                                    ).trim()
-                                                    ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-600'
-                                                    : 'hover:bg-muted'
-                                            }`}
+                                                String(
+                                                    (campaignModalMode === 'create'
+                                                        ? (createForm as any).voicemail_drop_media_uri
+                                                        : (editForm as any).voicemail_drop_media_uri) || ''
+                                                ).trim()
+                                                ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-600'
+                                                : 'hover:bg-muted'
+                                                }`}
                                             disabled={!modalVoicemailEnabled || !Boolean(String((campaignModalMode === 'create' ? (createForm as any).voicemail_drop_media_uri : (editForm as any).voicemail_drop_media_uri) || '').trim())}
                                             onClick={() => {
                                                 const uri = String((campaignModalMode === 'create' ? (createForm as any).voicemail_drop_media_uri : (editForm as any).voicemail_drop_media_uri) || '').trim();
@@ -2160,7 +2152,7 @@ const CallSchedulingPage = () => {
                                             {(() => {
                                                 const uri = String((campaignModalMode === 'create' ? (createForm as any).voicemail_drop_media_uri : (editForm as any).voicemail_drop_media_uri) || '').trim();
                                                 const playing = Boolean(audioPreview?.playing && audioPreview?.mediaUri === uri);
-                                                if (!playing) return <>Preview</>;
+                                                if (!playing) return <>{t('scheduling.form.preview')}</>;
                                                 const ct = audioPreview?.currentTime || 0;
                                                 const dur = audioPreview?.duration || 0;
                                                 const pct = dur > 0 ? Math.min(100, Math.round((ct / dur) * 100)) : 0;
@@ -2176,33 +2168,33 @@ const CallSchedulingPage = () => {
 
                                 {campaignModalMode === 'create' && (
                                     <div className="text-xs text-muted-foreground">
-                                        If you queue new files and don’t click Upload, they will upload to the shared recording library during campaign creation.
+                                        {t('scheduling.form.queuedFilesNotice')}
                                     </div>
                                 )}
                             </div>
                         ) : campaignModalStep === 'setup' ? (
                             <div className="space-y-3">
                                 <div className="text-sm text-muted-foreground">
-                                    Add this to <span className="font-mono">/etc/asterisk/extensions_custom.conf</span> and reload the dialplan.
+                                    {t('scheduling.form.setupInstructions')}
                                 </div>
                                 <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-                                    <div className="font-medium">Generated from current campaign settings</div>
+                                    <div className="font-medium">{t('scheduling.form.generatedFromSettings')}</div>
                                     <div className="text-xs text-muted-foreground mt-1">
-                                        Consent enabled: <span className="font-mono">{String(modalConsentEnabled)}</span>
+                                        {t('scheduling.form.consentEnabled')} <span className="font-mono">{String(modalConsentEnabled)}</span>
                                         {' · '}
-                                        Voicemail drop enabled: <span className="font-mono">{String(modalVoicemailEnabled)}</span>
+                                        {t('scheduling.form.voicemailDropEnabled')} <span className="font-mono">{String(modalVoicemailEnabled)}</span>
                                     </div>
                                     <div className="text-xs text-muted-foreground mt-1">
-                                        Replace <span className="font-mono">asterisk-ai-voice-agent</span> with your configured ARI app name if different.
+                                        {t('scheduling.form.replaceAriAppName')}
                                     </div>
                                 </div>
                                 <div className="rounded-lg border bg-muted/10 p-3 text-xs text-muted-foreground">
-                                    <div className="font-medium text-foreground">Legend</div>
+                                    <div className="font-medium text-foreground">{t('scheduling.form.legend')}</div>
                                     <div className="mt-1">
-                                        <span className="text-red-700 font-medium">Red</span> lines are commented out (prefixed with <span className="font-mono">;</span>) to match the current campaign settings.
+                                        {t('scheduling.form.legendRed')}
                                     </div>
                                     <div className="mt-1">
-                                        If you later enable the feature again, re-copy this snippet so those lines are uncommented.
+                                        {t('scheduling.form.legendEnableNotice')}
                                     </div>
                                 </div>
                                 <pre className="bg-muted/30 rounded-lg p-3 overflow-x-auto text-xs">
@@ -2225,25 +2217,25 @@ const CallSchedulingPage = () => {
                                         className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm"
                                         onClick={async () => {
                                             const ok = await copyTextToClipboard(modalDialplanSnippetForDisplayAndCopy);
-                                            if (ok) setNotice({ type: 'success', message: 'Dialplan copied to clipboard' });
-                                            else setNotice({ type: 'error', message: 'Clipboard copy failed (try selecting the text manually)' });
+                                            if (ok) setNotice({ type: 'success', message: t('scheduling.notices.dialplanCopied') });
+                                            else setNotice({ type: 'error', message: t('scheduling.notices.dialplanCopyFailed') });
                                         }}
                                     >
-                                        <Copy className="w-4 h-4" /> Copy
+                                        <Copy className="w-4 h-4" /> {t('scheduling.actions.copy')}
                                     </button>
                                 </div>
                                 {(modalConsentEnabled || modalVoicemailEnabled) && (
                                     <div className="text-xs text-muted-foreground">
-                                        If you change consent/voicemail settings later, re-check this tab and update the dialplan if needed.
+                                        {t('scheduling.notices.dialplanSettingsNotice')}
                                     </div>
                                 )}
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 <div className="border rounded-lg p-3">
-                                    <div className="font-medium text-sm">Advanced AMD settings</div>
+                                    <div className="font-medium text-sm">{t('scheduling.tabs.advanced')}</div>
                                     <div className="text-xs text-muted-foreground mt-1">
-                                        AMD() positional args. Leave blank to use defaults.
+                                        {t('scheduling.form.amdInstructions')}
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                                         {([
@@ -2290,28 +2282,28 @@ const CallSchedulingPage = () => {
 
             {/* Recycle modal */}
             {recycleLeadRow && (
-                <Modal isOpen={true} title="Recycle Lead" onClose={() => setRecycleLeadRow(null)}>
+                <Modal isOpen={true} title={t('scheduling.modals.recycleLead')} onClose={() => setRecycleLeadRow(null)}>
                     <div className="space-y-3">
                         <div className="text-sm">
-                            Lead: <span className="font-mono">{recycleLeadRow.phone_number}</span>
+                            {t('scheduling.form.lead')} <span className="font-mono">{recycleLeadRow.phone_number}</span>
                         </div>
                         <label className="flex items-start gap-2 text-sm">
                             <input type="radio" checked={recycleMode === 'redial'} onChange={() => setRecycleMode('redial')} />
                             <span>
-                                <span className="font-medium">Re-dial</span>
-                                <div className="text-xs text-muted-foreground">Keep attempt history; set lead back to pending.</div>
+                                <span className="font-medium">{t('scheduling.form.redial')}</span>
+                                <div className="text-xs text-muted-foreground">{t('scheduling.form.redialDesc')}</div>
                             </span>
                         </label>
                         <label className="flex items-start gap-2 text-sm">
                             <input type="radio" checked={recycleMode === 'reset'} onChange={() => setRecycleMode('reset')} />
                             <span>
-                                <span className="font-medium">Reset completely</span>
-                                <div className="text-xs text-muted-foreground">Delete attempts for this lead and reset counters; then re-queue.</div>
+                                <span className="font-medium">{t('scheduling.form.resetCompletely')}</span>
+                                <div className="text-xs text-muted-foreground">{t('scheduling.form.resetCompletelyDesc')}</div>
                             </span>
                         </label>
                         <div className="flex justify-end gap-2">
                             <button className="px-3 py-2 rounded-lg border hover:bg-muted text-sm" onClick={() => setRecycleLeadRow(null)}>
-                                Cancel
+                                {t('scheduling.actions.close')}
                             </button>
                             <button
                                 className="px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm"
@@ -2321,7 +2313,7 @@ const CallSchedulingPage = () => {
                                     await recycleLead(leadId, recycleMode);
                                 }}
                             >
-                                Confirm
+                                {t('scheduling.actions.confirm')}
                             </button>
                         </div>
                     </div>
@@ -2332,7 +2324,7 @@ const CallSchedulingPage = () => {
             {callHistoryModalId && (
                 <Modal
                     isOpen={true}
-                    title="Call History"
+                    title={t('scheduling.modals.callHistory')}
                     onClose={() => {
                         setCallHistoryModalId(null);
                         setCallHistoryRecord(null);
@@ -2341,31 +2333,31 @@ const CallSchedulingPage = () => {
                 >
                     {callHistoryLoading ? (
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                            <RefreshCw className="w-4 h-4 animate-spin" /> Loading…
+                            <RefreshCw className="w-4 h-4 animate-spin" /> {t('scheduling.form.loading')}
                         </div>
                     ) : callHistoryError ? (
                         <div className="text-sm text-red-600">{callHistoryError}</div>
                     ) : callHistoryRecord ? (
                         <div className="space-y-3">
                             <div className="text-sm">
-                                <div className="text-xs text-muted-foreground">Call ID</div>
+                                <div className="text-xs text-muted-foreground">{t('scheduling.form.callId')}</div>
                                 <div className="font-mono">{callHistoryRecord.call_id}</div>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                                 <div>
-                                    <div className="text-xs text-muted-foreground">Number</div>
+                                    <div className="text-xs text-muted-foreground">{t('scheduling.leadsTable.number')}</div>
                                     <div className="font-mono">{callHistoryRecord.caller_number || '-'}</div>
                                 </div>
                                 <div>
-                                    <div className="text-xs text-muted-foreground">Name</div>
+                                    <div className="text-xs text-muted-foreground">{t('scheduling.leadsTable.name')}</div>
                                     <div>{callHistoryRecord.caller_name || '-'}</div>
                                 </div>
                                 <div>
-                                    <div className="text-xs text-muted-foreground">Outcome</div>
+                                    <div className="text-xs text-muted-foreground">{t('scheduling.leadsTable.outcome')}</div>
                                     <div className="font-medium">{callHistoryRecord.outcome || '-'}</div>
                                 </div>
                                 <div>
-                                    <div className="text-xs text-muted-foreground">Duration</div>
+                                    <div className="text-xs text-muted-foreground">{t('scheduling.leadsTable.duration')}</div>
                                     <div className="font-medium">{Math.round(callHistoryRecord.duration_seconds || 0)}s</div>
                                 </div>
                             </div>
@@ -2373,7 +2365,7 @@ const CallSchedulingPage = () => {
                                 <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700">{callHistoryRecord.error_message}</div>
                             )}
                             <div>
-                                <div className="font-medium text-sm mb-1">Transcript</div>
+                                <div className="font-medium text-sm mb-1">{t('scheduling.form.transcript')}</div>
                                 <div className="bg-muted/30 rounded-lg p-3 max-h-64 overflow-y-auto text-sm space-y-2">
                                     {(callHistoryRecord.conversation_history || []).length ? (
                                         callHistoryRecord.conversation_history.map((m: any, idx: number) => (
@@ -2383,13 +2375,13 @@ const CallSchedulingPage = () => {
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="text-muted-foreground">No transcript available.</div>
+                                        <div className="text-muted-foreground">{t('scheduling.form.noTranscript')}</div>
                                     )}
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="text-sm text-muted-foreground">No record loaded.</div>
+                        <div className="text-sm text-muted-foreground">{t('scheduling.form.noRecordLoaded')}</div>
                     )}
                 </Modal>
             )}

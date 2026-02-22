@@ -183,10 +183,14 @@ _CALL_DURATION = Histogram(
 # Track call start times for duration calculation
 _call_start_times = {}  # call_id -> timestamp
 
-# In-memory set to prevent duplicate cleanup (race condition guard)
+# In-memory set to prevent duplicate cleanup (race condition guard).
+# IMPORTANT: All reads AND mutations of _cleanup_in_progress / _cleanup_completed_at
+# must be performed while holding _cleanup_lock to prevent TOCTOU races between
+# concurrent StasisEnd and ChannelDestroyed events on the same call.
 _cleanup_in_progress: set = set()  # call_ids currently being cleaned up
-_cleanup_completed_at: dict = {}  # call_id -> epoch seconds (best-effort dedupe for repeated StasisEnd/Destroyed)
-_cleanup_lock = asyncio.Lock()  # Lock to make cleanup guard atomic (AAVA-148)
+_cleanup_completed_at: dict = {}  # call_id -> epoch seconds (TTL-evicted; see _evict_cleanup_cache)
+_cleanup_lock = asyncio.Lock()  # Must be held for any access to the two dicts above
+_CLEANUP_CACHE_TTL_SECONDS = 3600  # Evict entries older than 1 hour to prevent unbounded growth
 
 
 class Engine:
@@ -1031,8 +1035,8 @@ class Engine:
     async def _outbound_scheduler_loop(self) -> None:
         """Background control-plane: lease leads and originate outbound calls."""
         logger.info("Outbound scheduler started")
-        try:
-            while True:
+        while True:
+            try:
                 await asyncio.sleep(1.0)
                 # Guard against pre-answer failures that never enter Stasis (prevents capacity lockup).
                 await self._outbound_cleanup_stale_attempts()
@@ -1163,10 +1167,14 @@ class Engine:
                                 exc_info=True,
                             )
                         continue
-        except asyncio.CancelledError:
-            logger.info("Outbound scheduler cancelled")
-        except Exception:
-            logger.error("Outbound scheduler crashed", exc_info=True)
+            except asyncio.CancelledError:
+                logger.info("Outbound scheduler cancelled")
+                return
+            except Exception:
+                # Unexpected error in outer loop — log and restart after a short back-off so the
+                # dialer keeps running rather than dying silently.
+                logger.error("Outbound scheduler crashed, restarting in 5 s", exc_info=True)
+                await asyncio.sleep(5.0)
 
     async def _outbound_originate_attempt(self, campaign: Dict[str, Any], lead: Dict[str, Any], attempt_id: str) -> None:
         """Originate a leased+marked lead via configurable Local/ routing (FreePBX, ViciDial, generic)."""

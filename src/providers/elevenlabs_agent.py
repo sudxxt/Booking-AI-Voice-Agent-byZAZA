@@ -14,11 +14,34 @@ import base64
 import json
 import logging
 import os
-import audioop
+try:
+    import audioop  # deprecated in 3.11, removed in 3.13
+except ImportError:
+    import array as _array
+    class _AudiopStub:
+        @staticmethod
+        def ulaw2lin(data: bytes, width: int) -> bytes:
+            out = _array.array('h')
+            for byte in data:
+                b = byte ^ 0xFF
+                sign = (b & 0x80) >> 7
+                exp = (b & 0x70) >> 4
+                mantissa = b & 0x0F
+                sample = ((mantissa << 3) + 132) << max(exp - 1, 0) if exp else (mantissa << 3) + 4
+                if exp:
+                    sample -= 132
+                out.append(-sample if sign else sample)
+            return out.tobytes()
+
+        @staticmethod
+        def alaw2lin(data: bytes, width: int) -> bytes:
+            return bytes(len(data) * 2)  # stub
+
+    audioop = _AudiopStub()  # type: ignore[assignment]
 from ..audio.resampler import resample_audio
 import struct
 from typing import Any, Callable, Dict, List, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import websockets
 from websockets.asyncio.client import ClientConnection
@@ -35,13 +58,9 @@ class ElevenLabsSessionState:
     conversation_id: Optional[str] = None
     is_agent_speaking: bool = False
     is_user_speaking: bool = False
-    pending_audio_chunks: List[bytes] = None
+    pending_audio_chunks: List[bytes] = field(default_factory=list)
     total_audio_sent: int = 0
     total_audio_received: int = 0
-    
-    def __post_init__(self):
-        if self.pending_audio_chunks is None:
-            self.pending_audio_chunks = []
 
 
 class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
@@ -78,10 +97,27 @@ class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
         self._closed = False
         self._in_audio_burst: bool = False
         
+        # Reuse a single aiohttp session for the provider lifetime (avoids per-call SSL overhead)
+        self._http_session: Optional[Any] = None
+
         # Audio resampling state
         self._resample_state_in = None  # For input resampling
         self._resample_state_out = None  # For output resampling
-        
+
+    @staticmethod
+    def _log_task_exception(task: asyncio.Task) -> None:
+        """Done-callback: surface exceptions from fire-and-forget tasks to the error log."""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc:
+            logger.error(
+                "[elevenlabs] Background task failed",
+                task_name=task.get_name(),
+                error=str(exc),
+                exc_info=exc,
+            )
+
         # Turn latency tracking (Milestone 21 - Call History)
         self._turn_start_time: Optional[float] = None
         self._turn_first_audio_received: bool = False
@@ -175,7 +211,10 @@ class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
             logger.info(f"[elevenlabs] [{call_id}] WebSocket connected")
             
             # Start receive loop
-            self._receive_task = asyncio.create_task(self._receive_loop())
+            self._receive_task = asyncio.create_task(
+                self._receive_loop(), name=f"elevenlabs-recv-{call_id}"
+            )
+            self._receive_task.add_done_callback(self._log_task_exception)
             
             # Send initial configuration if context provided
             if context:
@@ -195,40 +234,55 @@ class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
             logger.error(f"[elevenlabs] [{call_id}] Connection failed: {e}")
             raise
     
+    async def _get_http_session(self):
+        """Return a lazily-created, reused aiohttp.ClientSession for the provider lifetime."""
+        import aiohttp
+        if self._http_session is None or self._http_session.closed:
+            self._http_session = aiohttp.ClientSession()
+        return self._http_session
+
     async def _get_signed_url(self, api_key: str, agent_id: str, call_id: str) -> str:
         """
         Get a signed URL for connecting to an authenticated ElevenLabs agent.
-        
-        For agents with authentication enabled, we need to request a signed URL
-        from the ElevenLabs API before connecting via WebSocket.
+        Retries up to 3 times with exponential backoff on transient HTTP errors.
         """
         import aiohttp
-        
+
         url = f"https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id={agent_id}"
-        headers = {
-            "xi-api-key": api_key,
-        }
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
+        headers = {"xi-api-key": api_key}
+        _MAX_ATTEMPTS = 3
+
+        for attempt in range(1, _MAX_ATTEMPTS + 1):
+            try:
+                http = await self._get_http_session()
+                async with http.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        logger.error(f"[elevenlabs] [{call_id}] Failed to get signed URL: {response.status} - {error_text}")
-                        raise ConnectionError(f"Failed to get signed URL: {response.status}")
-                    
+                        logger.error(
+                            f"[elevenlabs] [{call_id}] Failed to get signed URL (attempt {attempt}): "
+                            f"{response.status} - {error_text}"
+                        )
+                        if response.status < 500 or attempt >= _MAX_ATTEMPTS:
+                            raise ConnectionError(f"Failed to get signed URL: {response.status}")
+                        # 5xx — transient server error, retry
+                        await asyncio.sleep(1.5 * attempt)
+                        continue
+
                     data = await response.json()
                     signed_url = data.get("signed_url")
-                    
                     if not signed_url:
                         raise ConnectionError("No signed_url in response")
-                    
+
                     logger.info(f"[elevenlabs] [{call_id}] Got signed URL for authenticated agent")
                     return signed_url
-                    
-        except aiohttp.ClientError as e:
-            logger.error(f"[elevenlabs] [{call_id}] HTTP error getting signed URL: {e}")
-            raise ConnectionError(f"HTTP error: {e}")
+
+            except aiohttp.ClientError as e:
+                logger.warning(f"[elevenlabs] [{call_id}] HTTP error getting signed URL (attempt {attempt}): {e}")
+                if attempt >= _MAX_ATTEMPTS:
+                    raise ConnectionError(f"HTTP error: {e}")
+                await asyncio.sleep(1.5 * attempt)
+
+        raise ConnectionError("Failed to get signed URL after all retries")
     
     async def _send_session_config(self, context: Dict[str, Any]) -> None:
         """Send session configuration to ElevenLabs."""
@@ -345,12 +399,15 @@ class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
         }
         
         try:
-            await self._ws.send(json.dumps(message))
+            await asyncio.wait_for(self._ws.send(json.dumps(message)), timeout=5.0)
             self._session_state.total_audio_sent += len(pcm16_audio)
-            # Log every 10 chunks for debugging
+            # Log every 50 chunks for debugging
             chunks_sent = self._session_state.total_audio_sent // 640  # 640 bytes = 20ms @ 16kHz
             if chunks_sent % 50 == 0 and chunks_sent > 0:
                 logger.debug(f"[elevenlabs] [{self._call_id}] Audio progress: {self._session_state.total_audio_sent} bytes sent")
+        except asyncio.TimeoutError:
+            logger.warning(f"[elevenlabs] [{self._call_id}] send_audio timed out — WebSocket may be stalled")
+            self._connected = False
         except Exception as e:
             logger.warning(f"[elevenlabs] [{self._call_id}] Failed to send audio: {e}")
     
@@ -361,8 +418,11 @@ class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
         
         message = {"type": "interrupt"}
         try:
-            await self._ws.send(json.dumps(message))
+            await asyncio.wait_for(self._ws.send(json.dumps(message)), timeout=3.0)
             logger.debug(f"[elevenlabs] [{self._call_id}] Sent interrupt")
+        except asyncio.TimeoutError:
+            logger.warning(f"[elevenlabs] [{self._call_id}] send_interrupt timed out")
+            self._connected = False
         except Exception as e:
             logger.warning(f"[elevenlabs] [{self._call_id}] Failed to send interrupt: {e}")
     
@@ -409,7 +469,15 @@ class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
                 except Exception as e:
                     logger.debug(f"[elevenlabs] [{self._call_id}] WebSocket close error: {e}")
                 self._ws = None
-            
+
+            # Close the shared HTTP session if it's still open
+            if self._http_session and not self._http_session.closed:
+                try:
+                    await self._http_session.close()
+                except Exception:
+                    pass
+                self._http_session = None
+
             self._connected = False
             
             # Emit session ended event
@@ -440,25 +508,72 @@ class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
     async def _receive_loop(self) -> None:
         """Process incoming WebSocket messages from ElevenLabs."""
         logger.debug(f"[elevenlabs] [{self._call_id}] Receive loop started")
-        
-        try:
-            async for message in self._ws:
+        _MAX_RECONNECT_ATTEMPTS = 3
+        _RECONNECT_BACKOFF_BASE_SEC = 1.5
+        attempt = 0
+
+        while not self._closing:
+            try:
+                async for message in self._ws:
+                    if self._closing:
+                        break
+                    try:
+                        await self._handle_message(message)
+                    except Exception as e:
+                        logger.error(f"[elevenlabs] [{self._call_id}] Error handling message: {e}")
+                # Clean exit from the async for — WS closed normally.
+                break
+            except websockets.exceptions.ConnectionClosed as e:
+                self._connected = False
                 if self._closing:
+                    logger.debug(f"[elevenlabs] [{self._call_id}] WebSocket closed (expected): {e}")
                     break
-                
+                attempt += 1
+                if attempt > _MAX_RECONNECT_ATTEMPTS:
+                    logger.error(
+                        f"[elevenlabs] [{self._call_id}] WebSocket closed unexpectedly after "
+                        f"{attempt - 1} reconnect attempts, giving up: {e}"
+                    )
+                    break
+                wait_sec = _RECONNECT_BACKOFF_BASE_SEC * (2 ** (attempt - 1))
+                logger.warning(
+                    f"[elevenlabs] [{self._call_id}] WebSocket closed unexpectedly ({e}), "
+                    f"reconnect attempt {attempt}/{_MAX_RECONNECT_ATTEMPTS} in {wait_sec:.1f}s"
+                )
+                await asyncio.sleep(wait_sec)
+                # Re-establish connection
                 try:
-                    await self._handle_message(message)
-                except Exception as e:
-                    logger.error(f"[elevenlabs] [{self._call_id}] Error handling message: {e}")
-                    
-        except websockets.exceptions.ConnectionClosed as e:
-            logger.info(f"[elevenlabs] [{self._call_id}] WebSocket closed: {e}")
-        except asyncio.CancelledError:
-            logger.debug(f"[elevenlabs] [{self._call_id}] Receive loop cancelled")
-        except Exception as e:
-            logger.error(f"[elevenlabs] [{self._call_id}] Receive loop error: {e}")
-        finally:
-            self._connected = False
+                    api_key = self.config.api_key or ""
+                    agent_id = self.config.agent_id or ""
+                    if api_key and agent_id and self._call_id:
+                        signed_url = await self._get_signed_url(api_key, agent_id, self._call_id)
+                        self._ws = await asyncio.wait_for(
+                            websockets.connect(
+                                signed_url,
+                                max_size=16 * 1024 * 1024,
+                                ping_interval=20,
+                                ping_timeout=20,
+                                close_timeout=5,
+                            ),
+                            timeout=10.0,
+                        )
+                        self._connected = True
+                        logger.info(f"[elevenlabs] [{self._call_id}] Reconnected (attempt {attempt})")
+                    else:
+                        logger.error(f"[elevenlabs] [{self._call_id}] Cannot reconnect: missing credentials")
+                        break
+                except Exception as reconn_err:
+                    logger.error(f"[elevenlabs] [{self._call_id}] Reconnect attempt {attempt} failed: {reconn_err}")
+                    if attempt >= _MAX_RECONNECT_ATTEMPTS:
+                        break
+            except asyncio.CancelledError:
+                logger.debug(f"[elevenlabs] [{self._call_id}] Receive loop cancelled")
+                break
+            except Exception as e:
+                logger.error(f"[elevenlabs] [{self._call_id}] Receive loop error: {e}")
+                break
+
+        self._connected = False
     
     async def _handle_message(self, raw_message: str) -> None:
         """Handle a single WebSocket message."""
@@ -616,19 +731,38 @@ class ElevenLabsAgentProvider(AIProviderInterface, ProviderCapabilitiesMixin):
         return output
     
     async def _handle_agent_response(self, data: Dict[str, Any]) -> None:
-        """Handle agent text response (transcript of what agent said)."""
+        """Handle agent text response (transcript of what agent said).
+
+        ElevenLabs sends `agent_response` when the agent has fully finished its
+        speaking turn. This is the correct moment to emit `AgentAudioDone` so
+        the engine knows the turn is complete and can accept the next user input.
+        """
         response = data.get("agent_response_event", {})
         text = response.get("agent_response", "")
-        
+
         if text:
-            logger.debug(f"[elevenlabs] [{self._call_id}] Agent: {text[:100]}...")
-            
+            logger.debug(f"[elevenlabs] [{self._call_id}] Agent finished speaking: {text[:100]}")
+
             await self.on_event({
                 "type": "agent_transcript",
                 "call_id": self._call_id,
                 "text": text,
                 "role": "assistant",
             })
+
+        # Signal end-of-turn regardless of whether there is text.
+        # The engine uses AgentAudioDone to know it can re-open the input gate.
+        if self._in_audio_burst:
+            self._in_audio_burst = False
+            try:
+                await self.on_event({
+                    "type": "AgentAudioDone",
+                    "call_id": self._call_id,
+                    "streaming_done": True,
+                })
+                logger.debug(f"[elevenlabs] [{self._call_id}] AgentAudioDone emitted (agent_response turn end)")
+            except Exception as e:
+                logger.warning(f"[elevenlabs] [{self._call_id}] Failed to emit AgentAudioDone: {e}")
     
     async def _handle_user_transcript(self, data: Dict[str, Any]) -> None:
         """Handle user transcript (STT result)."""

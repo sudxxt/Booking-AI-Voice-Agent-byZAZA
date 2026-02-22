@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FormInput, FormLabel, FormSwitch, FormSelect } from '../ui/FormComponents';
 import { ensureModularKey, isFullAgentProvider, isRegisteredProvider, capabilityFromKey } from '../../utils/providerNaming';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface LocalAIStatus {
     stt_backend?: string;
@@ -29,6 +30,7 @@ const renderMarkerList = (value: any) =>
     (Array.isArray(value) ? value : []).join('\n');
 
 const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange, isNew }) => {
+    const { t } = useTranslation();
     const [localConfig, setLocalConfig] = useState<any>({ ...config });
     const [localAIStatus, setLocalAIStatus] = useState<LocalAIStatus | null>(null);
     const [statusLoading, setStatusLoading] = useState(false);
@@ -246,31 +248,31 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
     return (
         <div className="space-y-6">
             <div className="space-y-4 border-b border-border pb-6">
-                <h4 className="font-semibold">Pipeline Identity</h4>
+                <h4 className="font-semibold">{t('pipelines.form.identity')}</h4>
                 <FormInput
-                    label="Pipeline Name"
+                    label={t('pipelines.form.pipelineName')}
                     value={localConfig.name || ''}
                     onChange={(e) => updateConfig({ name: e.target.value })}
-                    placeholder="e.g., english_support"
+                    placeholder={t('pipelines.form.pipelineNamePlaceholder')}
                     disabled={!isNew}
-                    tooltip="Unique identifier for this pipeline."
+                    tooltip={t('pipelines.form.pipelineNameTooltip')}
                 />
             </div>
 
             <div className="space-y-4">
-                <h4 className="font-semibold">Components</h4>
+                <h4 className="font-semibold">{t('pipelines.form.components')}</h4>
 
                 <div className="space-y-2">
-                    <FormLabel>Speech-to-Text (STT)</FormLabel>
+                    <FormLabel>{t('pipelines.form.stt')}</FormLabel>
                     <select
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         value={localConfig.stt || ''}
                         onChange={(e) => handleProviderChange('stt', e.target.value)}
                     >
-                        <option value="">Select STT Provider...</option>
+                        <option value="">{t('pipelines.form.selectStt')}</option>
                         {sttProviders.map(p => (
                             <option key={p.value} value={p.value} disabled={p.disabled}>
-                                {p.label} {p.disabled ? '(Disabled)' : ''}
+                                {p.label} {p.disabled ? `(${t('pipelines.form.disabled')})` : ''}
                             </option>
                         ))}
                     </select>
@@ -285,24 +287,24 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                                 <AlertCircle className="h-3 w-3 text-yellow-500" />
                             )}
                             <span>
-                                Active Backend: <strong className="text-foreground">{localAIStatus.stt_backend || 'Unknown'}</strong>
+                                {t('pipelines.form.activeBackend')}: <strong className="text-foreground">{localAIStatus.stt_backend || t('pipelines.form.unknown')}</strong>
                                 {localAIStatus.stt_model && <span className="text-muted-foreground"> ({localAIStatus.stt_model})</span>}
                             </span>
                         </div>
                     )}
                     {sttProviders.length === 0 && (
-                        <p className="text-xs text-destructive">No STT providers available. Create a modular STT provider first.</p>
+                        <p className="text-xs text-destructive">{t('pipelines.form.noStt')}</p>
                     )}
                 </div>
 
                 <div className="space-y-3">
                     <FormSwitch
                         id="pipeline-stt-streaming"
-                        label="Streaming STT"
+                        label={t('pipelines.form.streamingStt')}
                         checked={localConfig.options?.stt?.streaming ?? true}
                         onChange={(e) => updateSTTOptions({ streaming: e.target.checked })}
-                        description="Recommended. Enables low-latency, two-way conversation."
-                        tooltip="When enabled, supported STT adapters stream audio continuously. When disabled, STT runs in buffered chunk mode."
+                        description={t('pipelines.form.streamingSttDesc')}
+                        tooltip={t('pipelines.form.streamingSttTooltip')}
                     />
 
                     <div className="flex items-center justify-between">
@@ -311,40 +313,40 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                             className="text-xs text-primary hover:underline"
                             onClick={() => setShowAdvancedSTT((v) => !v)}
                         >
-                            {showAdvancedSTT ? 'Hide Advanced' : 'Show Advanced'}
+                            {showAdvancedSTT ? t('pipelines.form.hideAdvanced') : t('pipelines.form.showAdvanced')}
                         </button>
                         <div className="text-xs text-muted-foreground">
-                            Defaults: chunk_ms=160, stream_format=pcm16_16k
+                            {t('pipelines.form.sttDefaults')}
                         </div>
                     </div>
 
                     {showAdvancedSTT && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormInput
-                                label="chunk_ms"
+                                label={t('pipelines.form.chunkMs')}
                                 type="number"
                                 value={localConfig.options?.stt?.chunk_ms ?? 160}
                                 onChange={(e) => updateSTTOptions({ chunk_ms: parseInt(e.target.value || '160', 10) })}
-                                tooltip="How often we flush accumulated audio frames to the STT streaming sender. 160ms is a good default."
+                                tooltip={t('pipelines.form.chunkMsTooltip')}
                             />
                             <FormInput
-                                label="stream_format"
+                                label={t('pipelines.form.streamFormat')}
                                 value={localConfig.options?.stt?.stream_format ?? 'pcm16_16k'}
                                 onChange={(e) => updateSTTOptions({ stream_format: e.target.value })}
-                                tooltip="Input audio format for streaming STT. For Local STT this should usually be pcm16_16k."
+                                tooltip={t('pipelines.form.streamFormatTooltip')}
                             />
                         </div>
                     )}
                 </div>
 
                 <div className="space-y-2">
-                    <FormLabel>Large Language Model (LLM)</FormLabel>
+                    <FormLabel>{t('pipelines.form.llm')}</FormLabel>
                     <select
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         value={localConfig.llm || ''}
                         onChange={(e) => handleProviderChange('llm', e.target.value)}
                     >
-                        <option value="">Select LLM Provider...</option>
+                        <option value="">{t('pipelines.form.selectLlm')}</option>
                         {llmProviders.map(p => (
                             <option key={p.value} value={p.value} disabled={p.disabled}>
                                 {p.label} {p.disabled ? '(Disabled)' : ''}
@@ -357,16 +359,16 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                 </div>
 
                 <div className="space-y-2">
-                    <FormLabel>Text-to-Speech (TTS)</FormLabel>
+                    <FormLabel>{t('pipelines.form.tts')}</FormLabel>
                     <select
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         value={localConfig.tts || ''}
                         onChange={(e) => handleProviderChange('tts', e.target.value)}
                     >
-                        <option value="">Select TTS Provider...</option>
+                        <option value="">{t('pipelines.form.selectTts')}</option>
                         {ttsProviders.map(p => (
                             <option key={p.value} value={p.value} disabled={p.disabled}>
-                                {p.label} {p.disabled ? '(Disabled)' : ''}
+                                {p.label} {p.disabled ? `(${t('pipelines.form.disabled')})` : ''}
                             </option>
                         ))}
                     </select>
@@ -381,13 +383,13 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                                 <AlertCircle className="h-3 w-3 text-yellow-500" />
                             )}
                             <span>
-                                Active Backend: <strong className="text-foreground">{localAIStatus.tts_backend || 'Unknown'}</strong>
+                                {t('pipelines.form.activeBackend')}: <strong className="text-foreground">{localAIStatus.tts_backend || t('pipelines.form.unknown')}</strong>
                                 {localAIStatus.tts_voice && <span className="text-muted-foreground"> ({localAIStatus.tts_voice})</span>}
                             </span>
                         </div>
                     )}
                     {ttsProviders.length === 0 && (
-                        <p className="text-xs text-destructive">No TTS providers available. Create a modular TTS provider first.</p>
+                        <p className="text-xs text-destructive">{t('pipelines.form.noTts')}</p>
                     )}
                 </div>
             </div>
@@ -396,43 +398,43 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                 {(isOpenAILlm || isOllamaLlm) && (
                     <div className="space-y-3 border border-amber-300/40 rounded-lg p-4 bg-amber-500/5">
                         <FormSwitch
-                            label="LLM Expert Settings"
-                            description="Expose high-impact LLM adapter overrides."
+                            label={t('pipelines.form.llmExpert')}
+                            description={t('pipelines.form.llmExpertDesc')}
                             checked={showLlmExpert}
                             onChange={(e) => setShowLlmExpert(e.target.checked)}
                             className="mb-0 border-0 p-0 bg-transparent"
                         />
                         <p className={`text-xs ${showLlmExpert ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
                             {showLlmExpert
-                                ? 'Warning: LLM expert overrides can break tool-calling behavior if they diverge from provider defaults.'
-                                : 'Expert values are visible and read-only until LLM expert mode is enabled.'}
+                                ? t('pipelines.form.llmExpertWarning')
+                                : t('pipelines.form.expertReadonly', { mode: 'LLM' })}
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormSwitch
-                                label="LLM Tools Enabled"
-                                description="Allow tool calls at the pipeline adapter level."
+                                label={t('pipelines.form.llmToolsEnabled')}
+                                description={t('pipelines.form.llmToolsEnabledDesc')}
                                 checked={localConfig.options?.llm?.tools_enabled ?? true}
                                 onChange={(e) => updateRoleOptions('llm', { tools_enabled: e.target.checked })}
                                 disabled={!showLlmExpert}
                             />
                             {isOpenAILlm && (
                                 <FormInput
-                                    label="OpenAI Realtime Model"
+                                    label={t('pipelines.form.openaiRealtime')}
                                     value={localConfig.options?.llm?.realtime_model || ''}
                                     onChange={(e) => updateRoleOptions('llm', { realtime_model: e.target.value })}
                                     placeholder="gpt-4o-realtime-preview-2024-12-17"
-                                    tooltip="Adapter-level realtime model override for OpenAI pipeline LLM."
+                                    tooltip={t('pipelines.form.openaiRealtimeTooltip')}
                                     disabled={!showLlmExpert}
                                 />
                             )}
                         </div>
                         <div className="mt-2 border-t border-amber-300/30 pt-3 space-y-3">
                             <p className="text-xs text-muted-foreground">
-                                Hangup guardrails apply to pipeline LLMs that emit <code>hangup_call</code> too eagerly. These settings are per-pipeline and do not affect full-agent providers like Google Live.
+                                {t('pipelines.form.hangupGuardrail')}
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormSelect
-                                    label="Hangup Call Guardrail"
+                                    label={t('pipelines.form.guardrail')}
                                     value={guardrailEnabledValue}
                                     onChange={(e) => {
                                         const v = String(e.target.value || '');
@@ -444,16 +446,16 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                                         }
                                         updateRoleOptions('llm', { hangup_call_guardrail: v === 'true' });
                                     }}
-                                    tooltip="Auto: enabled only for specific adapters (e.g., Ollama) unless explicitly set. When enabled, hangup_call is allowed only if user end-of-call intent is detected from text."
+                                    tooltip={t('pipelines.form.guardrailTooltip')}
                                     options={[
-                                        { value: '', label: 'Auto (default)' },
-                                        { value: 'true', label: 'Enabled' },
-                                        { value: 'false', label: 'Disabled' },
+                                        { value: '', label: t('pipelines.form.autoDefault') },
+                                        { value: 'true', label: t('pipelines.form.enabled') },
+                                        { value: 'false', label: t('pipelines.form.disabled') },
                                     ]}
                                     disabled={!showLlmExpert}
                                 />
                                 <FormSelect
-                                    label="Hangup Guardrail Mode"
+                                    label={t('pipelines.form.guardrailMode')}
                                     value={guardrailModeValue}
                                     onChange={(e) => {
                                         const v = String(e.target.value || '');
@@ -465,19 +467,19 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                                         }
                                         updateRoleOptions('llm', { hangup_call_guardrail_mode: v });
                                     }}
-                                    tooltip="Auto uses the global hangup policy mode. Relaxed disables the guardrail, Strict forces it on, Normal uses adapter defaults unless explicitly enabled/disabled above."
+                                    tooltip={t('pipelines.form.guardrailModeTooltip')}
                                     options={[
-                                        { value: '', label: 'Auto (global)' },
-                                        { value: 'relaxed', label: 'Relaxed' },
-                                        { value: 'normal', label: 'Normal' },
-                                        { value: 'strict', label: 'Strict' },
+                                        { value: '', label: t('pipelines.form.autoGlobal') },
+                                        { value: 'relaxed', label: t('pipelines.form.relaxed') },
+                                        { value: 'normal', label: t('pipelines.form.normal') },
+                                        { value: 'strict', label: t('pipelines.form.strict') },
                                     ]}
                                     disabled={!showLlmExpert}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <FormLabel tooltip="Per-pipeline override list of caller phrases that indicate they want to end the call. Leave empty to use the global defaults from the Hangup tool policy.">
-                                    End-Call Intent Markers (Override)
+                                <FormLabel tooltip={t('pipelines.form.endCallIntentTooltip')}>
+                                    {t('pipelines.form.endCallIntent')}
                                 </FormLabel>
                                 <textarea
                                     className="w-full p-2 rounded border border-input bg-background text-sm min-h-[120px] disabled:cursor-not-allowed disabled:opacity-50"
@@ -511,7 +513,7 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                                     disabled={!showLlmExpert}
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    One phrase per line. Keep this list short to reduce false positives.
+                                    {t('pipelines.form.onePhrasePerLine')}
                                 </p>
                             </div>
                         </div>
@@ -521,20 +523,20 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                 {(isOpenAIStt || isGroqStt) && (
                     <div className="space-y-3 border border-amber-300/40 rounded-lg p-4 bg-amber-500/5">
                         <FormSwitch
-                            label="STT Expert Settings"
-                            description="Expose advanced STT adapter timestamp options."
+                            label={t('pipelines.form.sttExpert')}
+                            description={t('pipelines.form.sttExpertDesc')}
                             checked={showSttExpert}
                             onChange={(e) => setShowSttExpert(e.target.checked)}
                             className="mb-0 border-0 p-0 bg-transparent"
                         />
                         <p className={`text-xs ${showSttExpert ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
                             {showSttExpert
-                                ? 'Warning: unsupported timestamp settings can fail transcription requests on some models.'
-                                : 'Expert values are visible and read-only until STT expert mode is enabled.'}
+                                ? t('pipelines.form.sttExpertWarning')
+                                : t('pipelines.form.expertReadonly', { mode: 'STT' })}
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormInput
-                                label="STT Timestamp Granularities"
+                                label={t('pipelines.form.timestampGranularities')}
                                 value={timestampGranularitiesText}
                                 onChange={(e) =>
                                     updateRoleOptions('stt', {
@@ -545,7 +547,7 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                                     })
                                 }
                                 placeholder="segment, word"
-                                tooltip="Comma-separated; only supported on specific models/endpoints."
+                                tooltip={t('pipelines.form.timestampGranularitiesTooltip')}
                                 disabled={!showSttExpert}
                             />
                         </div>
@@ -555,35 +557,35 @@ const PipelineForm: React.FC<PipelineFormProps> = ({ config, providers, onChange
                 {(isOpenAITts || isGroqTts) && (
                     <div className="space-y-3 border border-amber-300/40 rounded-lg p-4 bg-amber-500/5">
                         <FormSwitch
-                            label="TTS Expert Settings"
-                            description="Expose provider-specific TTS adapter overrides."
+                            label={t('pipelines.form.ttsExpert')}
+                            description={t('pipelines.form.ttsExpertDesc')}
                             checked={showTtsExpert}
                             onChange={(e) => setShowTtsExpert(e.target.checked)}
                             className="mb-0 border-0 p-0 bg-transparent"
                         />
                         <p className={`text-xs ${showTtsExpert ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
                             {showTtsExpert
-                                ? 'Warning: TTS expert overrides can change output encoding/chunking and impact call playback.'
-                                : 'Expert values are visible and read-only until TTS expert mode is enabled.'}
+                                ? t('pipelines.form.ttsExpertWarning')
+                                : t('pipelines.form.expertReadonly', { mode: 'TTS' })}
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {isOpenAITts && (
                                 <FormInput
-                                    label="OpenAI TTS Response Format"
+                                    label={t('pipelines.form.openaiTtsFormat')}
                                     value={localConfig.options?.tts?.response_format || ''}
                                     onChange={(e) => updateRoleOptions('tts', { response_format: e.target.value })}
                                     placeholder="wav"
-                                    tooltip="Adapter response format (e.g., wav, pcm)."
+                                    tooltip={t('pipelines.form.openaiTtsFormatTooltip')}
                                     disabled={!showTtsExpert}
                                 />
                             )}
                             {isGroqTts && (
                                 <FormInput
-                                    label="Groq TTS Max Input Chars"
+                                    label={t('pipelines.form.groqTtsMaxChars')}
                                     type="number"
                                     value={localConfig.options?.tts?.max_input_chars ?? 200}
                                     onChange={(e) => updateRoleOptions('tts', { max_input_chars: parseInt(e.target.value || '200', 10) })}
-                                    tooltip="Max characters per TTS chunk before adapter splits text."
+                                    tooltip={t('pipelines.form.groqTtsMaxCharsTooltip')}
                                     disabled={!showTtsExpert}
                                 />
                             )}
