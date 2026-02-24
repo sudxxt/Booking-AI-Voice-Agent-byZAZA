@@ -1,14 +1,7 @@
 <div align="center">
 
-# Asterisk AI Voice Agent
+# Asterisk AI Voice Agent (ZAZA fork)
 
-![Version](https://img.shields.io/badge/version-6.2.1-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
-![Docker](https://img.shields.io/badge/docker-compose-blue.svg)
-![Asterisk](https://img.shields.io/badge/asterisk-18+-orange.svg)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hkjarral/Asterisk-AI-Voice-Agent)
-[![Discord](https://dcbadge.limes.pink/api/server/ysg8fphxUe?style=plastic)](https://discord.gg/ysg8fphxUe)
 
 The most powerful, flexible open-source AI voice agent for Asterisk/FreePBX. Featuring a **modular pipeline architecture** that lets you mix and match STT, LLM, and TTS providers, plus **5 production-ready golden baselines** validated for enterprise deployment.
 
