@@ -1,0 +1,6 @@
+pipelines:
+  local_hybrid:
+    tools: null
+providers:
+  deepgram:
+    enabled: true

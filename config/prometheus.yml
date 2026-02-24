@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'ai_engine'
+    static_configs:
+      # Use host.docker.internal to reach the ai_engine running on the host network 
+      # from within the docker bridge network, or use host IP. 
+      # We assume the default port 15000 is used by ai_engine.
+      - targets: ['host.docker.internal:15000']

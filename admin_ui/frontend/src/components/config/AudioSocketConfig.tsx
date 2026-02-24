@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import HelpTooltip from '../ui/HelpTooltip';
 
 interface AudioSocketConfigProps {
     config: any;
@@ -6,6 +8,7 @@ interface AudioSocketConfigProps {
 }
 
 const AudioSocketConfig: React.FC<AudioSocketConfigProps> = ({ config, onChange }) => {
+    const { t } = useTranslation();
     const handleChange = (field: string, value: any) => {
         onChange({ ...config, [field]: value });
     };
@@ -21,7 +24,10 @@ const AudioSocketConfig: React.FC<AudioSocketConfigProps> = ({ config, onChange 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Format</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Format</label>
+                        <HelpTooltip content={t('configEditor.audioSocketConfig.tooltips.format')} />
+                    </div>
                     <select
                         className="w-full p-2 rounded border border-input bg-background"
                         value={config.format || 'slin'}
@@ -30,11 +36,13 @@ const AudioSocketConfig: React.FC<AudioSocketConfigProps> = ({ config, onChange 
                         <option value="slin">SLIN (8kHz PCM)</option>
                         <option value="ulaw">μ-law (8kHz)</option>
                     </select>
-                    <p className="text-xs text-muted-foreground">Audio format for AudioSocket stream</p>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Host</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Host</label>
+                        <HelpTooltip content={t('configEditor.audioSocketConfig.tooltips.host')} />
+                    </div>
                     <input
                         type="text"
                         className="w-full p-2 rounded border border-input bg-background"
@@ -42,11 +50,13 @@ const AudioSocketConfig: React.FC<AudioSocketConfigProps> = ({ config, onChange 
                         onChange={(e) => handleChange('host', e.target.value)}
                         placeholder="127.0.0.1"
                     />
-                    <p className="text-xs text-muted-foreground">AudioSocket server host address</p>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Port</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Port</label>
+                        <HelpTooltip content={t('configEditor.audioSocketConfig.tooltips.port')} />
+                    </div>
                     <input
                         type="number"
                         className="w-full p-2 rounded border border-input bg-background"
@@ -54,7 +64,6 @@ const AudioSocketConfig: React.FC<AudioSocketConfigProps> = ({ config, onChange 
                         onChange={(e) => handleChange('port', parseInt(e.target.value))}
                         placeholder="8090"
                     />
-                    <p className="text-xs text-muted-foreground">AudioSocket server port</p>
                 </div>
             </div>
 

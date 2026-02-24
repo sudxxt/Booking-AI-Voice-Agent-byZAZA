@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  asterisk:
+    image: andrius/asterisk
+    container_name: local_asterisk
+    ports:
+      - "5060:5060/udp"
+      - "8088:8088"
+    volumes:
+      - ./config/asterisk/http.conf:/etc/asterisk/http.conf:ro
+      - ./config/asterisk/ari.conf:/etc/asterisk/ari.conf:ro
+    restart: unless-stopped
+    command: asterisk -f

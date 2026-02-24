@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AsteriskConfigProps {
     config: any;
@@ -6,6 +7,7 @@ interface AsteriskConfigProps {
 }
 
 const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => {
+    const { t } = useTranslation();
     const handleChange = (field: string, value: any) => {
         onChange({ ...config, [field]: value });
     };
@@ -34,6 +36,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             onChange={(e) => handleChange('app_name', e.target.value)}
                             placeholder="asterisk-ai-voice-agent"
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.appName')}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">ARI URL</label>
@@ -44,6 +47,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             onChange={(e) => handleNestedChange('network', 'ari_url', e.target.value)}
                             placeholder="http://localhost:8088/ari"
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.ariUrl')}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">ARI Application</label>
@@ -53,6 +57,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             value={config.network?.ari_app || ''}
                             onChange={(e) => handleNestedChange('network', 'ari_app', e.target.value)}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.ariApp')}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Username</label>
@@ -62,6 +67,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             value={config.network?.username || ''}
                             onChange={(e) => handleNestedChange('network', 'username', e.target.value)}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.username')}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Password</label>
@@ -71,6 +77,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             value={config.network?.password || ''}
                             onChange={(e) => handleNestedChange('network', 'password', e.target.value)}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.password')}</p>
                     </div>
                 </div>
             </div>
@@ -78,15 +85,18 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Inbound Call Handling</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="inbound_enabled"
-                            className="rounded border-input"
-                            checked={config.inbound?.enabled ?? true}
-                            onChange={(e) => handleNestedChange('inbound', 'enabled', e.target.checked)}
-                        />
-                        <label htmlFor="inbound_enabled" className="text-sm font-medium">Enable Inbound Handling</label>
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="inbound_enabled"
+                                className="rounded border-input"
+                                checked={config.inbound?.enabled ?? true}
+                                onChange={(e) => handleNestedChange('inbound', 'enabled', e.target.checked)}
+                            />
+                            <label htmlFor="inbound_enabled" className="text-sm font-medium">Enable Inbound Handling</label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.enableInbound')}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Default Context</label>
@@ -96,6 +106,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             value={config.inbound?.default_context || 'default'}
                             onChange={(e) => handleNestedChange('inbound', 'default_context', e.target.value)}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.defaultContext')}</p>
                     </div>
                 </div>
             </div>
@@ -103,15 +114,18 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Outbound Call Handling</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="outbound_enabled"
-                            className="rounded border-input"
-                            checked={config.outbound?.enabled ?? true}
-                            onChange={(e) => handleNestedChange('outbound', 'enabled', e.target.checked)}
-                        />
-                        <label htmlFor="outbound_enabled" className="text-sm font-medium">Enable Outbound Handling</label>
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="outbound_enabled"
+                                className="rounded border-input"
+                                checked={config.outbound?.enabled ?? true}
+                                onChange={(e) => handleNestedChange('outbound', 'enabled', e.target.checked)}
+                            />
+                            <label htmlFor="outbound_enabled" className="text-sm font-medium">Enable Outbound Handling</label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.enableOutbound')}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Context</label>
@@ -121,6 +135,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             value={config.outbound?.context || 'from-internal'}
                             onChange={(e) => handleNestedChange('outbound', 'context', e.target.value)}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.context')}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Extension</label>
@@ -130,6 +145,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             value={config.outbound?.extension || ''}
                             onChange={(e) => handleNestedChange('outbound', 'extension', e.target.value)}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.extension')}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Priority</label>
@@ -139,6 +155,7 @@ const AsteriskConfig: React.FC<AsteriskConfigProps> = ({ config, onChange }) => 
                             value={config.outbound?.priority || 1}
                             onChange={(e) => handleNestedChange('outbound', 'priority', parseInt(e.target.value))}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.asteriskConfig.instructions.priority')}</p>
                     </div>
                 </div>
             </div>

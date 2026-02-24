@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface GeneralConfigProps {
     config: any;
@@ -6,6 +7,7 @@ interface GeneralConfigProps {
 }
 
 const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
+    const { t } = useTranslation();
     const handleChange = (field: string, value: any) => {
         onChange({ ...config, [field]: value });
     };
@@ -22,7 +24,7 @@ const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
                         onChange={(e) => handleChange('active_pipeline', e.target.value)}
                         placeholder="e.g., default_pipeline"
                     />
-                    <p className="text-xs text-muted-foreground">The default pipeline to use for new calls.</p>
+                    <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.activePipeline')}</p>
                 </div>
 
                 <div className="space-y-2">
@@ -34,6 +36,7 @@ const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
                         onChange={(e) => handleChange('default_provider', e.target.value)}
                         placeholder="e.g., openai"
                     />
+                    <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.defaultProvider')}</p>
                 </div>
 
                 <div className="space-y-2">
@@ -44,6 +47,7 @@ const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
                         value={config.config_version || 6}
                         onChange={(e) => handleChange('config_version', parseInt(e.target.value))}
                     />
+                    <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.configVersion')}</p>
                 </div>
 
                 <div className="space-y-2">
@@ -56,21 +60,25 @@ const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
                         <option value="stream">Stream</option>
                         <option value="file">File</option>
                     </select>
+                    <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.downstreamMode')}</p>
                 </div>
             </div>
 
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Barge-In Settings</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="barge_in_enabled"
-                            className="rounded border-input"
-                            checked={config.barge_in?.enabled ?? true}
-                            onChange={(e) => handleChange('barge_in', { ...config.barge_in, enabled: e.target.checked })}
-                        />
-                        <label htmlFor="barge_in_enabled" className="text-sm font-medium">Enable Barge-In</label>
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="barge_in_enabled"
+                                className="rounded border-input"
+                                checked={config.barge_in?.enabled ?? true}
+                                onChange={(e) => handleChange('barge_in', { ...config.barge_in, enabled: e.target.checked })}
+                            />
+                            <label htmlFor="barge_in_enabled" className="text-sm font-medium">Enable Barge-In</label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.bargeInEnable')}</p>
                     </div>
 
                     <div className="space-y-2">
@@ -81,6 +89,7 @@ const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
                             value={config.barge_in?.energy_threshold || 700}
                             onChange={(e) => handleChange('barge_in', { ...config.barge_in, energy_threshold: parseInt(e.target.value) })}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.bargeInEnergy')}</p>
                     </div>
 
                     <div className="space-y-2">
@@ -91,6 +100,7 @@ const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
                             value={config.barge_in?.initial_protection_ms || 100}
                             onChange={(e) => handleChange('barge_in', { ...config.barge_in, initial_protection_ms: parseInt(e.target.value) })}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.bargeInInitial')}</p>
                     </div>
 
                     <div className="space-y-2">
@@ -101,6 +111,7 @@ const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
                             value={config.barge_in?.min_ms || 150}
                             onChange={(e) => handleChange('barge_in', { ...config.barge_in, min_ms: parseInt(e.target.value) })}
                         />
+                        <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.bargeInMin')}</p>
                     </div>
 
                     <div className="space-y-2">
@@ -111,11 +122,11 @@ const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
                             value={config.barge_in?.post_tts_end_protection_ms || 800}
                             onChange={(e) => handleChange('barge_in', { ...config.barge_in, post_tts_end_protection_ms: parseInt(e.target.value) })}
                         />
-                        <p className="text-xs text-muted-foreground">Prevents agent from hearing its own voice tail</p>
+                        <p className="text-xs text-muted-foreground">{t('configEditor.generalConfig.instructions.bargeInPost')}</p>
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import HelpTooltip from '../ui/HelpTooltip';
 
 interface LLMConfigProps {
     config: any;
@@ -6,6 +8,7 @@ interface LLMConfigProps {
 }
 
 const LLMConfig: React.FC<LLMConfigProps> = ({ config, onChange }) => {
+    const { t } = useTranslation();
     const handleChange = (field: string, value: any) => {
         onChange({ ...config, [field]: value });
     };
@@ -30,7 +33,10 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onChange }) => {
         <div className="space-y-6">
             <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">Default Prompts</h3>
+                    <div className="flex items-center space-x-2">
+                        <h3 className="text-lg font-semibold">Default Prompts</h3>
+                        <HelpTooltip content={t('configEditor.llmConfig.tooltips.defaultPrompts')} />
+                    </div>
                     <button
                         onClick={addPrompt}
                         className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90"
@@ -42,7 +48,10 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onChange }) => {
                 {(config.prompts || []).map((prompt: any, index: number) => (
                     <div key={index} className="border border-border rounded-lg p-4 space-y-2 bg-card">
                         <div className="flex justify-between items-center">
-                            <label className="text-sm font-medium">Role</label>
+                            <div className="flex items-center space-x-1">
+                                <label className="text-sm font-medium">Role</label>
+                                <HelpTooltip content={t('configEditor.llmConfig.tooltips.promptRole')} />
+                            </div>
                             <button
                                 onClick={() => removePrompt(index)}
                                 className="text-destructive hover:text-destructive/80 text-sm"
@@ -60,7 +69,10 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onChange }) => {
                             <option value="assistant">Assistant</option>
                         </select>
 
-                        <label className="text-sm font-medium">Content</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Content</label>
+                            <HelpTooltip content={t('configEditor.llmConfig.tooltips.promptContent')} />
+                        </div>
                         <textarea
                             className="w-full p-2 rounded border border-input bg-background min-h-[100px]"
                             value={prompt.content || ''}

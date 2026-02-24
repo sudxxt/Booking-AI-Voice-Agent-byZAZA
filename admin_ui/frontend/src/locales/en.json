@@ -936,6 +936,80 @@
             "applyBtn": "Apply Changes",
             "restartBtn": "Restart AI Engine"
         },
+        "generalConfig": {
+            "instructions": {
+                "activePipeline": "The default pipeline to use for new calls. Must match a defined pipeline name.",
+                "defaultProvider": "Provider to use if no pipeline is set. Commonly used for monolithic agents.",
+                "configVersion": "Schema version of the AST config. Usually does not need to be changed.",
+                "downstreamMode": "Stream for real-time production audio. File for recording playback.",
+                "bargeInEnable": "Allow users to interrupt the AI agent during TTS playback.",
+                "bargeInEnergy": "Caller energy threshold (RMS over PCM16). Higher = less sensitive.",
+                "bargeInInitial": "Short guard window at the start of agent output.",
+                "bargeInMin": "Minimum sustained caller speech time required before triggering barge-in.",
+                "bargeInPost": "Guard window after agent audio ends. Prevents agent from hearing its own voice tail."
+            }
+        },
+        "asteriskConfig": {
+            "instructions": {
+                "appName": "Stasis app name used in Asterisk dialplan.",
+                "ariUrl": "HTTP endpoint for Asterisk REST Interface (ARI).",
+                "ariApp": "Application name matching the Asterisk config.",
+                "username": "Username for connecting to ARI.",
+                "password": "Password for connecting to ARI.",
+                "enableInbound": "Accept and handle incoming calls.",
+                "defaultContext": "Context assigned to inbound calls if not provided by Asterisk.",
+                "enableOutbound": "Allow the agent to make outgoing calls.",
+                "context": "Asterisk dialplan context for outbound calls.",
+                "extension": "Extension to use for outbound calls.",
+                "priority": "Priority in dialplan for outbound calls."
+            }
+        },
+        "vadConfig": {
+            "tooltips": {
+                "enhancedVad": "Uses a more accurate energy-based Voice Activity Detector. Combines RMS energy analysis with WebRTC fallback for reliable speech detection. Recommended to keep enabled for production use.",
+                "useProviderVad": "Delegate VAD to the AI provider (e.g., Google Live, OpenAI Realtime) instead of running it locally. Enable this only if your provider supports server-side VAD and you want to offload processing.",
+                "minUtterance": "Minimum duration of speech (in milliseconds) before it is considered a valid utterance. Shorter values make the system more responsive but may pick up noise. Default: 600ms.",
+                "maxUtterance": "Maximum allowed duration (in milliseconds) for a single utterance. After this limit, the utterance is force-closed and sent for processing. Prevents stuck recordings. Default: 10000ms.",
+                "utterancePadding": "Extra silence (in milliseconds) added after speech ends before the utterance is finalized. Helps capture trailing words. Increase if words are being cut off. Default: 200ms.",
+                "fallbackEnabled": "Enable WebRTC-based VAD as a fallback when enhanced VAD is insufficient. WebRTC VAD is fast but less accurate. Recommended to keep enabled as a safety net.",
+                "aggressiveness": "WebRTC VAD aggressiveness level (0–3). 0 = least aggressive (more false positives, fewer missed speech). 3 = most aggressive (fewer false positives, more missed speech). Default: 1.",
+                "startFrames": "Number of consecutive speech frames required before WebRTC VAD considers speech started. Higher values reduce false triggers but add latency. Default: 3.",
+                "endSilenceFrames": "Number of consecutive silence frames required before WebRTC VAD considers speech ended. Higher values prevent premature cutoffs but add post-speech delay. Default: 50.",
+                "upstreamSquelch": "Suppress non-speech audio frames before sending them to the AI provider. Useful for providers with server-side VAD (like Google Live) to reduce bandwidth and prevent false triggers from background noise.",
+                "baseRms": "Minimum RMS energy level for a frame to be considered speech. Frames below this threshold are squelched. Increase in noisy environments, decrease in quiet ones. Default: 200.",
+                "noiseFactor": "Multiplier applied to the adaptive noise floor. A frame must exceed (noise_floor × factor) to pass. Higher values = stricter filtering, may miss quiet speech. Default: 2.5.",
+                "noiseEmaAlpha": "Exponential Moving Average alpha for noise floor estimation. Lower values make the noise floor adapt slower (more stable). Higher values adapt faster to changing noise. Range: 0.0–1.0. Default: 0.06.",
+                "minSpeechFrames": "Minimum consecutive speech frames before squelch allows audio through. Prevents single-frame noise spikes from passing. Default: 2.",
+                "squelchEndSilence": "Number of consecutive silence frames before squelch stops forwarding audio. Acts as a mini hold-open timer. Default: 15."
+            }
+        },
+        "streamingConfig": {
+            "tooltips": {
+                "chunkSize": "Size of each audio chunk sent to the AI provider (in milliseconds). Smaller chunks = lower latency, more network overhead. Larger chunks = more efficient, but higher latency. Default: 20ms.",
+                "sampleRate": "Audio sample rate in Hz. Must match your Asterisk configuration. 8000 Hz is standard for telephony (G.711). Do not change unless your system uses wideband (16000 Hz).",
+                "jitterBuffer": "Jitter buffer size (in milliseconds) to smooth out network timing variations. Larger buffer = more resilient to jitter but adds playback delay. Default: 950ms.",
+                "connectionTimeout": "Maximum time (in milliseconds) to wait for a provider connection before giving up. Increase if your AI provider has slow cold starts. Default: 120000ms (2 minutes).",
+                "keepaliveInterval": "Interval (in milliseconds) between WebSocket keepalive pings to the AI provider. Keeps the connection alive through firewalls/NATs. Default: 5000ms.",
+                "providerGrace": "Grace period (in milliseconds) after sending audio before expecting a provider response. Prevents premature timeout errors during initial provider processing. Default: 200ms.",
+                "continuousStream": "When enabled, audio is streamed continuously to the provider even during silence. Required for providers like Google Live and OpenAI Realtime. Disable only for chunk-based STT providers.",
+                "diagEnableTaps": "Enable diagnostic audio taps. Records raw audio streams (upstream and downstream) to disk for debugging. WARNING: generates large files. Use only for troubleshooting.",
+                "diagOutDir": "Directory where diagnostic audio tap files are saved. Must be writable by the AI Engine container. Default: /tmp/ai-engine-taps."
+            }
+        },
+        "llmConfig": {
+            "tooltips": {
+                "defaultPrompts": "Default system prompts sent to the LLM at the start of every conversation. These are applied globally unless a Context overrides them. Use 'system' role for behavioral instructions, 'user' for example inputs, 'assistant' for example responses.",
+                "promptRole": "The role of this prompt message. 'system' = instructions for the AI, 'user' = simulated user input, 'assistant' = simulated AI response. Most setups use a single 'system' prompt.",
+                "promptContent": "The actual text of the prompt message. For system prompts, describe the AI's personality, rules, and behavior. Keep it focused and concise for faster processing."
+            }
+        },
+        "audioSocketConfig": {
+            "tooltips": {
+                "format": "Audio encoding format for the AudioSocket stream. 'slin' (Signed Linear 8kHz PCM) is the standard for Asterisk. 'ulaw' (μ-law) is an alternative Asterisk codec. Must match your Asterisk channel codec.",
+                "host": "IP address or hostname the AudioSocket server listens on. Use '127.0.0.1' for local connections (same machine as Asterisk). Use '0.0.0.0' to accept connections from remote Asterisk servers.",
+                "port": "TCP port for the AudioSocket server. Must not conflict with other services. Default: 8090. Ensure this port is open in your firewall if Asterisk is on a different machine."
+            }
+        },
         "providers": {
             "title": "AI Providers",
             "desc": "Configure connections to external AI services (STT, LLM, TTS)",

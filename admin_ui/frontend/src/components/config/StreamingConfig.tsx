@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import HelpTooltip from '../ui/HelpTooltip';
 
 interface StreamingConfigProps {
     config: any;
@@ -6,6 +8,7 @@ interface StreamingConfigProps {
 }
 
 const StreamingConfig: React.FC<StreamingConfigProps> = ({ config, onChange }) => {
+    const { t } = useTranslation();
     const handleChange = (field: string, value: any) => {
         onChange({ ...config, [field]: value });
     };
@@ -14,7 +17,10 @@ const StreamingConfig: React.FC<StreamingConfigProps> = ({ config, onChange }) =
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Chunk Size (ms)</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Chunk Size (ms)</label>
+                        <HelpTooltip content={t('configEditor.streamingConfig.tooltips.chunkSize')} />
+                    </div>
                     <input
                         type="number"
                         className="w-full p-2 rounded border border-input bg-background"
@@ -23,7 +29,10 @@ const StreamingConfig: React.FC<StreamingConfigProps> = ({ config, onChange }) =
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Sample Rate</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Sample Rate</label>
+                        <HelpTooltip content={t('configEditor.streamingConfig.tooltips.sampleRate')} />
+                    </div>
                     <input
                         type="number"
                         className="w-full p-2 rounded border border-input bg-background"
@@ -32,7 +41,10 @@ const StreamingConfig: React.FC<StreamingConfigProps> = ({ config, onChange }) =
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Jitter Buffer (ms)</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Jitter Buffer (ms)</label>
+                        <HelpTooltip content={t('configEditor.streamingConfig.tooltips.jitterBuffer')} />
+                    </div>
                     <input
                         type="number"
                         className="w-full p-2 rounded border border-input bg-background"
@@ -41,7 +53,10 @@ const StreamingConfig: React.FC<StreamingConfigProps> = ({ config, onChange }) =
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Connection Timeout (ms)</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Connection Timeout (ms)</label>
+                        <HelpTooltip content={t('configEditor.streamingConfig.tooltips.connectionTimeout')} />
+                    </div>
                     <input
                         type="number"
                         className="w-full p-2 rounded border border-input bg-background"
@@ -50,7 +65,10 @@ const StreamingConfig: React.FC<StreamingConfigProps> = ({ config, onChange }) =
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Keepalive Interval (ms)</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Keepalive Interval (ms)</label>
+                        <HelpTooltip content={t('configEditor.streamingConfig.tooltips.keepaliveInterval')} />
+                    </div>
                     <input
                         type="number"
                         className="w-full p-2 rounded border border-input bg-background"
@@ -59,7 +77,10 @@ const StreamingConfig: React.FC<StreamingConfigProps> = ({ config, onChange }) =
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Provider Grace (ms)</label>
+                    <div className="flex items-center space-x-1">
+                        <label className="text-sm font-medium">Provider Grace (ms)</label>
+                        <HelpTooltip content={t('configEditor.streamingConfig.tooltips.providerGrace')} />
+                    </div>
                     <input
                         type="number"
                         className="w-full p-2 rounded border border-input bg-background"
@@ -69,32 +90,41 @@ const StreamingConfig: React.FC<StreamingConfigProps> = ({ config, onChange }) =
                 </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-                <input
-                    type="checkbox"
-                    id="continuous_stream"
-                    className="rounded border-input"
-                    checked={config.continuous_stream ?? true}
-                    onChange={(e) => handleChange('continuous_stream', e.target.checked)}
-                />
-                <label htmlFor="continuous_stream" className="text-sm font-medium">Continuous Stream</label>
+            <div className="flex flex-col space-y-1">
+                <div className="flex items-center space-x-2">
+                    <input
+                        type="checkbox"
+                        id="continuous_stream"
+                        className="rounded border-input"
+                        checked={config.continuous_stream ?? true}
+                        onChange={(e) => handleChange('continuous_stream', e.target.checked)}
+                    />
+                    <label htmlFor="continuous_stream" className="text-sm font-medium">Continuous Stream</label>
+                    <HelpTooltip content={t('configEditor.streamingConfig.tooltips.continuousStream')} />
+                </div>
             </div>
 
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Diagnostics</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="diag_enable_taps"
-                            className="rounded border-input"
-                            checked={config.diag_enable_taps ?? false}
-                            onChange={(e) => handleChange('diag_enable_taps', e.target.checked)}
-                        />
-                        <label htmlFor="diag_enable_taps" className="text-sm font-medium">Enable Taps</label>
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="diag_enable_taps"
+                                className="rounded border-input"
+                                checked={config.diag_enable_taps ?? false}
+                                onChange={(e) => handleChange('diag_enable_taps', e.target.checked)}
+                            />
+                            <label htmlFor="diag_enable_taps" className="text-sm font-medium">Enable Taps</label>
+                            <HelpTooltip content={t('configEditor.streamingConfig.tooltips.diagEnableTaps')} />
+                        </div>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Output Directory</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Output Directory</label>
+                            <HelpTooltip content={t('configEditor.streamingConfig.tooltips.diagOutDir')} />
+                        </div>
                         <input
                             type="text"
                             className="w-full p-2 rounded border border-input bg-background"

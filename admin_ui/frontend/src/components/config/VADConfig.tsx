@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import HelpTooltip from '../ui/HelpTooltip';
 
 interface VADConfigProps {
     config: any;
@@ -6,6 +8,7 @@ interface VADConfigProps {
 }
 
 const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
+    const { t } = useTranslation();
     const handleChange = (field: string, value: any) => {
         onChange({ ...config, [field]: value });
     };
@@ -15,30 +18,39 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Voice Activity Detection</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="enhanced_enabled"
-                            className="rounded border-input"
-                            checked={config.enhanced_enabled ?? true}
-                            onChange={(e) => handleChange('enhanced_enabled', e.target.checked)}
-                        />
-                        <label htmlFor="enhanced_enabled" className="text-sm font-medium">Enhanced VAD</label>
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="enhanced_enabled"
+                                className="rounded border-input"
+                                checked={config.enhanced_enabled ?? true}
+                                onChange={(e) => handleChange('enhanced_enabled', e.target.checked)}
+                            />
+                            <label htmlFor="enhanced_enabled" className="text-sm font-medium">Enhanced VAD</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.enhancedVad')} />
+                        </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="use_provider_vad"
-                            className="rounded border-input"
-                            checked={config.use_provider_vad ?? false}
-                            onChange={(e) => handleChange('use_provider_vad', e.target.checked)}
-                        />
-                        <label htmlFor="use_provider_vad" className="text-sm font-medium">Use Provider VAD</label>
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="use_provider_vad"
+                                className="rounded border-input"
+                                checked={config.use_provider_vad ?? false}
+                                onChange={(e) => handleChange('use_provider_vad', e.target.checked)}
+                            />
+                            <label htmlFor="use_provider_vad" className="text-sm font-medium">Use Provider VAD</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.useProviderVad')} />
+                        </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Min Utterance Duration (ms)</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Min Utterance Duration (ms)</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.minUtterance')} />
+                        </div>
                         <input
                             type="number"
                             className="w-full p-2 rounded border border-input bg-background"
@@ -47,7 +59,10 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Max Utterance Duration (ms)</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Max Utterance Duration (ms)</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.maxUtterance')} />
+                        </div>
                         <input
                             type="number"
                             className="w-full p-2 rounded border border-input bg-background"
@@ -56,7 +71,10 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Utterance Padding (ms)</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Utterance Padding (ms)</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.utterancePadding')} />
+                        </div>
                         <input
                             type="number"
                             className="w-full p-2 rounded border border-input bg-background"
@@ -70,18 +88,24 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Fallback VAD (WebRTC)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="fallback_enabled"
-                            className="rounded border-input"
-                            checked={config.fallback_enabled ?? true}
-                            onChange={(e) => handleChange('fallback_enabled', e.target.checked)}
-                        />
-                        <label htmlFor="fallback_enabled" className="text-sm font-medium">Enable Fallback</label>
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="fallback_enabled"
+                                className="rounded border-input"
+                                checked={config.fallback_enabled ?? true}
+                                onChange={(e) => handleChange('fallback_enabled', e.target.checked)}
+                            />
+                            <label htmlFor="fallback_enabled" className="text-sm font-medium">Enable Fallback</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.fallbackEnabled')} />
+                        </div>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Aggressiveness (0-3)</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Aggressiveness (0-3)</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.aggressiveness')} />
+                        </div>
                         <input
                             type="number"
                             min="0"
@@ -92,7 +116,10 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Start Frames</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Start Frames</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.startFrames')} />
+                        </div>
                         <input
                             type="number"
                             className="w-full p-2 rounded border border-input bg-background"
@@ -101,7 +128,10 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">End Silence Frames</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">End Silence Frames</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.endSilenceFrames')} />
+                        </div>
                         <input
                             type="number"
                             className="w-full p-2 rounded border border-input bg-background"
@@ -113,23 +143,28 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
             </div>
 
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Upstream Squelch</h3>
-                <p className="text-sm text-muted-foreground">
-                    Optional: suppress non-speech frames for continuous-audio providers with server-side VAD.
-                </p>
+                <div className="flex items-center space-x-2">
+                    <h3 className="text-lg font-semibold">Upstream Squelch</h3>
+                    <HelpTooltip content={t('configEditor.vadConfig.tooltips.upstreamSquelch')} />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="upstream_squelch_enabled"
-                            className="rounded border-input"
-                            checked={config.upstream_squelch_enabled ?? true}
-                            onChange={(e) => handleChange('upstream_squelch_enabled', e.target.checked)}
-                        />
-                        <label htmlFor="upstream_squelch_enabled" className="text-sm font-medium">Enable Upstream Squelch</label>
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="upstream_squelch_enabled"
+                                className="rounded border-input"
+                                checked={config.upstream_squelch_enabled ?? true}
+                                onChange={(e) => handleChange('upstream_squelch_enabled', e.target.checked)}
+                            />
+                            <label htmlFor="upstream_squelch_enabled" className="text-sm font-medium">Enable Upstream Squelch</label>
+                        </div>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Base RMS Threshold</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Base RMS Threshold</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.baseRms')} />
+                        </div>
                         <input
                             type="number"
                             min="0"
@@ -139,7 +174,10 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Noise Factor</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Noise Factor</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.noiseFactor')} />
+                        </div>
                         <input
                             type="number"
                             step="0.1"
@@ -150,7 +188,10 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Noise EMA Alpha</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Noise EMA Alpha</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.noiseEmaAlpha')} />
+                        </div>
                         <input
                             type="number"
                             step="0.01"
@@ -162,7 +203,10 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Min Speech Frames</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">Min Speech Frames</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.minSpeechFrames')} />
+                        </div>
                         <input
                             type="number"
                             min="1"
@@ -172,7 +216,10 @@ const VADConfig: React.FC<VADConfigProps> = ({ config, onChange }) => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">End Silence Frames</label>
+                        <div className="flex items-center space-x-1">
+                            <label className="text-sm font-medium">End Silence Frames</label>
+                            <HelpTooltip content={t('configEditor.vadConfig.tooltips.squelchEndSilence')} />
+                        </div>
                         <input
                             type="number"
                             min="1"

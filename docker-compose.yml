@@ -30,7 +30,12 @@ services:
     # Container runs as appuser (member of asterisk group via Dockerfile)
     # Files inherit group ownership from setgid directory (set up by preflight.sh)
     user: "appuser"
-    network_mode: host
+    # network_mode: host  # Disabled for Windows Docker Desktop compatibility
+    ports:
+      - "15000:15000"
+      - "8090:8090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./src:/app/src
       - ./main.py:/app/main.py
@@ -73,7 +78,11 @@ services:
         - INCLUDE_LLAMA=${INCLUDE_LLAMA:-true}
         - INCLUDE_KROKO_EMBEDDED=${INCLUDE_KROKO_EMBEDDED:-false}
     container_name: local_ai_server
-    network_mode: host
+    # network_mode: host  # Disabled for Windows Docker Desktop compatibility
+    ports:
+      - "8765:8765"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .env
     volumes:
