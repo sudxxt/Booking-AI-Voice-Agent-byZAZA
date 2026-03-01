@@ -1270,6 +1270,7 @@ async def get_download_progress(job_id: Optional[str] = None):
 
 
 class SingleModelDownload(BaseModel):
+    model_config = {"protected_namespaces": ()}
     model_id: str
     type: str  # stt, tts, llm
     download_url: str

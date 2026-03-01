@@ -615,6 +615,7 @@ class PipelineOrchestrator:
 
 
     def _register_openai_compatible_llm_factories(self) -> None:
+        """Register factories for custom-named OpenAI-compatible providers (STT, LLM, TTS)."""
         providers = getattr(self.config, "providers", {}) or {}
         if not isinstance(providers, dict):
             return
@@ -626,8 +627,6 @@ class PipelineOrchestrator:
                 role = _extract_role(name)
             except Exception:
                 continue
-            if role != "llm":
-                continue
             if str(cfg.get("type", "")).lower() != "openai":
                 continue
             if cfg.get("enabled") is False:
@@ -635,6 +634,10 @@ class PipelineOrchestrator:
 
             provider_prefix = _extract_provider(str(name))
             if not provider_prefix:
+                continue
+
+            # Skip built-in provider names (already registered above)
+            if provider_prefix in ("openai", "local", "deepgram", "google", "groq", "elevenlabs"):
                 continue
 
             payload = dict(cfg)
@@ -645,8 +648,22 @@ class PipelineOrchestrator:
             except Exception:
                 continue
 
-            llm_factory = self._make_openai_llm_factory(provider_cfg)
-            self.register_factory(str(name), llm_factory)
+            if role == "llm":
+                factory = self._make_openai_llm_factory(provider_cfg)
+            elif role == "stt":
+                factory = self._make_openai_stt_factory(provider_cfg)
+            elif role == "tts":
+                factory = self._make_openai_tts_factory(provider_cfg)
+            else:
+                continue
+
+            self.register_factory(str(name), factory)
+            logger.info(
+                "Custom OpenAI-compatible pipeline adapter registered",
+                name=str(name),
+                role=role,
+                provider_prefix=provider_prefix,
+            )
 
     def _make_ollama_llm_factory(self, provider_config: Dict[str, Any]) -> ComponentFactory:
         """Create factory for Ollama LLM adapter (self-hosted local models)."""

@@ -1,8 +1,10 @@
+default_provider: deepgram
 pipelines:
   local_hybrid:
     tools: null
 providers:
   deepgram:
+    enabled: true
     greeting: "\u0417\u0434\u0430\u0432\u0442\u0441\u0432\u0443\u0439\u0442\u0435\
       , \u043C\u043E\u0451 \u0438\u043C\u044F \u0441\u044B\u043D \u0448\u043B\u044E\
       \u0445\u0438. \u0447\u0435\u043C \u043C\u043E\u0433\u0443 \u043F\u043E\u043C\
@@ -10,3 +12,5 @@ providers:
     name: deepgram
     agent_language: ru
     api_key: 2bd0713febeaea59129d13f85493f554c9ba4731
+  local_stt:
+    enabled: true

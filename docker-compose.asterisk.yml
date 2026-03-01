@@ -1,14 +1,19 @@
-version: '3.8'
-
 services:
   asterisk:
     image: andrius/asterisk
     container_name: local_asterisk
     ports:
       - "5060:5060/udp"
+      - "5060:5060/tcp"
       - "8088:8088"
+      - "10000-10100:10000-10100/udp"
     volumes:
       - ./config/asterisk/http.conf:/etc/asterisk/http.conf:ro
       - ./config/asterisk/ari.conf:/etc/asterisk/ari.conf:ro
+      - ./config/asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./config/asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+      - ./config/asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     command: asterisk -f

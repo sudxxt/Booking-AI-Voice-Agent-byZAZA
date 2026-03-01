@@ -173,6 +173,15 @@ class AudioSocketServer:
                 if length:
                     payload = await reader.readexactly(length)
 
+                # DEBUG: Log every post-handshake frame type from Asterisk
+                if handshake_complete:
+                    logger.info(
+                        "AudioSocket TLV frame received",
+                        conn_id=conn_id,
+                        msg_type=hex(msg_type),
+                        payload_len=length,
+                    )
+
                 if not handshake_complete:
                     if msg_type != TYPE_UUID:
                         logger.warning(

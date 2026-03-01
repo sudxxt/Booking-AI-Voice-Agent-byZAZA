@@ -12,6 +12,10 @@ import axios from 'axios';
 import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 
 // Core Configuration Pages
 import ProvidersPage from './pages/ProvidersPage';
@@ -41,7 +45,6 @@ const RawYamlPage = lazy(() => import('./pages/Advanced/RawYamlPage'));
 const LogsPage = lazy(() => import('./pages/System/LogsPage'));
 const TerminalPage = lazy(() => import('./pages/System/TerminalPage'));
 const ModelsPage = lazy(() => import('./pages/System/ModelsPage'));
-const UpdatesPage = lazy(() => import('./pages/System/UpdatesPage'));
 const AsteriskPage = lazy(() => import('./pages/System/AsteriskPage'));
 
 // Loading fallback for lazy-loaded pages
@@ -120,63 +123,66 @@ function App() {
     return (
         <AuthProvider>
             <ConfirmDialogProvider>
-            <Toaster position="top-right" richColors closeButton />
-            <Router>
-                <Routes>
-                    <Route path="/login" element={<LoginPage />} />
+                <Toaster position="top-right" richColors closeButton />
+                <Router>
+                    <Routes>
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/reset-password" element={<ResetPasswordPage />} />
+                        <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-                    <Route path="*" element={
-                        <RequireAuth>
-                            <SetupGuard>
-                                <Suspense fallback={<PageLoader />}>
-                                    <Routes>
-                                        {/* Setup Wizard Route (lazy) */}
-                                        <Route path="/wizard" element={<Wizard />} />
+                        <Route path="*" element={
+                            <RequireAuth>
+                                <SetupGuard>
+                                    <Suspense fallback={<PageLoader />}>
+                                        <Routes>
+                                            {/* Setup Wizard Route (lazy) */}
+                                            <Route path="/wizard" element={<Wizard />} />
 
-                                        {/* Main Application Layout */}
-                                        <Route element={<AppShell />}>
-                                            <Route path="/" element={<Dashboard />} />
-                                            <Route path="/history" element={<CallHistoryPage />} />
-                                            <Route path="/scheduling" element={<CallSchedulingPage />} />
+                                            {/* Main Application Layout */}
+                                            <Route element={<AppShell />}>
+                                                <Route path="/" element={<RequireAuth allowedRoles={['owner', 'manager']}><Dashboard /></RequireAuth>} />
+                                                <Route path="/history" element={<RequireAuth allowedRoles={['owner', 'manager', 'operator']}><CallHistoryPage /></RequireAuth>} />
+                                                <Route path="/scheduling" element={<RequireAuth allowedRoles={['owner', 'manager']}><CallSchedulingPage /></RequireAuth>} />
 
-                                            {/* Core Configuration */}
-                                            <Route path="/providers" element={<ProvidersPage />} />
-                                            <Route path="/pipelines" element={<PipelinesPage />} />
-                                            <Route path="/contexts" element={<ContextsPage />} />
-                                            <Route path="/profiles" element={<ProfilesPage />} />
-                                            <Route path="/tools" element={<ToolsPage />} />
-                                            <Route path="/mcp" element={<MCPPage />} />
+                                                {/* Core Configuration */}
+                                                <Route path="/providers" element={<RequireAuth allowedRoles={['owner', 'manager']}><ProvidersPage /></RequireAuth>} />
+                                                <Route path="/pipelines" element={<RequireAuth allowedRoles={['owner', 'manager']}><PipelinesPage /></RequireAuth>} />
+                                                <Route path="/contexts" element={<RequireAuth allowedRoles={['owner', 'manager']}><ContextsPage /></RequireAuth>} />
+                                                <Route path="/profiles" element={<RequireAuth allowedRoles={['owner', 'manager']}><ProfilesPage /></RequireAuth>} />
+                                                <Route path="/tools" element={<RequireAuth allowedRoles={['owner', 'manager']}><ToolsPage /></RequireAuth>} />
+                                                <Route path="/mcp" element={<RequireAuth allowedRoles={['owner', 'manager']}><MCPPage /></RequireAuth>} />
 
-                                            {/* Advanced Settings */}
-                                            <Route path="/vad" element={<VADPage />} />
-                                            <Route path="/streaming" element={<StreamingPage />} />
-                                            <Route path="/llm" element={<LLMPage />} />
-                                            <Route path="/transport" element={<TransportPage />} />
-                                            <Route path="/barge-in" element={<BargeInPage />} />
-                                            <Route path="/yaml" element={<RawYamlPage />} />
+                                                {/* Advanced Settings */}
+                                                <Route path="/vad" element={<RequireAuth allowedRoles={['owner', 'manager']}><VADPage /></RequireAuth>} />
+                                                <Route path="/streaming" element={<RequireAuth allowedRoles={['owner', 'manager']}><StreamingPage /></RequireAuth>} />
+                                                <Route path="/llm" element={<RequireAuth allowedRoles={['owner', 'manager']}><LLMPage /></RequireAuth>} />
+                                                <Route path="/transport" element={<RequireAuth allowedRoles={['owner', 'manager']}><TransportPage /></RequireAuth>} />
+                                                <Route path="/barge-in" element={<RequireAuth allowedRoles={['owner', 'manager']}><BargeInPage /></RequireAuth>} />
+                                                <Route path="/yaml" element={<RequireAuth allowedRoles={['owner', 'manager']}><RawYamlPage /></RequireAuth>} />
 
-                                            {/* System Management */}
-                                            <Route path="/env" element={<EnvPage />} />
-                                            <Route path="/docker" element={<DockerPage />} />
-                                            <Route path="/asterisk" element={<AsteriskPage />} />
-                                            <Route path="/logs" element={<LogsPage />} />
-                                            <Route path="/terminal" element={<TerminalPage />} />
-                                            <Route path="/models" element={<ModelsPage />} />
-                                            <Route path="/updates" element={<UpdatesPage />} />
+                                                {/* System Management */}
+                                                <Route path="/env" element={<RequireAuth allowedRoles={['owner', 'manager']}><EnvPage /></RequireAuth>} />
+                                                <Route path="/docker" element={<RequireAuth allowedRoles={['owner', 'manager']}><DockerPage /></RequireAuth>} />
+                                                <Route path="/asterisk" element={<RequireAuth allowedRoles={['owner', 'manager']}><AsteriskPage /></RequireAuth>} />
+                                                <Route path="/logs" element={<RequireAuth allowedRoles={['owner', 'manager']}><LogsPage /></RequireAuth>} />
+                                                <Route path="/terminal" element={<RequireAuth allowedRoles={['owner', 'manager']}><TerminalPage /></RequireAuth>} />
+                                                <Route path="/models" element={<RequireAuth allowedRoles={['owner', 'manager']}><ModelsPage /></RequireAuth>} />
 
-                                            {/* Help */}
-                                            <Route path="/help" element={<HelpPage />} />
+                                                {/* Help */}
+                                                <Route path="/help" element={<RequireAuth allowedRoles={['owner', 'manager', 'operator']}><HelpPage /></RequireAuth>} />
 
-                                            {/* Fallback */}
-                                            <Route path="*" element={<Navigate to="/" replace />} />
-                                        </Route>
-                                    </Routes>
-                                </Suspense>
-                            </SetupGuard>
-                        </RequireAuth>
-                    } />
-                </Routes>
-            </Router>
+                                                {/* Fallback */}
+                                                <Route path="*" element={<Navigate to="/" replace />} />
+                                            </Route>
+                                        </Routes>
+                                    </Suspense>
+                                </SetupGuard>
+                            </RequireAuth>
+                        } />
+                    </Routes>
+                </Router>
             </ConfirmDialogProvider>
         </AuthProvider>
     );

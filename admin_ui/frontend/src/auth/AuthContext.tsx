@@ -1,9 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-interface User {
+export type UserRole = 'owner' | 'manager' | 'operator';
+
+export interface User {
+    id: string;
+    email: string;
     username: string;
+    role: UserRole;
     disabled?: boolean;
+    is_email_verified?: boolean;
 }
 
 interface AuthContextType {
@@ -34,24 +40,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     useEffect(() => {
-        console.log("AuthProvider effect: token =", token);
         if (token) {
             // Verify token and get user info
             axios.get('/api/auth/me', {
                 headers: { Authorization: `Bearer ${token}` }
             })
                 .then(response => {
-                    console.log("AuthProvider: user loaded");
                     setUser(response.data);
                     setLoading(false);
                 })
                 .catch((err) => {
-                    console.log("AuthProvider: user load failed", err);
+                    console.error("AuthProvider: user load failed", err);
                     logout();
                     setLoading(false);
                 });
         } else {
-            console.log("AuthProvider: no token");
             setLoading(false);
         }
     }, [token]);
@@ -98,10 +101,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const interceptor = axios.interceptors.request.use(config => {
             if (!config.headers) {
-                config.headers = {};
+                config.headers = new axios.AxiosHeaders();
             }
-            if (token && !(config.headers as any).Authorization) {
-                (config.headers as any).Authorization = `Bearer ${token}`;
+            if (token && !config.headers.get('Authorization')) {
+                config.headers.set('Authorization', `Bearer ${token}`);
             }
             return config;
         });

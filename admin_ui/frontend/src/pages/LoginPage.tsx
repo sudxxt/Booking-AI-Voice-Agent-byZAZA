@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Lock, User, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -84,6 +84,11 @@ const LoginPage: React.FC = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
                             </div>
+                            <div className="flex justify-end mt-2">
+                                <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                                    Forgot password?
+                                </Link>
+                            </div>
                         </div>
                     </div>
 
@@ -95,6 +100,13 @@ const LoginPage: React.FC = () => {
                         >
                             {loading ? t('login.signingIn') : t('login.signIn')}
                         </button>
+                    </div>
+
+                    <div className="text-center text-sm pt-2">
+                        <span className="text-muted-foreground">Don't have an account? </span>
+                        <Link to="/register" className="text-primary hover:underline font-medium transition-colors">
+                            Sign up
+                        </Link>
                     </div>
                 </form>
             </div>

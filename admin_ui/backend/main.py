@@ -129,8 +129,13 @@ Most endpoints require JWT authentication. Obtain a token via `POST /api/auth/lo
     ],
 )
 
-# Initialize users (create default admin if needed)
-auth.load_users()
+# Initialize users (create default admin if needed, migrate JSON users)
+from db.database import SessionLocal
+_init_db = SessionLocal()
+try:
+    auth._migrate_json_users(_init_db)
+finally:
+    _init_db.close()
 
 # Warn if JWT_SECRET isn't set (localhost-only is okay for dev)
 if getattr(auth, "USING_PLACEHOLDER_SECRET", False):
@@ -166,18 +171,24 @@ app.add_middleware(
 # Public routes
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
+# Permissions
+require_admin = Depends(auth.RoleChecker(["owner", "manager"]))
+require_authenticated = Depends(auth.get_current_active_user)
+
 # Protected routes
-app.include_router(config.router, prefix="/api/config", tags=["config"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(system.router, prefix="/api/system", tags=["system"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(wizard.router, prefix="/api/wizard", tags=["wizard"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(logs.router, prefix="/api/logs", tags=["logs"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(local_ai.router, prefix="/api/local-ai", tags=["local-ai"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(mcp.router, dependencies=[Depends(auth.get_current_user)])
-app.include_router(ollama.router, tags=["ollama"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(calls.router, prefix="/api", tags=["calls"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(outbound.router, prefix="/api", tags=["outbound"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(tools.router, prefix="/api/tools", tags=["tools"], dependencies=[Depends(auth.get_current_user)])
-app.include_router(docs.router, tags=["documentation"], dependencies=[Depends(auth.get_current_user)])
+app.include_router(config.router, prefix="/api/config", tags=["config"], dependencies=[require_admin])
+app.include_router(system.router, prefix="/api/system", tags=["system"], dependencies=[require_admin])
+app.include_router(wizard.router, prefix="/api/wizard", tags=["wizard"], dependencies=[require_admin])
+app.include_router(logs.router, prefix="/api/logs", tags=["logs"], dependencies=[require_admin])
+app.include_router(local_ai.router, prefix="/api/local-ai", tags=["local-ai"], dependencies=[require_admin])
+app.include_router(mcp.router, dependencies=[require_admin])
+app.include_router(ollama.router, tags=["ollama"], dependencies=[require_admin])
+app.include_router(tools.router, prefix="/api/tools", tags=["tools"], dependencies=[require_admin])
+
+# Routes available to operators
+app.include_router(calls.router, prefix="/api", tags=["calls"], dependencies=[require_authenticated])
+app.include_router(outbound.router, prefix="/api", tags=["outbound"], dependencies=[require_authenticated])
+app.include_router(docs.router, tags=["documentation"], dependencies=[require_authenticated])
 
 @app.get("/health")
 async def health_check():

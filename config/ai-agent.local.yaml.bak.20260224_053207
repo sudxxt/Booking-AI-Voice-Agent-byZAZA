@@ -1,3 +1,0 @@
-pipelines:
-  local_hybrid:
-    tools: null

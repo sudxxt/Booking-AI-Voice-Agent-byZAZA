@@ -1,10 +1,11 @@
-active_pipeline: null
+active_pipeline: aitunnel
 asterisk:
   app_name: asterisk-ai-voice-agent
 audio_transport: audiosocket
 audiosocket:
   format: slin
-  host: 127.0.0.1
+  host: 0.0.0.0
+  advertise_host: ai_engine
   port: 8090
 barge_in:
   enabled: true
@@ -30,15 +31,16 @@ config_version: 6
 farewell_hangup_delay_sec: 3
 contexts:
   default:
-    greeting: Hello
+    greeting: Привет! Чем могу помочь?
     profile: telephony_ulaw_8k
+    pipeline: aitunnel
     prompt: >-
-      You are Asterisk, an AI Assistant. Be helpful and concise.
+      Ты голосовой ассистент. Отвечай коротко и по делу на русском языке.
 
 
-      CALL ENDING:
-      - When the caller indicates they are done, say a brief farewell and use the hangup_call tool to end the call.
-    provider: local
+      ЗАВЕРШЕНИЕ ЗВОНКА:
+      - Когда звонящий хочет закончить, попрощайся и используй инструмент hangup_call.
+    provider: aitunnel
     tools:
       - hangup_call
   Tool_Example:
@@ -1185,7 +1187,7 @@ contexts:
     tools:
       - hangup_call
       - mcp_weather_get_city
-default_provider: local_hybrid
+default_provider: aitunnel
 downstream_mode: stream
 external_media:
   codec: ulaw
@@ -1199,6 +1201,11 @@ llm:
   initial_greeting: Hello, how can I help you today?
   prompt: Voice assistant. Answer in 5-8 words. Be direct. Expand only if asked.
 pipelines:
+  aitunnel:
+    stt: aitunnel_stt
+    llm: aitunnel_llm
+    tts: aitunnel_tts
+    tools: []
   local_hybrid:
     llm: openai_llm
     options:
@@ -1599,6 +1606,43 @@ providers:
     tts_model: tts-1
     type: openai
     voice: alloy
+  # ─── AI Tunnel (api.aitunnel.ru) ── OpenAI-совместимый прокси ───
+  aitunnel_stt:
+    type: openai
+    enabled: true
+    capabilities:
+      - stt
+    api_key: ${OPENAI_API_KEY}
+    stt_base_url: https://api.aitunnel.ru/v1/audio/transcriptions
+    stt_model: whisper-1
+    input_encoding: linear16
+    input_sample_rate_hz: 16000
+    response_format: json
+    temperature: 0
+    request_timeout_sec: 15
+  aitunnel_llm:
+    type: openai
+    enabled: true
+    capabilities:
+      - llm
+    api_key: ${OPENAI_API_KEY}
+    chat_base_url: https://api.aitunnel.ru/v1
+    chat_model: gpt-4o-mini
+    temperature: 0.7
+    response_timeout_sec: 10
+    tools_enabled: true
+  aitunnel_tts:
+    type: openai
+    enabled: true
+    capabilities:
+      - tts
+    api_key: ${OPENAI_API_KEY}
+    tts_base_url: https://api.aitunnel.ru/v1/audio/speech
+    tts_model: tts-1
+    voice: alloy
+    response_format: wav
+    target_encoding: mulaw
+    target_sample_rate_hz: 8000
 streaming:
   chunk_size_ms: 20
   connection_timeout_ms: 120000
