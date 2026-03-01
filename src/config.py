@@ -180,6 +180,11 @@ class OpenAIProviderConfig(BaseModel):
     realtime_model: str = Field(default="gpt-4o-realtime-preview-2024-12-17")
     chat_model: str = Field(default="gpt-4o-mini")
     stt_model: str = Field(default="whisper-1")
+    # ISO-639-1 language code for STT (e.g., "ru", "en", "es").
+    # When set, Whisper uses this as a hint instead of auto-detecting (which often defaults to English).
+    language: Optional[str] = None
+    # STT prompt hint (improves accuracy for non-English languages when set in the target language).
+    stt_prompt: Optional[str] = None
     # NOTE: Default to widely-available TTS model to avoid silent-call failures when
     # accounts don't have access to newer/limited models.
     tts_model: str = Field(default="tts-1")

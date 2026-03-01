@@ -1,9 +1,16 @@
 {
   "pipeline@8000Hz": {
-    "type": "moderate",
-    "mean_interval_ms": 0.16721127827962234,
+    "type": "steady",
+    "mean_interval_ms": 0.13018475850423172,
     "max_gap_ms": 1.4870166778564453,
-    "variance": 0.0403295635232818,
+    "variance": 0.0282477474919555,
+    "optimal_buffer_ms": 40
+  },
+  "aitunnel@8000Hz": {
+    "type": "moderate",
+    "mean_interval_ms": 0.045937795778952704,
+    "max_gap_ms": 0.08988380432128906,
+    "variance": 0.00013321829816204025,
     "optimal_buffer_ms": 40
   }
 }

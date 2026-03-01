@@ -5,7 +5,7 @@ audio_transport: audiosocket
 audiosocket:
   format: slin
   host: 0.0.0.0
-  advertise_host: ai_engine
+  advertise_host: 127.0.0.1
   port: 8090
 barge_in:
   enabled: true
@@ -1615,6 +1615,8 @@ providers:
     api_key: ${OPENAI_API_KEY}
     stt_base_url: https://api.aitunnel.ru/v1/audio/transcriptions
     stt_model: whisper-1
+    language: ru
+    stt_prompt: "Привет, чем могу помочь?"
     input_encoding: linear16
     input_sample_rate_hz: 16000
     response_format: json
