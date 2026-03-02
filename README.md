@@ -644,29 +644,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-## 💖 Support This Project
-
-Asterisk AI Voice Agent is **free and open source**. If it's saving you money, consider supporting development:
-
-<p align="center">
-  <a href="https://github.com/sponsors/hkjarral">
-    <img src="https://img.shields.io/badge/Sponsor_on_GitHub-❤️-pink?logo=github&style=for-the-badge" alt="GitHub Sponsors">
-  </a>
-  <a href="https://ko-fi.com/asteriskaivoiceagent">
-    <img src="https://img.shields.io/badge/Buy_me_a_coffee-☕-yellow?logo=ko-fi&style=for-the-badge" alt="Ko-fi">
-  </a>
-  <a href="https://meetify.com/aava1">
-    <img src="https://img.shields.io/badge/Book_Consultation-📅-blue?style=for-the-badge" alt="Book Consultation">
-  </a>
-</p>
-
-Your support funds:
-- 🐛 Faster bug fixes and issue responses  
-- ✨ New provider integrations and features  
-- 📚 Better documentation and tutorials
-
-If you find this project useful, please also give it a ⭐️!
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=hkjarral/Asterisk-AI-Voice-Agent&type=date&legend=top-left)](https://www.star-history.com/#hkjarral/Asterisk-AI-Voice-Agent&type=date&legend=top-left)
